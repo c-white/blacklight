@@ -3,7 +3,18 @@
 #ifndef READ_INPUT_H_
 #define READ_INPUT_H_
 
-// Declarations
-void read_input(const char *input_file);
+// Input reader
+struct input_reader
+{
+  // Constructor and destructor
+  input_reader(const char *input_file_);
+  ~input_reader();
+
+  // Data
+  const char *input_file;
+  char *data_file;
+  double m;
+  double a;
+};
 
 #endif

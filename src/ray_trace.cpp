@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
   const char *input_file = argv[1];
 
   // Read input file
-  read_input(input_file);
+  input_reader inputs(input_file);
 
   // End program
   return 0;
