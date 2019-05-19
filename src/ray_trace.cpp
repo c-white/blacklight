@@ -6,6 +6,7 @@
 
 // Ray Trace headers
 #include "ray_trace.hpp"
+#include "read_input.hpp"  // read_input
 
 // Main function
 int main(int argc, char *argv[])
@@ -19,8 +20,7 @@ int main(int argc, char *argv[])
   const char *input_file = argv[1];
 
   // Read input file
-  unsigned long int input_file_length = std::filesystem::file_size(input_file);
-  std::cout << input_file_length << "\n";
+  read_input(input_file);
 
   // End program
   return 0;
