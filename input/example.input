@@ -1,0 +1,6 @@
+<input>
+data_file = data/test_data.athdf
+
+<coord>
+m = 1.0
+a = 0.98
