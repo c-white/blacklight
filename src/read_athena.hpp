@@ -3,6 +3,9 @@
 #ifndef READ_ATHENA_H_
 #define READ_ATHENA_H_
 
+// C++ headers
+#include <string>  // string
+
 // Ray Trace headers
 #include "read_input.hpp"  // input_reader
 
@@ -10,11 +13,14 @@
 struct athena_reader
 {
   // Constructor and destructor
-  athena_reader(const input_reader &inputs);
+  athena_reader(const std::string data_file_);
   ~athena_reader();
 
   // Data
-  double r_min;
+  const std::string data_file;
+
+  // Functions
+  void read();
 };
 
 #endif

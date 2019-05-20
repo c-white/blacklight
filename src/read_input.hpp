@@ -10,15 +10,17 @@
 struct input_reader
 {
   // Constructor and destructor
-  input_reader(const std::string input_file);
+  input_reader(const std::string input_file_);
   ~input_reader();
 
   // Data
+  const std::string input_file;
   std::string data_file;
   double m;
   double a;
 
   // Functions
+  void read();
   static bool removeable_space(unsigned char c);
 };
 

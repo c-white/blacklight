@@ -12,9 +12,22 @@
 
 // Input reader constructor
 // Inputs:
-//   input_file: name of input file
+//   input_file_: name of input file
 
-input_reader::input_reader(const std::string input_file)
+input_reader::input_reader(const std::string input_file_)
+  : input_file(input_file_) {}
+
+// Input reader destructor
+
+input_reader::~input_reader() {}
+
+// Input reader read and initialize function
+// Inputs: (none)
+// Outputs: (none)
+// Notes:
+//   Initializes all member objects
+
+void input_reader::read()
 {
   // Open input file
   std::ifstream input_stream(input_file);
@@ -48,11 +61,8 @@ input_reader::input_reader(const std::string input_file)
     else
       throw ray_trace_exception("Error: Unknown key in input file.\n");
   }
+  return;
 }
-
-// Input reader destructor
-
-input_reader::~input_reader() {}
 
 // Definition of what constitutes a space
 // Inputs:

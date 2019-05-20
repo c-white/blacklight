@@ -22,10 +22,10 @@ int main(int argc, char *argv[])
   const std::string input_file(argv[1]);
 
   // Read input file
-  input_reader *p_inputs;
+  input_reader inputs(input_file);
   try
   {
-    p_inputs = new input_reader(input_file);
+    inputs.read();
   } catch (const ray_trace_exception &exception) {
     std::cout << exception.what();
     return 1;
@@ -35,10 +35,10 @@ int main(int argc, char *argv[])
   }
 
   // Read data file
-  athena_reader *p_raw_data;
+  athena_reader raw_data(inputs.data_file);
   try
   {
-    p_raw_data = new athena_reader(*p_inputs);
+    raw_data.read();
   } catch (const ray_trace_exception &exception) {
     std::cout << exception.what();
     return 1;
@@ -46,6 +46,7 @@ int main(int argc, char *argv[])
     std::cout << "Error: Could not read data file.\n";
     return 1;
   }
+  std::cout << raw_data.data_file << "\n";
 
   // End program
   return 0;
