@@ -15,7 +15,7 @@ struct input_reader
 
   // Data
   const std::string input_file;
-  char *data_file;
+  std::string data_file;
   double m;
   double a;
 
