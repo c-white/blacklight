@@ -10,23 +10,26 @@
 #include "read_input.hpp"
 #include "exceptions.hpp"  // ray_trace_exception
 
+//--------------------------------------------------------------------------------------------------
+
 // Input reader constructor
 // Inputs:
 //   input_file_: name of input file
-
 input_reader::input_reader(const std::string input_file_)
   : input_file(input_file_) {}
 
-// Input reader destructor
+//--------------------------------------------------------------------------------------------------
 
+// Input reader destructor
 input_reader::~input_reader() {}
+
+//--------------------------------------------------------------------------------------------------
 
 // Input reader read and initialize function
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
 //   Initializes all member objects.
-
 void input_reader::read()
 {
   // Open input file
@@ -64,12 +67,13 @@ void input_reader::read()
   return;
 }
 
+//--------------------------------------------------------------------------------------------------
+
 // Definition of what constitutes a space
 // Inputs:
 //   c: character to be tested
 // Outputs:
 //   returned value: flag indicating character is a removable space
-
 bool input_reader::removeable_space(unsigned char c)
 {
   return std::isspace(c) != 0;

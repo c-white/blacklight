@@ -4,30 +4,31 @@
 #include <fstream>  // ifstream
 #include <string>   // string
 
-#include <iostream>
-
 // Ray Trace headers
 #include "read_athena.hpp"
 #include "read_input.hpp"   // input_reader
 #include "exceptions.hpp"   // ray_trace_exception
 
+//--------------------------------------------------------------------------------------------------
+
 // Athena++ reader constructor
 // Inputs:
 //   input_file: object containing input file data
-
 athena_reader::athena_reader(const std::string data_file_)
   : data_file(data_file_) {}
 
-// Athena++ reader destructor
+//--------------------------------------------------------------------------------------------------
 
+// Athena++ reader destructor
 athena_reader::~athena_reader() {}
+
+//--------------------------------------------------------------------------------------------------
 
 // Athena++ reader read and initialize function
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
 //   Initializes all member objects.
-
 void athena_reader::read()
 {
   // Open data file
@@ -37,9 +38,12 @@ void athena_reader::read()
 
   // Read superblock
   unsigned long int root_object_header_address, btree_address, root_name_heap_address;
-  read_hdf5_superblock(data_stream, &root_object_header_address, &btree_address, &root_name_heap_address);
+  read_hdf5_superblock(data_stream, &root_object_header_address, &btree_address,
+      &root_name_heap_address);
   return;
 }
+
+//--------------------------------------------------------------------------------------------------
 
 // Function to read HDF5 superblock
 // Inputs:
@@ -53,9 +57,9 @@ void athena_reader::read()
 //   Must have superblock version 0.
 //   Must have size of offsets 8.
 //   Must have size of lengths 8.
-
-void athena_reader::read_hdf5_superblock(std::ifstream &data_stream, unsigned long int *p_root_object_header_address,
-    unsigned long int *p_btree_address, unsigned long int *p_root_name_heap_address)
+void athena_reader::read_hdf5_superblock(std::ifstream &data_stream,
+    unsigned long int *p_root_object_header_address, unsigned long int *p_btree_address,
+    unsigned long int *p_root_name_heap_address)
 {
   // Check format signature
   data_stream.seekg(0);
@@ -96,6 +100,8 @@ void athena_reader::read_hdf5_superblock(std::ifstream &data_stream, unsigned lo
   return;
 }
 
+//--------------------------------------------------------------------------------------------------
+
 // Function to read HDF5 root group symbol table entry
 // Inputs:
 //   data_stream: input file stream
@@ -107,7 +113,6 @@ void athena_reader::read_hdf5_superblock(std::ifstream &data_stream, unsigned lo
 //   Assumes stream pointer is already set.
 //   Must have size of offsets 8.
 //   Must be run on little-endian machine
-
 void athena_reader::read_root_group_symbol_table_entry(std::ifstream &data_stream,
     unsigned long int *p_root_object_header_address, unsigned long int *p_btree_address,
     unsigned long int *p_root_name_heap_address)

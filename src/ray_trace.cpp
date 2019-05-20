@@ -5,12 +5,20 @@
 #include <string>     // string
 
 // Ray Trace headers
-#include "ray_trace.hpp"
 #include "read_athena.hpp"  // athena_reader
 #include "read_input.hpp"   // input_reader
 #include "exceptions.hpp"   // ray_trace_exception
 
+//--------------------------------------------------------------------------------------------------
+
 // Main function
+// Inputs:
+//   argc: number of command-line arguments
+//   argv: array of command-line argument strings
+// Outputs:
+//   returned value:
+//     0: successful execution
+//     1: error
 int main(int argc, char *argv[])
 {
   // Parse command line inputs

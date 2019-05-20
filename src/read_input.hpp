@@ -6,6 +6,8 @@
 // C++ headers
 #include <string>  // string
 
+//--------------------------------------------------------------------------------------------------
+
 // Input reader
 struct input_reader
 {
