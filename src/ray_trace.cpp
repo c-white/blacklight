@@ -6,8 +6,9 @@
 
 // Ray Trace headers
 #include "ray_trace.hpp"
-#include "read_input.hpp"  // input_reader
-#include "exceptions.hpp"  // ray_trace_exception
+#include "read_athena.hpp"  // athena_reader
+#include "read_input.hpp"   // input_reader
+#include "exceptions.hpp"   // ray_trace_exception
 
 // Main function
 int main(int argc, char *argv[])
@@ -21,14 +22,29 @@ int main(int argc, char *argv[])
   const std::string input_file(argv[1]);
 
   // Read input file
+  input_reader *p_inputs;
   try
   {
-    input_reader inputs(input_file);
+    p_inputs = new input_reader(input_file);
   } catch (const ray_trace_exception &exception) {
     std::cout << exception.what();
     return 1;
   } catch (...) {
     std::cout << "Error: Could not read input file.\n";
+    return 1;
+  }
+
+  // Read data file
+  athena_reader *p_raw_data;
+  try
+  {
+    p_raw_data = new athena_reader(*p_inputs);
+  } catch (const ray_trace_exception &exception) {
+    std::cout << exception.what();
+    return 1;
+  } catch (...) {
+    std::cout << "Error: Could not read data file.\n";
+    return 1;
   }
 
   // End program

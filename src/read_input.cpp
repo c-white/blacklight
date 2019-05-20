@@ -12,10 +12,9 @@
 
 // Input reader constructor
 // Inputs:
-//   input_file: C string containing name of input file
+//   input_file: name of input file
 
-input_reader::input_reader(const std::string input_file_)
-  : input_file(input_file_)
+input_reader::input_reader(const std::string input_file)
 {
   // Open input file
   std::ifstream input_stream(input_file);
