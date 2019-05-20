@@ -1,6 +1,6 @@
-<input>
+# File names
 data_file = data/test_data.athdf
 
-<coordinate>
+# Coordinates
 m = 1.0
 a = 0.98
