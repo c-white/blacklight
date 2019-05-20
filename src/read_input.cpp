@@ -25,7 +25,7 @@ input_reader::~input_reader() {}
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Initializes all member objects
+//   Initializes all member objects.
 
 void input_reader::read()
 {

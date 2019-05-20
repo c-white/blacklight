@@ -46,7 +46,6 @@ int main(int argc, char *argv[])
     std::cout << "Error: Could not read data file.\n";
     return 1;
   }
-  std::cout << raw_data.data_file << "\n";
 
   // End program
   return 0;

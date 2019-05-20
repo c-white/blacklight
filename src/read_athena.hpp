@@ -21,6 +21,10 @@ struct athena_reader
 
   // Functions
   void read();
+  void read_hdf5_superblock(std::ifstream &data_stream, unsigned long int *p_root_object_header_address,
+      unsigned long int *p_btree_address, unsigned long int *p_root_name_heap_address);
+  void read_root_group_symbol_table_entry(std::ifstream &data_stream, unsigned long int *p_root_object_header_address,
+      unsigned long int *p_btree_address, unsigned long int *p_root_name_heap_address);
 };
 
 #endif
