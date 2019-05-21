@@ -8,6 +8,7 @@
 #include <string>   // string
 
 // Ray Trace headers
+#include "array.hpp"       // array
 #include "read_input.hpp"  // input_reader
 
 //--------------------------------------------------------------------------------------------------
@@ -28,7 +29,7 @@ struct athena_reader
   int num_dataset_names;
   std::string *variable_names;
   int num_variable_names;
-  int *nums_variables;
+  array<int> num_variables;
 
   // Functions
   void read();
@@ -38,6 +39,8 @@ struct athena_reader
   static void set_hdf5_string_array(const unsigned char *datatype_raw,
       const unsigned char *dataspace_raw, const unsigned char *data_raw,
       std::string **string_array, int *p_array_length);
+  static void set_hdf5_int_array(const unsigned char *datatype_raw,
+      const unsigned char *dataspace_raw, const unsigned char *data_raw, array<int> &int_array);
   static void read_hdf5_dataspace_dims(const unsigned char *dataspace_raw,
       unsigned long int **p_dims, int *p_num_dims);
 };

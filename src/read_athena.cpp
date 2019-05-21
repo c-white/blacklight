@@ -8,6 +8,7 @@
 
 // Ray Trace headers
 #include "read_athena.hpp"
+#include "array.hpp"        // array
 #include "read_input.hpp"   // input_reader
 #include "exceptions.hpp"   // ray_trace_exception
 
@@ -170,6 +171,7 @@ void athena_reader::read_hdf5_root_object_header()
   bool dataset_names_found = false;
   bool variable_names_found = false;
   bool num_variables_found = false;
+  int num_nums_variables;
   for (int n = 0; n < num_messages; n++)
   {
     // Read message type and size
@@ -240,8 +242,11 @@ void athena_reader::read_hdf5_root_object_header()
             &num_dataset_names);
       } else if (name == "VariableNames") {
         variable_names_found = true;
+        set_hdf5_string_array(datatype_raw, dataspace_raw, message_data + offset, &variable_names,
+            &num_variable_names);
       } else if (name == "NumVariables") {
         num_variables_found = true;
+        set_hdf5_int_array(datatype_raw, dataspace_raw, message_data + offset, num_variables);
       }
 
       // Free raw buffers
@@ -261,6 +266,9 @@ void athena_reader::read_hdf5_root_object_header()
   // Check that appropriate messages were found
   if (not (dataset_names_found and variable_names_found and num_variables_found))
     throw ray_trace_exception("Error: Could not find needed file-level attributes.\n");
+  if (num_nums_variables != num_dataset_names)
+    throw ray_trace_exception("Error: DatasetNames and NumVariables file-level attribute "
+        "mismatch.\n");
   return;
 }
 
@@ -272,7 +280,7 @@ void athena_reader::read_hdf5_root_object_header()
 //   dataspace_raw: raw dataspace description
 //   data_raw: raw data
 // Outputs:
-//   *p_string_array: array allocated and initialized
+//   *p_string_array: array allocated and set
 //   *p_array_length: number of allocated members
 // Notes:
 //   Must have datatype version 1.
@@ -308,7 +316,7 @@ void athena_reader::set_hdf5_string_array(const unsigned char *datatype_raw,
   int num_dims;
   read_hdf5_dataspace_dims(dataspace_raw, &dims, &num_dims);
   if (num_dims != 1)
-    throw ray_trace_exception("Error: Unexpected HDF5 string encoding.\n");
+    throw ray_trace_exception("Error: Unexpected HDF5 string array size.\n");
   *p_array_length = static_cast<int>(dims[0]);
 
   // Allocate and initialize array
@@ -318,6 +326,82 @@ void athena_reader::set_hdf5_string_array(const unsigned char *datatype_raw,
   {
     std::memcpy(buffer, data_raw + size * static_cast<unsigned int>(n), size);
     (*p_string_array)[n].assign(buffer, size);
+  }
+
+  // Free dimensions
+  delete[] dims;
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to initialize 4-byte integer array dataset from HDF5
+// Inputs:
+//   datatype_raw: raw datatype description
+//   dataspace_raw: raw dataspace description
+//   data_raw: raw data
+// Outputs:
+//   int_array: array allocated and set
+// Notes:
+//   Must have datatype version 1.
+//   Must be 4 bytes.
+//   Must have little-endian data.
+//   Must have trivial padding.
+//   Must be signed.
+//   Must have no offset.
+
+void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
+    const unsigned char *dataspace_raw, const unsigned char *data_raw, array<int> &int_array)
+{
+  // Check datatype version and class
+  int offset = 0;
+  unsigned char version_class = datatype_raw[offset++];
+  if (version_class >> 4 != 1)
+    throw ray_trace_exception("Error: Unexpected HDF5 datatype version.\n");
+  if ((version_class & 0b00001111) != 0)
+    throw ray_trace_exception("Error: Unexpected HDF5 datatype class.\n");
+
+  // Read datatype metadata
+  unsigned char class_1 = datatype_raw[offset++];
+  offset += 2;
+
+  // Read data size
+  unsigned int size;
+  std::memcpy(&size, datatype_raw + offset, 4);
+  offset += 4;
+  if (size != 4)
+    throw ray_trace_exception("Error: Unexpected int size.\n");
+
+  // Read and check properties
+  if ((class_1 & 0b00000001) != 0)
+    throw ray_trace_exception("Error: Unexpected HDF5 fixed-point byte order.\n");
+  if ((class_1 & 0b00000010) != 0 or (class_1 & 0b00000100) != 0)
+    throw ray_trace_exception("Error: Unexpected HDF5 fixed-point padding.\n");
+  if ((class_1 & 0b00001000) != 1)
+    throw ray_trace_exception("Error: Unexpected HDF5 fixed-point sign.\n");
+  unsigned short int bit_offset, bit_precision;
+  std::memcpy(&bit_offset, datatype_raw + offset, 2);
+  offset += 2;
+  std::memcpy(&bit_precision, datatype_raw + offset, 2);
+  offset += 2;
+  if (bit_offset != 0 or bit_precision != 8 * size)
+    throw ray_trace_exception("Error: Unexpected HDF5 fixed-point bit layout.\n");
+
+  // Read dimensions
+  unsigned long int *dims;
+  int num_dims;
+  read_hdf5_dataspace_dims(dataspace_raw, &dims, &num_dims);
+  int num_elements = 1;
+  for (int n = 0; n < num_dims; n++)
+    num_elements *= static_cast<int>(dims[n]);
+
+  // Allocate and initialize array
+  if (num_dims == 1)
+  {
+    int_array.allocate(static_cast<int>(dims[0]));
+    std::memcpy(int_array.data, data_raw, size * static_cast<unsigned int>(num_elements));
+  } else {
+    throw ray_trace_exception("Error: Unexpected HDF5 fixed-point array size.\n");
   }
 
   // Free dimensions
