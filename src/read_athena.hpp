@@ -4,7 +4,8 @@
 #define READ_ATHENA_H_
 
 // C++ headers
-#include <string>  // string
+#include <fstream>  // ifstream
+#include <string>   // string
 
 // Ray Trace headers
 #include "read_input.hpp"  // input_reader
@@ -15,20 +16,30 @@
 struct athena_reader
 {
   // Constructor and destructor
-  athena_reader(const std::string data_file_);
+  athena_reader(const std::string data_file);
   ~athena_reader();
 
   // Data
-  const std::string data_file;
+  std::ifstream data_stream;
+  unsigned long int root_object_header_address;
+  unsigned long int btree_address;
+  unsigned long int root_name_heap_address;
+  std::string *dataset_names;
+  int num_dataset_names;
+  std::string *variable_names;
+  int num_variable_names;
+  int *nums_variables;
 
   // Functions
   void read();
-  void read_hdf5_superblock(std::ifstream &data_stream,
-      unsigned long int *p_root_object_header_address, unsigned long int *p_btree_address,
-      unsigned long int *p_root_name_heap_address);
-  void read_root_group_symbol_table_entry(std::ifstream &data_stream,
-      unsigned long int *p_root_object_header_address, unsigned long int *p_btree_address,
-      unsigned long int *p_root_name_heap_address);
+  void read_hdf5_superblock();
+  void read_root_group_symbol_table_entry();
+  void read_hdf5_root_object_header();
+  static void set_hdf5_string_array(const unsigned char *datatype_raw,
+      const unsigned char *dataspace_raw, const unsigned char *data_raw,
+      std::string **string_array, int *p_array_length);
+  static void read_hdf5_dataspace_dims(const unsigned char *dataspace_raw,
+      unsigned long int **p_dims, int *p_num_dims);
 };
 
 #endif
