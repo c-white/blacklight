@@ -171,7 +171,6 @@ void athena_reader::read_hdf5_root_object_header()
   bool dataset_names_found = false;
   bool variable_names_found = false;
   bool num_variables_found = false;
-  int num_nums_variables;
   for (int n = 0; n < num_messages; n++)
   {
     // Read message type and size
@@ -266,7 +265,7 @@ void athena_reader::read_hdf5_root_object_header()
   // Check that appropriate messages were found
   if (not (dataset_names_found and variable_names_found and num_variables_found))
     throw ray_trace_exception("Error: Could not find needed file-level attributes.\n");
-  if (num_nums_variables != num_dataset_names)
+  if (num_variables.n1 != num_dataset_names)
     throw ray_trace_exception("Error: DatasetNames and NumVariables file-level attribute "
         "mismatch.\n");
   return;
@@ -373,12 +372,10 @@ void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
     throw ray_trace_exception("Error: Unexpected int size.\n");
 
   // Read and check properties
-  if ((class_1 & 0b00000001) != 0)
-    throw ray_trace_exception("Error: Unexpected HDF5 fixed-point byte order.\n");
+  bool rev_endian = class_1 & 0b00000001;
   if ((class_1 & 0b00000010) != 0 or (class_1 & 0b00000100) != 0)
     throw ray_trace_exception("Error: Unexpected HDF5 fixed-point padding.\n");
-  if ((class_1 & 0b00001000) != 1)
-    throw ray_trace_exception("Error: Unexpected HDF5 fixed-point sign.\n");
+  bool signed_val = class_1 & 0b00001000;
   unsigned short int bit_offset, bit_precision;
   std::memcpy(&bit_offset, datatype_raw + offset, 2);
   offset += 2;
@@ -391,15 +388,28 @@ void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
   unsigned long int *dims;
   int num_dims;
   read_hdf5_dataspace_dims(dataspace_raw, &dims, &num_dims);
-  int num_elements = 1;
+  unsigned int num_elements = 1;
   for (int n = 0; n < num_dims; n++)
-    num_elements *= static_cast<int>(dims[n]);
+    num_elements *= static_cast<unsigned int>(dims[n]);
 
   // Allocate and initialize array
   if (num_dims == 1)
   {
     int_array.allocate(static_cast<int>(dims[0]));
-    std::memcpy(int_array.data, data_raw, size * static_cast<unsigned int>(num_elements));
+    char *buffer = new char[size];
+    for (unsigned int n = 0; n < num_elements; n++)
+    {
+      if (rev_endian)
+        for (unsigned int m = 0; m < size; m++)
+          std::memcpy(buffer + size - 1 - m, data_raw + n * size + m, 1);
+      else
+        std::memcpy(buffer, data_raw + n * size, 4);
+      if (signed_val)
+        int_array(n) = *reinterpret_cast<int *>(buffer);
+      else
+        int_array(n) = static_cast<int>(*reinterpret_cast<unsigned int *>(buffer));
+    }
+    delete[] buffer;
   } else {
     throw ray_trace_exception("Error: Unexpected HDF5 fixed-point array size.\n");
   }
