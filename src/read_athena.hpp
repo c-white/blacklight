@@ -22,21 +22,26 @@ struct athena_reader
   athena_reader &operator=(const athena_reader &source) = delete;
   ~athena_reader();
 
-  // Data
+  // Metadata
   std::ifstream data_stream;
   unsigned long int root_object_header_address;
   unsigned long int btree_address;
   unsigned long int root_name_heap_address;
+  unsigned long int root_data_segment_address;
   std::string *dataset_names;
   int num_dataset_names;
   std::string *variable_names;
   int num_variable_names;
   array<int> num_variables;
 
+  // Data
+  array<int> levels;
+
   // Functions
   void read();
   void read_hdf5_superblock();
   void read_root_group_symbol_table_entry();
+  void read_hdf5_root_heap();
   void read_hdf5_root_object_header();
   static void set_hdf5_string_array(const unsigned char *datatype_raw,
       const unsigned char *dataspace_raw, const unsigned char *data_raw,

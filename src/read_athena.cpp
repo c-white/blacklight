@@ -6,6 +6,8 @@
 #include <ios>      // streamoff
 #include <string>   // string
 
+#include <iostream>
+
 // Ray Trace headers
 #include "read_athena.hpp"
 #include "array.hpp"        // array
@@ -50,6 +52,9 @@ void athena_reader::read()
 {
   // Read superblock
   read_hdf5_superblock();
+
+  // Read offset of dataset names
+  read_hdf5_root_heap();
 
   // Read necessary file attributes
   read_hdf5_root_object_header();
@@ -131,6 +136,7 @@ void athena_reader::read_root_group_symbol_table_entry()
   data_stream.read(reinterpret_cast<char *>(&cache_type), 4);
   if (cache_type != 1)
     throw ray_trace_exception("Error: Unexpected HDF5 root group symbol table entry cache type.\n");
+  data_stream.ignore(4);
 
   // Read B-tree and name heap addresses
   data_stream.read(reinterpret_cast<char *>(&btree_address), 8);
@@ -140,14 +146,38 @@ void athena_reader::read_root_group_symbol_table_entry()
 
 //--------------------------------------------------------------------------------------------------
 
+// Function to read HDF5 root local heap
+// Inputs: (none)
+// Outputs: (none)
+// Notes:
+//   Sets root_data_segment_address.
+//   Assumes root_name_heap_address set.
+//   Changes stream pointer.
+void athena_reader::read_hdf5_root_heap()
+{
+  // Check local heap signature and version
+  data_stream.seekg(static_cast<std::streamoff>(root_name_heap_address));
+  const unsigned char expected_signature[] = {'H', 'E', 'A', 'P'};
+  for (int n = 0; n < 4; n++)
+    if (data_stream.get() != expected_signature[n])
+      throw ray_trace_exception("Error: Unexpected HDF5 heap signature.\n");
+  if (data_stream.get() != 0)
+    throw ray_trace_exception("Error: Unexpected HDF5 heap version.\n");
+  data_stream.ignore(3);
+
+  // Skip data segement size and offset to head of free list
+  data_stream.ignore(16);
+
+  // Read address of data segment
+  data_stream.read(reinterpret_cast<char *>(&root_data_segment_address), 8);
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
 // Function to read HDF5 root object header
-// Inputs:
-//   data_stream: input file stream
-//   root_object_header_address: offset into file of root header
-// Outputs:
-//   *p_dataset_names: newly allocated array of names of cell value datasets
-//   *p_variable_names: newly allocated array of names of variables in cell value datasets
-//   *p_num_variables: newly allocated array of numbers of variables in each dataset
+// Inputs: (none)
+// Outputs: (none)
 // Notes:
 //   Allocates and sets dataset_names, variable_names, nums_variables.
 //   Sets num_dataset_names and num_variable_names.
