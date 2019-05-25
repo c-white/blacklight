@@ -71,7 +71,7 @@ void array<type>::allocate(int n1_)
 
 //--------------------------------------------------------------------------------------------------
 
-// Multidimensional array read accessor (1D)
+// Multidimensional array read accessors (1D)
 // Inputs:
 //   n: index
 // Outputs:
@@ -81,16 +81,26 @@ type array<type>::operator()(int n) const
 {
   return data[n];
 }
+template<typename type>
+type array<type>::operator()(unsigned int n) const
+{
+  return data[n];
+}
 
 //--------------------------------------------------------------------------------------------------
 
-// Multidimensional array read/write accessor (1D)
+// Multidimensional array read/write accessors (1D)
 // Inputs:
 //   n: index
 // Outputs:
 //   returned value: reference to element
 template<typename type>
 type &array<type>::operator()(int n)
+{
+  return data[n];
+}
+template<typename type>
+type &array<type>::operator()(unsigned int n)
 {
   return data[n];
 }

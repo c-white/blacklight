@@ -26,6 +26,8 @@ struct array
   void allocate(int n);
   type operator()(int n) const;
   type &operator()(int n);
+  type operator()(unsigned int n) const;
+  type &operator()(unsigned int n);
 };
 
 #endif
