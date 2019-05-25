@@ -20,11 +20,6 @@ input_reader::input_reader(const std::string input_file_)
 
 //--------------------------------------------------------------------------------------------------
 
-// Input reader destructor
-input_reader::~input_reader() {}
-
-//--------------------------------------------------------------------------------------------------
-
 // Input reader read and initialize function
 // Inputs: (none)
 // Outputs: (none)

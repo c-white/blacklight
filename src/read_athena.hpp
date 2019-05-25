@@ -16,8 +16,10 @@
 // Athena++ reader
 struct athena_reader
 {
-  // Constructor and destructor
+  // Constructors and destructor
   athena_reader(const std::string data_file);
+  athena_reader(const athena_reader &source) = delete;
+  athena_reader &operator=(const athena_reader &source) = delete;
   ~athena_reader();
 
   // Data

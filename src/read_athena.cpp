@@ -30,7 +30,14 @@ athena_reader::athena_reader(const std::string data_file)
 //--------------------------------------------------------------------------------------------------
 
 // Athena++ reader destructor
-athena_reader::~athena_reader() {}
+athena_reader::~athena_reader()
+{
+  // Free memory
+  if (num_dataset_names > 0)
+    delete[] dataset_names;
+  if (num_variable_names > 0)
+    delete[] variable_names;
+}
 
 //--------------------------------------------------------------------------------------------------
 
@@ -344,10 +351,9 @@ void athena_reader::set_hdf5_string_array(const unsigned char *datatype_raw,
 // Notes:
 //   Must have datatype version 1.
 //   Must be 4 bytes.
-//   Must have little-endian data.
 //   Must have trivial padding.
-//   Must be signed.
 //   Must have no offset.
+//   Must be run on little-endian machine.
 
 void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
     const unsigned char *dataspace_raw, const unsigned char *data_raw, array<int> &int_array)

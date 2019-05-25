@@ -11,9 +11,9 @@ struct array
 {
   // Constructors and destructor
   array();
+  array(int n1_);
   array(const array<type> &source) = delete;
   array &operator=(const array<type> &source) = delete;
-  array(int n1_);
   ~array();
 
   // Data
