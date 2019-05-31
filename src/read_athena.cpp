@@ -56,8 +56,14 @@ void athena_reader::read()
   read_hdf5_root_object_header();
   read_hdf5_tree();
 
-  // Located needed headers
+  // Read level data
   unsigned long int header_address = read_hdf5_dataset_header_address("Levels");
+  unsigned char *datatype_raw, *dataspace_raw, *data_raw;
+  read_hdf5_data_object_header(header_address, &datatype_raw, &dataspace_raw, &data_raw);
+  set_hdf5_int_array(datatype_raw, dataspace_raw, data_raw, levels);
+  delete[] datatype_raw;
+  delete[] dataspace_raw;
+  delete[] data_raw;
   return;
 }
 
@@ -242,7 +248,7 @@ void athena_reader::read_hdf5_root_object_header()
 
       // Check attribute message version
       int offset = 0;
-      if (message_data[0] != 1)
+      if (message_data[offset] != 1)
         throw ray_trace_exception("Error: Unexpected HDF5 attribute message version.\n");
       offset += 2;
 
@@ -422,6 +428,134 @@ unsigned long int athena_reader::read_hdf5_dataset_header_address(const char *na
   // Report failure to find named dataset
   throw ray_trace_exception("Error: Could not find HDF5 dataset in file.\n");
   return 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to read HDF5 data object header
+// Inputs:
+//   data_object_header_address: offset where header is located
+// Outputs:
+//   *p_datatype_raw: raw datatype description
+//   *p_dataspace_raw: raw dataspace description
+//   *p_data_raw: raw data
+// Notes:
+//   Changes stream pointer.
+//   Must have object header version 1.
+//   Must not have shared header messages.
+//   Must have data layout message version 3.
+//   Must have size of offsets 8.
+//   Must be run on little-endian machine.
+void athena_reader::read_hdf5_data_object_header(unsigned long int data_object_header_address,
+    unsigned char **p_datatype_raw, unsigned char **p_dataspace_raw, unsigned char **p_data_raw)
+{
+  // Check object header version
+  data_stream.seekg(static_cast<std::streamoff>(data_object_header_address));
+  if (data_stream.get() != 1)
+    throw ray_trace_exception("Error: Unexpected HDF5 object header version.\n");
+  data_stream.ignore(1);
+
+  // Read number of header messages
+  unsigned short int num_messages;
+  data_stream.read(reinterpret_cast<char *>(&num_messages), 2);
+
+  // Skip reading object reference count and object header size
+  data_stream.ignore(8);
+
+  // Align to 8 bytes within header (location of padding not documented)
+  data_stream.ignore(4);
+
+  // Prepare containers for message information
+  bool datatype_found = false;
+  bool dataspace_found = false;
+  bool data_layout_found = false;
+  unsigned long int data_address = 0;
+  unsigned long int data_size = 0;
+
+  // Go through messages
+  for (int n = 0; n < num_messages; n++)
+  {
+    // Read message type and size
+    unsigned short int message_type, message_size;
+    data_stream.read(reinterpret_cast<char *>(&message_type), 2);
+    data_stream.read(reinterpret_cast<char *>(&message_size), 2);
+
+    // Check message flags
+    unsigned char message_flags;
+    data_stream.read(reinterpret_cast<char *>(&message_flags), 1);
+    data_stream.ignore(3);
+    if (message_flags & 0b00000010)
+      throw ray_trace_exception("Error: Unexpected HDF5 header message flag.\n");
+
+    // Read message data
+    unsigned char *message_data = new unsigned char[message_size];
+    data_stream.read(reinterpret_cast<char *>(message_data), message_size);
+
+    // Follow any continuation messages
+    if (message_type == 16)
+    {
+      unsigned long int new_offset;
+      std::memcpy(&new_offset, message_data, 8);
+      data_stream.seekg(static_cast<std::streamoff>(new_offset));
+      continue;
+
+    // Inspect any datatype messages
+    } else if (message_type == 3) {
+      if (datatype_found)
+        throw ray_trace_exception("Error: Too many HDF5 datatypes for dataset.\n");
+      datatype_found = true;
+      *p_datatype_raw = new unsigned char[message_size];
+      std::memcpy(*p_datatype_raw, message_data, message_size);
+
+    // Inspect any dataspace messages
+    } else if (message_type == 1) {
+      if (dataspace_found)
+        throw ray_trace_exception("Error: Too many HDF5 dataspaces for dataset.\n");
+      dataspace_found = true;
+      *p_dataspace_raw = new unsigned char[message_size];
+      std::memcpy(*p_dataspace_raw, message_data, message_size);
+
+    // Inspect any data layout messages
+    } else if (message_type == 8) {
+
+      // Note if data layout has already been found
+      if (data_layout_found)
+        throw ray_trace_exception("Error: Too many HDF5 data layouts for dataset.\n");
+      data_layout_found = true;
+
+      // Check layout version and class
+      int offset = 0;
+      if (message_data[offset] != 3)
+        throw ray_trace_exception("Error: Unexpected HDF5 data layout message version.\n");
+      offset += 1;
+      if (message_data[offset] != 1)
+        throw ray_trace_exception("Error: Unexpected HDF5 data layout class.\n");
+      offset += 1;
+
+      // Read data layout
+      std::memcpy(&data_address, message_data + offset, 8);
+      offset += 8;
+      std::memcpy(&data_size, message_data + offset, 8);
+      offset += 8;
+    }
+
+    // Free raw buffer
+    delete[] message_data;
+
+    // Break when required information found
+    if (datatype_found and dataspace_found and data_layout_found)
+      break;
+  }
+
+  // Check that appropriate messages were found
+  if (not (datatype_found and dataspace_found and data_layout_found))
+    throw ray_trace_exception("Error: Could not find needed dataset properties.\n");
+
+  // Read raw data
+  *p_data_raw = new unsigned char[data_size];
+  data_stream.seekg(static_cast<std::streamoff>(data_address));
+  data_stream.read(reinterpret_cast<char *>(*p_data_raw), static_cast<std::streamoff>(data_size));
+  return;
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -47,6 +47,8 @@ struct athena_reader
   void read_hdf5_root_object_header();
   void read_hdf5_tree();
   unsigned long int read_hdf5_dataset_header_address(const char *name);
+  void read_hdf5_data_object_header(unsigned long int data_object_header_address,
+      unsigned char **p_datatype_raw, unsigned char **p_dataspace_raw, unsigned char **p_data_raw);
   static void set_hdf5_string_array(const unsigned char *datatype_raw,
       const unsigned char *dataspace_raw, const unsigned char *data_raw,
       std::string **string_array, int *p_array_length);
