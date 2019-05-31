@@ -4,9 +4,7 @@
 #include <cstring>  // memcpy, size_t
 #include <fstream>  // ifstream
 #include <ios>      // streamoff
-#include <string>   // string
-
-#include <iostream>
+#include <string>   // getline, string
 
 // Ray Trace headers
 #include "read_athena.hpp"
@@ -39,6 +37,8 @@ athena_reader::~athena_reader()
     delete[] dataset_names;
   if (num_variable_names > 0)
     delete[] variable_names;
+  if (num_children > 0)
+    delete[] children_addresses;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -50,14 +50,14 @@ athena_reader::~athena_reader()
 //   Initializes all member objects.
 void athena_reader::read()
 {
-  // Read superblock
+  // Read basic data about file
   read_hdf5_superblock();
-
-  // Read offset of dataset names
   read_hdf5_root_heap();
-
-  // Read necessary file attributes
   read_hdf5_root_object_header();
+  read_hdf5_tree();
+
+  // Located needed headers
+  unsigned long int header_address = read_hdf5_dataset_header_address("Levels");
   return;
 }
 
@@ -153,6 +153,7 @@ void athena_reader::read_root_group_symbol_table_entry()
 //   Sets root_data_segment_address.
 //   Assumes root_name_heap_address set.
 //   Changes stream pointer.
+//   Must have size of offsets 8.
 void athena_reader::read_hdf5_root_heap()
 {
   // Check local heap signature and version
@@ -186,6 +187,8 @@ void athena_reader::read_hdf5_root_heap()
 //   Must have object header version 1.
 //   Must not have shared header messages.
 //   Must have attribute message version 1.
+//   Must have size of offsets 8.
+//   Must be run on little-endian machine.
 void athena_reader::read_hdf5_root_object_header()
 {
   // Check object header version
@@ -310,6 +313,119 @@ void athena_reader::read_hdf5_root_object_header()
 
 //--------------------------------------------------------------------------------------------------
 
+// Function to locate children of root node in HDF5 tree
+// Inputs: (none)
+// Outputs: (none)
+//   returned value: address within file of header
+// Notes:
+//   Allocates and sets children_addresses.
+//   Sets num_children.
+//   Assumes btree_address set.
+//   Changes stream pointer.
+//   Must have B-tree version 1.
+//   Must have only 1 level of children.
+//   Must have size of offsets 8.
+//   Must be run on little-endian machine.
+void athena_reader::read_hdf5_tree()
+{
+  // Check signature
+  data_stream.seekg(static_cast<std::streamoff>(btree_address));
+  const unsigned char expected_signature[] = {'T', 'R', 'E', 'E'};
+  for (int n = 0; n < 4; n++)
+    if (data_stream.get() != expected_signature[n])
+      throw ray_trace_exception("Error: Unexpected HDF5 B-tree signature.\n");
+
+  // Check node type and level
+  if (data_stream.get() != 0)
+    throw ray_trace_exception("Error: Unexpected HDF5 node type.\n");
+  if (data_stream.get() != 0)
+    throw ray_trace_exception("Error: Unexpected HDF5 node level.\n");
+
+  // Read number of children
+  unsigned short int num_entries;
+  data_stream.read(reinterpret_cast<char *>(&num_entries), 2);
+  num_children = num_entries;
+
+  // Skip addresses of siblings
+  data_stream.ignore(16);
+
+  // Read addresses of children
+  children_addresses = new unsigned long int[num_children];
+  for (int n = 0; n < num_children; n++)
+  {
+    data_stream.ignore(8);
+    data_stream.read(reinterpret_cast<char *>(children_addresses + n), 8);
+  }
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to locate HDF5 header address for dataset with given name
+// Inputs:
+//   name: name of dataset
+// Outputs:
+//   returned value: address within file of header
+// Notes:
+//   Assumes children_addresses set.
+//   Changes stream pointer.
+//   Must have symbol table entry cache type 0.
+//   Must have size of offsets 8.
+//   Must be run on little-endian machine.
+unsigned long int athena_reader::read_hdf5_dataset_header_address(const char *name)
+{
+  // Go through children
+  for (int n = 0; n < num_children; n++)
+  {
+    // Check symbol table node signature and version
+    data_stream.seekg(static_cast<std::streamoff>(children_addresses[n]));
+    const unsigned char expected_signature[] = {'S', 'N', 'O', 'D'};
+    for (int m = 0; m < 4; m++)
+      if (data_stream.get() != expected_signature[m])
+        throw ray_trace_exception("Error: Unexpected HDF5 symbol table node signature.\n");
+    if (data_stream.get() != 1)
+      throw ray_trace_exception("Error: Unexpected HDF5 symbol table node version.\n");
+    data_stream.ignore(1);
+
+    // Read number of symbols
+    unsigned short int num_symbols;
+    data_stream.read(reinterpret_cast<char *>(&num_symbols), 2);
+
+    // Go through symbols
+    for (int m = 0; m < num_symbols; m++)
+    {
+      // Read addresses
+      unsigned long int link_name_offset, object_header_address;
+      data_stream.read(reinterpret_cast<char *>(&link_name_offset), 8);
+      data_stream.read(reinterpret_cast<char *>(&object_header_address), 8);
+
+      // Check cache type
+      unsigned int cache_type;
+      data_stream.read(reinterpret_cast<char *>(&cache_type), 4);
+      if (cache_type != 0)
+        throw ray_trace_exception("Error: Unexpected HDF5 symbol table entry cache type.\n");
+
+      // Skip remaining entry
+      data_stream.ignore(20);
+
+      // Compare name
+      std::streamoff position = data_stream.tellg();
+      data_stream.seekg(static_cast<std::streamoff>(root_data_segment_address + link_name_offset));
+      std::string dataset_name;
+      std::getline(data_stream, dataset_name, '\0');
+      if (dataset_name == name)
+        return object_header_address;
+      data_stream.seekg(position);
+    }
+  }
+
+  // Report failure to find named dataset
+  throw ray_trace_exception("Error: Could not find HDF5 dataset in file.\n");
+  return 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+
 // Function to initialize string array dataset from HDF5
 // Inputs:
 //   datatype_raw: raw datatype description
@@ -321,7 +437,6 @@ void athena_reader::read_hdf5_root_object_header()
 // Notes:
 //   Must have datatype version 1.
 //   Must be a 1D array.
-
 void athena_reader::set_hdf5_string_array(const unsigned char *datatype_raw,
     const unsigned char *dataspace_raw, const unsigned char *data_raw, std::string **p_string_array,
     int *p_array_length)
@@ -384,7 +499,6 @@ void athena_reader::set_hdf5_string_array(const unsigned char *datatype_raw,
 //   Must have trivial padding.
 //   Must have no offset.
 //   Must be run on little-endian machine.
-
 void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
     const unsigned char *dataspace_raw, const unsigned char *data_raw, array<int> &int_array)
 {
@@ -466,7 +580,6 @@ void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
 // Notes:
 //   Must not have permutation indices.
 //   Must be run on little-endian machine
-
 void athena_reader::read_hdf5_dataspace_dims(const unsigned char *dataspace_raw,
     unsigned long int **p_dims, int *p_num_dims)
 {

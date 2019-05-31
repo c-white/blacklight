@@ -29,10 +29,12 @@ struct athena_reader
   unsigned long int root_name_heap_address;
   unsigned long int root_data_segment_address;
   std::string *dataset_names;
-  int num_dataset_names;
+  int num_dataset_names = 0;
   std::string *variable_names;
-  int num_variable_names;
+  int num_variable_names = 0;
   array<int> num_variables;
+  unsigned long int *children_addresses;
+  int num_children = 0;
 
   // Data
   array<int> levels;
@@ -43,6 +45,8 @@ struct athena_reader
   void read_root_group_symbol_table_entry();
   void read_hdf5_root_heap();
   void read_hdf5_root_object_header();
+  void read_hdf5_tree();
+  unsigned long int read_hdf5_dataset_header_address(const char *name);
   static void set_hdf5_string_array(const unsigned char *datatype_raw,
       const unsigned char *dataspace_raw, const unsigned char *data_raw,
       std::string **string_array, int *p_array_length);
