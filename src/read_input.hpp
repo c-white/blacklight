@@ -14,11 +14,23 @@ struct input_reader
   // Constructor
   input_reader(const std::string input_file_);
 
-  // Data
+  // Data - general
   const std::string input_file;
+
+  // Data - file names
   std::string data_file;
+  std::string output_file;
+
+  // Data - coordinates
   double m;
   double a;
+
+  // Data - image
+  double im_th;
+  double im_ph;
+  double im_width;
+  int im_res;
+  int num_samples;
 
   // Functions
   void read();

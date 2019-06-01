@@ -1,6 +1,14 @@
 # File names
-data_file = data/test_data.athdf
+data_file   = data/test_data.athdf
+output_file = output/test_output.dat
 
 # Coordinates
 m = 1.0
 a = 0.98
+
+# Image
+im_theta    = 90.0
+im_phi      = 0.0
+im_width    = 20.0
+im_res      = 10
+num_samples = 100

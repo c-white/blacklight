@@ -5,6 +5,7 @@
 #include <string>     // string
 
 // Ray Trace headers
+#include "ray_trace.hpp"
 #include "read_athena.hpp"  // athena_reader
 #include "read_input.hpp"   // input_reader
 #include "exceptions.hpp"   // ray_trace_exception

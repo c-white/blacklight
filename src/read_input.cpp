@@ -9,6 +9,7 @@
 // Ray Trace headers
 #include "read_input.hpp"
 #include "exceptions.hpp"  // ray_trace_exception
+#include "ray_trace.hpp"   // math
 
 //--------------------------------------------------------------------------------------------------
 
@@ -52,10 +53,22 @@ void input_reader::read()
     // Store values
     if (key == "data_file")
       data_file = val;
+    else if (key == "output_file")
+      output_file = val;
     else if (key == "m")
       m = stod(val);
     else if (key == "a")
       a = stod(val);
+    else if (key == "im_theta")
+      im_th = stod(val) * math::pi/180.0;
+    else if (key == "im_phi")
+      im_ph = stod(val) * math::pi/180.0;
+    else if (key == "im_width")
+      im_width = stod(val);
+    else if (key == "im_res")
+      im_res = stoi(val);
+    else if (key == "num_samples")
+      num_samples = stoi(val);
     else
       throw ray_trace_exception("Error: Unknown key in input file.\n");
   }
