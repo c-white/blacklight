@@ -56,22 +56,21 @@ void athena_reader::read()
   read_hdf5_root_object_header();
   read_hdf5_tree();
 
-  // Read level data
-  unsigned long int header_address = read_hdf5_dataset_header_address("Levels");
-  unsigned char *datatype_raw, *dataspace_raw, *data_raw;
-  read_hdf5_data_object_header(header_address, &datatype_raw, &dataspace_raw, &data_raw);
-  set_hdf5_int_array(datatype_raw, dataspace_raw, data_raw, levels);
-  delete[] datatype_raw;
-  delete[] dataspace_raw;
-  delete[] data_raw;
+  // Read block layout
+  read_hdf5_int_array("Levels", levels);
+  read_hdf5_int_array("LogicalLocations", locations);
 
-  // Read location data
-  header_address = read_hdf5_dataset_header_address("LogicalLocations");
-  read_hdf5_data_object_header(header_address, &datatype_raw, &dataspace_raw, &data_raw);
-  set_hdf5_int_array(datatype_raw, dataspace_raw, data_raw, locations);
-  delete[] datatype_raw;
-  delete[] dataspace_raw;
-  delete[] data_raw;
+  // Read coordinates
+  read_hdf5_float_array("x1f", rf);
+  read_hdf5_float_array("x2f", thf);
+  read_hdf5_float_array("x3f", phf);
+  read_hdf5_float_array("x1v", r);
+  read_hdf5_float_array("x2v", th);
+  read_hdf5_float_array("x3v", ph);
+
+  // Read cell data
+  read_hdf5_float_array("prim", prim);
+  read_hdf5_float_array("B", bb);
   return;
 }
 
@@ -375,6 +374,58 @@ void athena_reader::read_hdf5_tree()
 
 //--------------------------------------------------------------------------------------------------
 
+// Function to read integer array dataset from HDF5 file by name
+// Inputs:
+//   name: name of dataset
+// Outputs:
+//   int_array: array allocated and set (indirectly)
+// Notes:
+//   Changes stream pointer.
+void athena_reader::read_hdf5_int_array(const char *name, array<int> &int_array)
+{
+  // Locate header
+  unsigned long int header_address = read_hdf5_dataset_header_address(name);
+
+  // Read header
+  unsigned char *datatype_raw, *dataspace_raw, *data_raw;
+  read_hdf5_data_object_header(header_address, &datatype_raw, &dataspace_raw, &data_raw);
+
+  // Set array
+  set_hdf5_int_array(datatype_raw, dataspace_raw, data_raw, int_array);
+  delete[] datatype_raw;
+  delete[] dataspace_raw;
+  delete[] data_raw;
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to read float array dataset from HDF5 file by name
+// Inputs:
+//   name: name of dataset
+// Outputs:
+//   int_array: array allocated and set (indirectly)
+// Notes:
+//   Changes stream pointer.
+void athena_reader::read_hdf5_float_array(const char *name, array<float> &float_array)
+{
+  // Locate header
+  unsigned long int header_address = read_hdf5_dataset_header_address(name);
+
+  // Read header
+  unsigned char *datatype_raw, *dataspace_raw, *data_raw;
+  read_hdf5_data_object_header(header_address, &datatype_raw, &dataspace_raw, &data_raw);
+
+  // Set array
+  set_hdf5_float_array(datatype_raw, dataspace_raw, data_raw, float_array);
+  delete[] datatype_raw;
+  delete[] dataspace_raw;
+  delete[] data_raw;
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
 // Function to locate HDF5 header address for dataset with given name
 // Inputs:
 //   name: name of dataset
@@ -533,12 +584,10 @@ void athena_reader::read_hdf5_data_object_header(unsigned long int data_object_h
 
       // Check layout version and class
       int offset = 0;
-      if (message_data[offset] != 3)
+      if (message_data[offset++] != 3)
         throw ray_trace_exception("Error: Unexpected HDF5 data layout message version.\n");
-      offset += 1;
-      if (message_data[offset] != 1)
+      if (message_data[offset++] != 1)
         throw ray_trace_exception("Error: Unexpected HDF5 data layout class.\n");
-      offset += 1;
 
       // Read data layout
       std::memcpy(&data_address, message_data + offset, 8);
@@ -628,7 +677,7 @@ void athena_reader::set_hdf5_string_array(const unsigned char *datatype_raw,
 
 //--------------------------------------------------------------------------------------------------
 
-// Function to initialize 4-byte integer array dataset from HDF5
+// Function to initialize integer array dataset from HDF5
 // Inputs:
 //   datatype_raw: raw datatype description
 //   dataspace_raw: raw dataspace description
@@ -637,7 +686,8 @@ void athena_reader::set_hdf5_string_array(const unsigned char *datatype_raw,
 //   int_array: array allocated and set
 // Notes:
 //   Must have datatype version 1.
-//   Must be 4 bytes.
+//   Must be 4 or 8 bytes.
+//   8-byte integers will be truncated to 4 bytes.
 //   Must have trivial padding.
 //   Must have no offset.
 //   Must be run on little-endian machine.
@@ -665,7 +715,7 @@ void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
 
   // Read and check properties
   bool rev_endian = class_1 & 0b00000001;
-  if ((class_1 & 0b00000010) != 0 or (class_1 & 0b00000100) != 0)
+  if (class_1 & 0b00000010 or class_1 & 0b00000100)
     throw ray_trace_exception("Error: Unexpected HDF5 fixed-point padding.\n");
   bool signed_val = class_1 & 0b00001000;
   unsigned short int bit_offset, bit_precision;
@@ -705,6 +755,104 @@ void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
       int_array(n) = *reinterpret_cast<int *>(buffer);
     else
       int_array(n) = static_cast<int>(*reinterpret_cast<unsigned int *>(buffer));
+  }
+  delete[] buffer;
+
+  // Free dimensions
+  delete[] dims;
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to initialize 4-byte floating point array dataset from HDF5
+// Inputs:
+//   datatype_raw: raw datatype description
+//   dataspace_raw: raw dataspace description
+//   data_raw: raw data
+// Outputs:
+//   float_array: array allocated and set
+// Notes:
+//   Must have datatype version 1.
+//   Must be standard 4-byte floats.
+//   Must be run on little-endian machine.
+void athena_reader::set_hdf5_float_array(const unsigned char *datatype_raw,
+    const unsigned char *dataspace_raw, const unsigned char *data_raw, array<float> &float_array)
+{
+  // Check datatype version and class
+  int offset = 0;
+  unsigned char version_class = datatype_raw[offset++];
+  if (version_class >> 4 != 1)
+    throw ray_trace_exception("Error: Unexpected HDF5 datatype version.\n");
+  if ((version_class & 0b00001111) != 1)
+    throw ray_trace_exception("Error: Unexpected HDF5 datatype class.\n");
+
+  // Read datatype metadata
+  unsigned char class_1 = datatype_raw[offset++];
+  unsigned char class_2 = datatype_raw[offset++];
+  offset++;
+
+  // Read data size
+  unsigned int size;
+  std::memcpy(&size, datatype_raw + offset, 4);
+  offset += 4;
+  if (size != 4)
+    throw ray_trace_exception("Error: Unexpected float size.\n");
+
+  // Check properties
+  bool rev_endian = class_1 & 0b00000001;
+  if (class_1 & 0b01000000)
+    throw ray_trace_exception("Error: Unexpected HDF5 floating-point byte order.\n");
+  if (class_1 & 0b00001110)
+    throw ray_trace_exception("Error: Unexpected HDF5 floating-point padding.\n");
+  if ((class_1 & 0b00110000) != 0b00100000)
+    throw ray_trace_exception("Error: Unexpected HDF5 floating-point mantissa normalization.\n");
+  if (class_2 != 31)
+    throw ray_trace_exception("Error: Unexpected HDF5 floating-point sign location.\n");
+  unsigned short int bit_offset, bit_precision;
+  unsigned char exp_loc, exp_size, man_loc, man_size;
+  unsigned int exp_bias;
+  std::memcpy(&bit_offset, datatype_raw + offset, 2);
+  offset += 2;
+  std::memcpy(&bit_precision, datatype_raw + offset, 2);
+  offset += 2;
+  std::memcpy(&exp_loc, datatype_raw + offset++, 1);
+  std::memcpy(&exp_size, datatype_raw + offset++, 1);
+  std::memcpy(&man_loc, datatype_raw + offset++, 1);
+  std::memcpy(&man_size, datatype_raw + offset++, 1);
+  std::memcpy(&exp_bias, datatype_raw + offset, 4);
+  offset += 4;
+  if (bit_offset != 0 or bit_precision != 32 or exp_loc != 23 or exp_size != 8 or man_loc != 0
+      or man_size != 23 or exp_bias != 127)
+    throw ray_trace_exception("Error: Unexpected HDF5 floating-point bit layout.\n");
+
+  // Read dimensions
+  unsigned long int *dims;
+  int num_dims;
+  read_hdf5_dataspace_dims(dataspace_raw, &dims, &num_dims);
+  unsigned int num_elements = 1;
+  for (int n = 0; n < num_dims; n++)
+    num_elements *= static_cast<unsigned int>(dims[n]);
+
+  // Allocate array
+  if (num_dims == 2)
+    float_array.allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]));
+  else if (num_dims == 5)
+    float_array.allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]),
+        static_cast<int>(dims[2]), static_cast<int>(dims[3]), static_cast<int>(dims[4]));
+  else
+    throw ray_trace_exception("Error: Unexpected HDF5 floating-point array size.\n");
+
+  // Initialize array
+  char *buffer = new char[size];
+  for (unsigned int n = 0; n < num_elements; n++)
+  {
+    if (rev_endian)
+      for (unsigned int m = 0; m < size; m++)
+        std::memcpy(buffer + size - 1 - m, data_raw + n * size + m, 1);
+    else
+      std::memcpy(buffer, data_raw + n * size, 4);
+    float_array(n) = *reinterpret_cast<float *>(buffer);
   }
   delete[] buffer;
 
