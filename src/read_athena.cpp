@@ -64,6 +64,14 @@ void athena_reader::read()
   delete[] datatype_raw;
   delete[] dataspace_raw;
   delete[] data_raw;
+
+  // Read location data
+  header_address = read_hdf5_dataset_header_address("LogicalLocations");
+  read_hdf5_data_object_header(header_address, &datatype_raw, &dataspace_raw, &data_raw);
+  set_hdf5_int_array(datatype_raw, dataspace_raw, data_raw, locations);
+  delete[] datatype_raw;
+  delete[] dataspace_raw;
+  delete[] data_raw;
   return;
 }
 
@@ -652,7 +660,7 @@ void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
   unsigned int size;
   std::memcpy(&size, datatype_raw + offset, 4);
   offset += 4;
-  if (size != 4)
+  if (size != 4 and size != 8)
     throw ray_trace_exception("Error: Unexpected int size.\n");
 
   // Read and check properties
@@ -676,27 +684,29 @@ void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
   for (int n = 0; n < num_dims; n++)
     num_elements *= static_cast<unsigned int>(dims[n]);
 
-  // Allocate and initialize array
+  // Allocate array
   if (num_dims == 1)
-  {
     int_array.allocate(static_cast<int>(dims[0]));
-    char *buffer = new char[size];
-    for (unsigned int n = 0; n < num_elements; n++)
-    {
-      if (rev_endian)
-        for (unsigned int m = 0; m < size; m++)
-          std::memcpy(buffer + size - 1 - m, data_raw + n * size + m, 1);
-      else
-        std::memcpy(buffer, data_raw + n * size, 4);
-      if (signed_val)
-        int_array(n) = *reinterpret_cast<int *>(buffer);
-      else
-        int_array(n) = static_cast<int>(*reinterpret_cast<unsigned int *>(buffer));
-    }
-    delete[] buffer;
-  } else {
+  else if (num_dims == 2)
+    int_array.allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]));
+  else
     throw ray_trace_exception("Error: Unexpected HDF5 fixed-point array size.\n");
+
+  // Initialize array
+  char *buffer = new char[size];
+  for (unsigned int n = 0; n < num_elements; n++)
+  {
+    if (rev_endian)
+      for (unsigned int m = 0; m < size; m++)
+        std::memcpy(buffer + size - 1 - m, data_raw + n * size + m, 1);
+    else
+      std::memcpy(buffer, data_raw + n * size, 4);
+    if (signed_val)
+      int_array(n) = *reinterpret_cast<int *>(buffer);
+    else
+      int_array(n) = static_cast<int>(*reinterpret_cast<unsigned int *>(buffer));
   }
+  delete[] buffer;
 
   // Free dimensions
   delete[] dims;

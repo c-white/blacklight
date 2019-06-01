@@ -38,6 +38,7 @@ struct athena_reader
 
   // Data
   array<int> levels;
+  array<int> locations;
 
   // Functions
   void read();
