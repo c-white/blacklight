@@ -10,12 +10,13 @@ DEP_EXT = d
 # Compiler and flags
 CC := g++
 CPPFLAGS := -MMD -MP
-CXXFLAGS := -std=c++17 -O3 -Wpedantic -Wall -Wextra -Wdouble-promotion -Wformat=2 -Wformat-signedness \
-	-Wnull-dereference -Wmissing-include-dirs -Wunused -Wuninitialized -Wstrict-overflow=5 -Wstringop-truncation \
-	-Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wshadow -Wplacement-new=2 -Wundef -Wunused-macros -Wcast-qual \
-	-Wcast-align -Wconversion -Wzero-as-null-pointer-constant -Wuseless-cast -Wextra-semi -Wsign-conversion -Wlogical-op \
-	-Wmissing-declarations -Wredundant-decls -Wctor-dtor-privacy -Wnoexcept -Wnon-virtual-dtor -Wstrict-null-sentinel \
-	-Wold-style-cast -Woverloaded-virtual -Wsign-promo
+CXXFLAGS := -std=c++17 -O3 -Wpedantic -Wall -Wextra -Wdouble-promotion -Wformat=2 \
+	-Wformat-signedness -Wnull-dereference -Wmissing-include-dirs -Wunused -Wuninitialized \
+	-Wstrict-overflow=5 -Wstringop-truncation -Walloc-zero -Wduplicated-branches -Wduplicated-cond \
+	-Wshadow -Wplacement-new=2 -Wundef -Wunused-macros -Wcast-qual -Wcast-align -Wconversion \
+	-Wzero-as-null-pointer-constant -Wuseless-cast -Wextra-semi -Wsign-conversion -Wlogical-op \
+	-Wmissing-declarations -Wredundant-decls -Wctor-dtor-privacy -Wnoexcept -Wnon-virtual-dtor \
+	-Wstrict-null-sentinel -Wold-style-cast -Woverloaded-virtual -Wsign-promo
 LDFLAGS :=
 LDLIBS :=
 
