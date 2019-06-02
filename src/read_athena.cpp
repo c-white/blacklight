@@ -6,6 +6,8 @@
 #include <ios>      // streamoff
 #include <string>   // getline, string
 
+#include <iostream>
+
 // Ray Trace headers
 #include "read_athena.hpp"
 #include "array.hpp"        // array
@@ -321,6 +323,36 @@ void athena_reader::read_hdf5_root_object_header()
   if (num_variables.n1 != num_dataset_names)
     throw ray_trace_exception("Error: DatasetNames and NumVariables file-level attribute "
         "mismatch.\n");
+  verify_variables();
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to check that needed variables located as expected
+// Inputs: (none)
+// Outputs: (none)
+// Notes:
+//   Assumes metadata set.
+void athena_reader::verify_variables()
+{
+  // Check that primitives and magnetic fields are present in expected order
+  if (num_dataset_names < 2)
+    throw ray_trace_exception("Error: Insufficient datasets in data file.\n");
+  if (not dataset_names[ind_prim].compare("prim"))
+    throw ray_trace_exception("Error: Primitives not found in data file.\n");
+  if (not dataset_names[ind_bb].compare("B"))
+    throw ray_trace_exception("Error: Magnetic fields not found in data file.\n");
+
+  // Check that primitives and magnetic fields have expected sizes
+  if (num_variables(ind_prim) != 5)
+    throw ray_trace_exception("Error: Primitives from data file do not have 5 variables.\n");
+  if (num_variables(ind_bb) != 3)
+    throw ray_trace_exception("Error: Magnetic fields from data file do not have 5 variables.\n");
+
+  // Check that variables are in expected locations
+  if (not variable_names[ind_rho].compare("rho"))
+    throw ray_trace_exception("Error: Density not found.\n");
   return;
 }
 

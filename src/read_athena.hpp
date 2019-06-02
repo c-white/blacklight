@@ -35,6 +35,9 @@ struct athena_reader
   array<int> num_variables;
   unsigned long int *children_addresses;
   int num_children = 0;
+  const int ind_prim = 0;
+  const int ind_bb = 1;
+  const int ind_rho = 0;
 
   // Data
   array<int> levels;
@@ -49,6 +52,7 @@ struct athena_reader
   void read_root_group_symbol_table_entry();
   void read_hdf5_root_heap();
   void read_hdf5_root_object_header();
+  void verify_variables();
   void read_hdf5_tree();
   void read_hdf5_int_array(const char *name, array<int> &int_array);
   void read_hdf5_float_array(const char *name, array<float> &float_array);
