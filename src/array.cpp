@@ -110,10 +110,10 @@ array<type>::array(const array<type> &source)
 {
   data = source.data;
   n1 = source.n1;
-  n2 = source.n1;
-  n3 = source.n1;
-  n4 = source.n1;
-  n5 = source.n1;
+  n2 = source.n2;
+  n3 = source.n3;
+  n4 = source.n4;
+  n5 = source.n5;
   n_tot = source.n_tot;
   allocated = source.allocated;
   is_copy = true;
@@ -127,10 +127,10 @@ array<type> &array<type>::operator=(const array<type> &source)
 {
   data = source.data;
   n1 = source.n1;
-  n2 = source.n1;
-  n3 = source.n1;
-  n4 = source.n1;
-  n5 = source.n1;
+  n2 = source.n2;
+  n3 = source.n3;
+  n4 = source.n4;
+  n5 = source.n5;
   n_tot = source.n_tot;
   allocated = source.allocated;
   is_copy = true;
@@ -455,4 +455,83 @@ type &array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3,
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
       * (i3 + static_cast<unsigned int>(n3) * (i4 + static_cast<unsigned int>(n4) * i5)))];
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Multidimensional array slicing
+// Inputs:
+//   dimension: dimension of slice starting at 1 for innermost dimension
+//   index: index of slice starting at 0 for first slice in given dimension
+// Outputs: (none)
+// Notes:
+//   Moves data pointer and redefines data shape.
+//   Checks to make sure only a shallow copy is being sliced so that destructor will not try to
+//       deallocate memory.
+template<typename type>
+void array<type>::slice(int dimension, int index)
+{
+  // Check that this is a shallow copy
+  if (not is_copy)
+    throw ray_trace_exception("Error: Attempting to slice array that is not shallow copy.");
+
+  // Slice array
+  switch (dimension)
+  {
+    // 1D
+    case 1:
+      if (index < 0 or index >= n1)
+        throw ray_trace_exception("Error: Attempting to slice outside array bounds.");
+      data += index;
+      n2 = 1;
+      n3 = 1;
+      n4 = 1;
+      n5 = 1;
+      break;
+
+    // 2D
+    case 2:
+      if (index < 0 or index >= n2)
+        throw ray_trace_exception("Error: Attempting to slice outside array bounds.");
+      data += index * n1;
+      n3 = 1;
+      n4 = 1;
+      n5 = 1;
+      break;
+
+    // 3D
+    case 3:
+      if (index < 0 or index >= n3)
+        throw ray_trace_exception("Error: Attempting to slice outside array bounds.");
+      data += index * n2 * n1;
+      n4 = 1;
+      n5 = 1;
+      break;
+
+    // 4D
+    case 4:
+      if (index < 0 or index >= n4)
+        throw ray_trace_exception("Error: Attempting to slice outside array bounds.");
+      data += index * n3 * n2 * n1;
+      n4 = 1;
+      n5 = 1;
+      break;
+
+    // 5D
+    case 5:
+      if (index < 0 or index >= n5)
+        throw ray_trace_exception("Error: Attempting to slice outside array bounds.");
+      data += index * n4 * n3 * n2 * n1;
+      n5 = 1;
+      break;
+
+    // Invalid dimension
+    default:
+      if (dimension < 1 or dimension > max_dims)
+        throw ray_trace_exception("Error: Attempting to slice at invalid dimension.");
+  }
+
+  // Recalculate number of elements
+  n_tot = n1 * n2 * n3 * n4 * n5;
+  return;
 }

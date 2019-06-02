@@ -26,14 +26,17 @@ struct array
   int n_tot;
   bool allocated = false;
   bool is_copy = false;
+  static constexpr int max_dims = 5;
 
-  // Functions
+  // Functions - allocators
   void allocate();
   void allocate(int n1_);
   void allocate(int n2_, int n1_);
   void allocate(int n3_, int n2_, int n1_);
   void allocate(int n4_, int n3_, int n2_, int n1_);
   void allocate(int n5_, int n4_, int n3_, int n2_, int n1_);
+
+  // Functions - read accessors
   type operator()(int i1_) const;
   type operator()(unsigned int i1_) const;
   type operator()(int i2_, int i1_) const;
@@ -45,6 +48,8 @@ struct array
   type operator()(int i5_, int i4_, int i3_, int i2_, int i1_) const;
   type operator()(unsigned int i5_, unsigned int i4_, unsigned int i3_, unsigned int i2_,
       unsigned int i1_) const;
+
+  // Functions - read/write accessors
   type &operator()(int i1_);
   type &operator()(unsigned int i1_);
   type &operator()(int i2_, int i1_);
@@ -56,6 +61,9 @@ struct array
   type &operator()(int i5_, int i4_, int i3_, int i2_, int i1_);
   type &operator()(unsigned int i5_, unsigned int i4_, unsigned int i3_, unsigned int i2_,
       unsigned int i1_);
+
+  // Functions - miscellaneous
+  void slice(int dimension, int index);
 };
 
 #endif
