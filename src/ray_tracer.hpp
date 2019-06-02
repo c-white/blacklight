@@ -20,6 +20,7 @@ struct ray_tracer
 
   // Data
   array<float> rf, thf, phf;
+  array<float> rho;
 
   // Functions
 };
