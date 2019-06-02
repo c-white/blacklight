@@ -39,12 +39,17 @@ void input_reader::read()
     // Remove spaces
     line.erase(std::remove_if(line.begin(), line.end(), removeable_space), line.end());
 
-    // Skip blank lines and comments
-    if (line.empty() or line[0] == '#')
+    // Remove comments
+    std::string::size_type pos = line.find('#');
+    if (pos != std::string::npos)
+      line.erase(pos);
+
+    // Skip blank lines
+    if (line.empty())
       continue;
 
     // Split on '='
-    std::string::size_type pos = line.find_first_of("=");
+    pos = line.find('=');
     if (pos == std::string::npos)
       throw ray_trace_exception("Error: Invalid assignment in input file.\n");
     std::string key = line.substr(0, pos);
