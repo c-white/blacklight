@@ -6,8 +6,6 @@
 #include <ios>      // streamoff
 #include <string>   // getline, string
 
-#include <iostream>
-
 // Ray Trace headers
 #include "read_athena.hpp"
 #include "array.hpp"        // array
@@ -73,6 +71,9 @@ void athena_reader::read()
   // Read cell data
   read_hdf5_float_array("prim", prim);
   read_hdf5_float_array("B", bb);
+
+  // Close data file
+  data_stream.close();
   return;
 }
 

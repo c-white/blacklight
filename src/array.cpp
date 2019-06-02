@@ -13,10 +13,7 @@ template struct array<float>;
 // Multidimensional array constructor (empty)
 // Inputs: (none)
 template<typename type>
-array<type>::array()
-{
-  allocated = false;
-}
+array<type>::array() {}
 
 //--------------------------------------------------------------------------------------------------
 
@@ -107,11 +104,46 @@ array<type>::array(int n5_, int n4_, int n3_, int n2_, int n1_)
 
 //--------------------------------------------------------------------------------------------------
 
+// Multidimensional array copy constructor
+template<typename type>
+array<type>::array(const array<type> &source)
+{
+  data = source.data;
+  n1 = source.n1;
+  n2 = source.n1;
+  n3 = source.n1;
+  n4 = source.n1;
+  n5 = source.n1;
+  n_tot = source.n_tot;
+  allocated = source.allocated;
+  is_copy = true;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Multidimensional array copy assignment constructor
+template<typename type>
+array<type> &array<type>::operator=(const array<type> &source)
+{
+  data = source.data;
+  n1 = source.n1;
+  n2 = source.n1;
+  n3 = source.n1;
+  n4 = source.n1;
+  n5 = source.n1;
+  n_tot = source.n_tot;
+  allocated = source.allocated;
+  is_copy = true;
+  return *this;
+}
+
+//--------------------------------------------------------------------------------------------------
+
 // Multidimensional array destructor
 template<typename type>
 array<type>::~array()
 {
-  if (allocated)
+  if (allocated and not is_copy)
     delete[] data;
 }
 
@@ -125,6 +157,7 @@ void array<type>::allocate()
 {
   if (allocated)
     throw ray_trace_exception("Error: Attempting to reallocate array.");
+  allocated = true;
   n_tot = n1 * n2 * n3 * n4 * n5;
   if (n_tot <= 0)
     throw ray_trace_exception("Error: Attempting to allocate empty array.");

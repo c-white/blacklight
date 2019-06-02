@@ -16,15 +16,16 @@ struct array
   array(int n3_, int n2_, int n1_);
   array(int n4_, int n3_, int n2_, int n1_);
   array(int n5_, int n4_, int n3_, int n2_, int n1_);
-  array(const array<type> &source) = delete;
-  array &operator=(const array<type> &source) = delete;
+  array(const array<type> &source);
+  array &operator=(const array<type> &source);
   ~array();
 
   // Data
   type *data;
   int n1, n2, n3, n4, n5;
   int n_tot;
-  bool allocated;
+  bool allocated = false;
+  bool is_copy = false;
 
   // Functions
   void allocate();
