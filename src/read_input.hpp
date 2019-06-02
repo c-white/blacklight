@@ -22,8 +22,8 @@ struct input_reader
   std::string output_file;
 
   // Data - coordinates
-  double m;
-  double a;
+  double bh_m;
+  double bh_a;
 
   // Data - image
   double im_th;

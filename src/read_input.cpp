@@ -61,9 +61,9 @@ void input_reader::read()
     else if (key == "output_file")
       output_file = val;
     else if (key == "m")
-      m = stod(val);
+      bh_m = stod(val);
     else if (key == "a")
-      a = stod(val);
+      bh_a = stod(val);
     else if (key == "im_theta")
       im_th = stod(val) * math::pi/180.0;
     else if (key == "im_phi")

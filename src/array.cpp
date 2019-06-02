@@ -7,6 +7,7 @@
 // Instantiations
 template struct array<int>;
 template struct array<float>;
+template struct array<double>;
 
 //--------------------------------------------------------------------------------------------------
 

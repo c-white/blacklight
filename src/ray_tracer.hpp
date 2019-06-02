@@ -20,27 +20,30 @@ struct ray_tracer
   ~ray_tracer();
 
   // Input data - coordinates
-  double m;
-  double a;
+  double bh_m;
+  double bh_a;
 
   // Input data - image
   double im_th;
   double im_ph;
+  double im_rot;
   double im_width;
   int im_res;
   int num_samples;
 
   // Grid data
+  double r_min, r_max, th_min, th_max, ph_min, ph_max;
   array<float> rf, thf, phf;
   array<float> rho;
 
   // Sample and image data
-  array<float> samples;
-  array<float> image;
+  const int ind_rho = 0;
+  const int num_states = 1;
+  array<double> im_pos, im_dir;
 
   // Functions
-  void sample_rays();
   void make_image();
+  void initialize_camera();
 };
 
 #endif
