@@ -6,9 +6,10 @@
 
 // Ray Trace headers
 #include "ray_trace.hpp"
+#include "exceptions.hpp"   // ray_trace_exception
+#include "ray_tracer.hpp"   // ray_tracer
 #include "read_athena.hpp"  // athena_reader
 #include "read_input.hpp"   // input_reader
-#include "exceptions.hpp"   // ray_trace_exception
 
 //--------------------------------------------------------------------------------------------------
 
@@ -55,6 +56,9 @@ int main(int argc, char *argv[])
     std::cout << "Error: Could not read data file.\n";
     return 1;
   }
+
+  // Process data
+  ray_tracer ray_tracing(raw_data);
 
   // End program
   return 0;
