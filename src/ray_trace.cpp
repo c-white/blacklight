@@ -58,7 +58,18 @@ int main(int argc, char *argv[])
   }
 
   // Process data
-  ray_tracer ray_tracing(raw_data);
+  ray_tracer ray_tracing(inputs, raw_data);
+  try
+  {
+    ray_tracing.sample_rays();
+    ray_tracing.make_image();
+  } catch (const ray_trace_exception &exception) {
+    std::cout << exception.what();
+    return 1;
+  } catch (...) {
+    std::cout << "Error: Could not process data.\n";
+    return 1;
+  }
 
   // End program
   return 0;
