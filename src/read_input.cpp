@@ -68,6 +68,8 @@ void input_reader::read()
       im_th = stod(val) * math::pi/180.0;
     else if (key == "im_phi")
       im_ph = stod(val) * math::pi/180.0;
+    else if (key == "im_rot")
+      im_rot = stod(val) * math::pi/180.0;
     else if (key == "im_width")
       im_width = stod(val);
     else if (key == "im_res")
