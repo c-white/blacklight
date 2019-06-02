@@ -40,6 +40,7 @@ struct athena_reader
   const int ind_rho = 0;
 
   // Data
+  float r_min, r_max, th_min, th_max, ph_min, ph_max;
   array<int> levels;
   array<int> locations;
   array<float> rf, thf, phf;

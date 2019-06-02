@@ -224,6 +224,9 @@ void athena_reader::read_hdf5_root_object_header()
   data_stream.ignore(4);
 
   // Go through messages
+  bool root_grid_x1_found = false;
+  bool root_grid_x2_found = false;
+  bool root_grid_x3_found = false;
   bool dataset_names_found = false;
   bool variable_names_found = false;
   bool num_variables_found = false;
@@ -290,8 +293,26 @@ void athena_reader::read_hdf5_root_object_header()
           static_cast<std::string::size_type>(static_cast<int>(name_size) - 1));
 
       // Read and set desired attributes
-      if (name == "DatasetNames")
+      if (name == "RootGridX1")
       {
+        root_grid_x1_found = true;
+        array<float> root_grid_x1;
+        set_hdf5_float_array(datatype_raw, dataspace_raw, message_data + offset, root_grid_x1);
+        r_min = root_grid_x1(0);
+        r_max = root_grid_x1(1);
+      } else if (name == "RootGridX2") {
+        root_grid_x2_found = true;
+        array<float> root_grid_x2;
+        set_hdf5_float_array(datatype_raw, dataspace_raw, message_data + offset, root_grid_x2);
+        th_min = root_grid_x2(0);
+        th_max = root_grid_x2(1);
+      } else if (name == "RootGridX3") {
+        root_grid_x3_found = true;
+        array<float> root_grid_x3;
+        set_hdf5_float_array(datatype_raw, dataspace_raw, message_data + offset, root_grid_x3);
+        ph_min = root_grid_x3(0);
+        ph_max = root_grid_x3(1);
+      } else if (name == "DatasetNames") {
         dataset_names_found = true;
         set_hdf5_string_array(datatype_raw, dataspace_raw, message_data + offset, &dataset_names,
             &num_dataset_names);
@@ -314,12 +335,14 @@ void athena_reader::read_hdf5_root_object_header()
     delete[] message_data;
 
     // Break when required information found
-    if (dataset_names_found and variable_names_found and num_variables_found)
+    if (root_grid_x1_found and root_grid_x2_found and root_grid_x2_found and dataset_names_found
+        and variable_names_found and num_variables_found)
       break;
   }
 
   // Check that appropriate messages were found
-  if (not (dataset_names_found and variable_names_found and num_variables_found))
+  if (not (root_grid_x1_found and root_grid_x2_found and root_grid_x3_found and dataset_names_found
+      and variable_names_found and num_variables_found))
     throw ray_trace_exception("Error: Could not find needed file-level attributes.\n");
   if (num_variables.n1 != num_dataset_names)
     throw ray_trace_exception("Error: DatasetNames and NumVariables file-level attribute "
@@ -868,7 +891,9 @@ void athena_reader::set_hdf5_float_array(const unsigned char *datatype_raw,
     num_elements *= static_cast<unsigned int>(dims[n]);
 
   // Allocate array
-  if (num_dims == 2)
+  if (num_dims == 1)
+    float_array.allocate(static_cast<int>(dims[0]));
+  else if (num_dims == 2)
     float_array.allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]));
   else if (num_dims == 5)
     float_array.allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]),
@@ -884,7 +909,7 @@ void athena_reader::set_hdf5_float_array(const unsigned char *datatype_raw,
       for (unsigned int m = 0; m < size; m++)
         std::memcpy(buffer + size - 1 - m, data_raw + n * size + m, 1);
     else
-      std::memcpy(buffer, data_raw + n * size, 4);
+      std::memcpy(buffer, data_raw + n * size, size);
     float_array(n) = *reinterpret_cast<float *>(buffer);
   }
   delete[] buffer;
