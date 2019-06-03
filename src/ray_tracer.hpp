@@ -24,12 +24,13 @@ struct ray_tracer
   double bh_a;
 
   // Input data - image
+  double im_r;
   double im_th;
   double im_ph;
   double im_rot;
   double im_width;
   int im_res;
-  int num_samples;
+  double im_step;
 
   // Grid data
   double r_min, r_max, th_min, th_max, ph_min, ph_max;

@@ -7,9 +7,10 @@ m = 1.0   # black hole mass scale for data (usually 1)
 a = 0.98  # black hole dimensionless spin (magnitude less than 1)
 
 # Image
-im_theta    = 90.0  # polar coordinate of camera center in degrees (0.0 for north, 180.0 for south)
-im_phi      = 0.0   # azimuthal coordinate of camera in degrees
-im_rot      = 0.0   # rotation of camera in degrees (0.0 for north up, 90.0 for north left)
-im_width    = 20.0  # full width of image in gravitational units
-im_res      = 10    # number of pixels per side
-num_samples = 100   # number of samples along each geodesic
+im_radius = 100.0  # radial coordinate of camera center in gravitational units
+im_theta  = 90.0   # polar coordinate of camera center in degrees (0.0 for north, 180.0 for south)
+im_phi    = 0.0    # azimuthal coordinate of camera in degrees
+im_rot    = 0.0    # rotation of camera in degrees (0.0 for north up, 90.0 for north left)
+im_width  = 20.0   # full width of image in gravitational units
+im_res    = 10     # number of pixels per side
+im_step   = 0.1    # step size along each geodesic

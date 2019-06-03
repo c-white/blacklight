@@ -22,12 +22,13 @@ ray_tracer::ray_tracer(const input_reader &inputs, const athena_reader &raw_data
   bh_a = inputs.bh_a;
 
   // Copy image input data
+  im_r = inputs.im_r;
   im_th = inputs.im_th;
   im_ph = inputs.im_ph;
   im_rot = inputs.im_rot;
   im_width = inputs.im_width;
   im_res = inputs.im_res;
-  num_samples = inputs.num_samples;
+  im_step = inputs.im_step;
 
   // Copy raw data scalars
   r_min = raw_data.r_min;
@@ -78,10 +79,9 @@ void ray_tracer::make_image()
 void ray_tracer::initialize_camera()
 {
   // Calculate camera position
-  double im_r = r_max;
-  double im_x = r_max * std::sin(im_th) * std::cos(im_ph);
-  double im_y = r_max * std::sin(im_th) * std::sin(im_ph);
-  double im_z = r_max * std::cos(im_th);
+  double im_x = im_r * std::sin(im_th) * std::cos(im_ph);
+  double im_y = im_r * std::sin(im_th) * std::sin(im_ph);
+  double im_z = im_r * std::cos(im_th);
 
   // Calculate camera direction
   double im_nx = im_x / im_r;

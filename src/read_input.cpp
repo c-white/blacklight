@@ -4,7 +4,7 @@
 #include <algorithm>   // remove_if
 #include <cctype>      // isspace
 #include <fstream>     // ifstream
-#include <string>      // getline, stod, string
+#include <string>      // getline, stod, stoi, string
 
 // Ray Trace headers
 #include "read_input.hpp"
@@ -61,21 +61,23 @@ void input_reader::read()
     else if (key == "output_file")
       output_file = val;
     else if (key == "m")
-      bh_m = stod(val);
+      bh_m = std::stod(val);
     else if (key == "a")
-      bh_a = stod(val);
+      bh_a = std::stod(val);
+    else if (key == "im_radius")
+      im_r = std::stod(val);
     else if (key == "im_theta")
-      im_th = stod(val) * math::pi/180.0;
+      im_th = std::stod(val) * math::pi/180.0;
     else if (key == "im_phi")
-      im_ph = stod(val) * math::pi/180.0;
+      im_ph = std::stod(val) * math::pi/180.0;
     else if (key == "im_rot")
-      im_rot = stod(val) * math::pi/180.0;
+      im_rot = std::stod(val) * math::pi/180.0;
     else if (key == "im_width")
-      im_width = stod(val);
+      im_width = std::stod(val);
     else if (key == "im_res")
-      im_res = stoi(val);
-    else if (key == "num_samples")
-      num_samples = stoi(val);
+      im_res = std::stoi(val);
+    else if (key == "im_step")
+      im_step = std::stod(val);
     else
       throw ray_trace_exception("Error: Unknown key in input file.\n");
   }

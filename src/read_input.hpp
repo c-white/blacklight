@@ -26,12 +26,13 @@ struct input_reader
   double bh_a;
 
   // Data - image
+  double im_r;
   double im_th;
   double im_ph;
   double im_rot;
   double im_width;
   int im_res;
-  int num_samples;
+  double im_step;
 
   // Functions
   void read();
