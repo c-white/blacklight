@@ -132,9 +132,9 @@ void ray_tracer::initialize_camera()
       double nth = (std::cos(th) * std::cos(ph) * im_nx + std::cos(th) * std::sin(ph) * im_ny
           - std::sin(th) * im_nz) / r;
       double nph = (-std::sin(ph) / std::sin(th) * im_nx + std::cos(ph) / std::sin(th) * im_ny) / r;
-      im_dir(0,m,l) = -nr;
-      im_dir(1,m,l) = -nth;
-      im_dir(2,m,l) = -nph;
+      im_dir(0,m,l) = nr;
+      im_dir(1,m,l) = nth;
+      im_dir(2,m,l) = nph;
     }
   return;
 }
