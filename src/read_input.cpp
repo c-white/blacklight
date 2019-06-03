@@ -78,6 +78,8 @@ void input_reader::read()
       im_res = std::stoi(val);
     else if (key == "im_step")
       im_step = std::stod(val);
+    else if (key == "im_max_steps")
+      im_max_steps = std::stoi(val);
     else
       throw ray_trace_exception("Error: Unknown key in input file.\n");
   }

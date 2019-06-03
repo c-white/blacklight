@@ -536,3 +536,19 @@ void array<type>::slice(int dimension, int index)
   n_tot = n1 * n2 * n3 * n4 * n5;
   return;
 }
+
+//--------------------------------------------------------------------------------------------------
+
+// Multidimensional array zeroing
+// Inputs: (none)
+// Outputs: (none)
+// Notes:
+//   Sets any allocated array to be zero.
+template<typename type>
+void array<type>::zero()
+{
+  if (allocated)
+    for (int n = 0; n < n_tot; n++)
+      data[n] = static_cast<type>(0);
+  return;
+}

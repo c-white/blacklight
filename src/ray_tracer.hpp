@@ -31,6 +31,7 @@ struct ray_tracer
   double im_width;
   int im_res;
   double im_step;
+  int im_max_steps;
 
   // Grid data
   double r_min, r_max, th_min, th_max, ph_min, ph_max;
@@ -41,10 +42,14 @@ struct ray_tracer
   const int ind_rho = 0;
   const int num_states = 1;
   array<double> im_pos, im_dir;
+  array<double> sample_pos, sample_dir, sample_len;
 
   // Functions
   void make_image();
   void initialize_camera();
+  void integrate_geodesics();
+  void gcov_func(double r, double th, array<double> &gcov);
+  void gcon_func(double r, double th, array<double> &gcon);
 };
 
 #endif

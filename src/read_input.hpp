@@ -33,6 +33,7 @@ struct input_reader
   double im_width;
   int im_res;
   double im_step;
+  int im_max_steps;
 
   // Functions
   void read();

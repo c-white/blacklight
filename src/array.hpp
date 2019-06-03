@@ -64,6 +64,7 @@ struct array
 
   // Functions - miscellaneous
   void slice(int dimension, int index);
+  void zero();
 };
 
 #endif
