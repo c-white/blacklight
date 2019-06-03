@@ -39,6 +39,7 @@ struct ray_tracer
   array<float> rho;
 
   // Sample and image data
+  double r_hor;
   const int ind_rho = 0;
   const int num_states = 1;
   array<double> im_pos, im_dir;
@@ -47,9 +48,11 @@ struct ray_tracer
   // Functions
   void make_image();
   void initialize_camera();
+  void initialize_geodesics();
   void integrate_geodesics();
   void gcov_func(double r, double th, array<double> &gcov);
   void gcon_func(double r, double th, array<double> &gcon);
+  void dgcon_func(double r, double th, array<double> &dgcon);
 };
 
 #endif

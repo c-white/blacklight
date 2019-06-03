@@ -14,4 +14,4 @@ im_rot       = 0.0    # rotation of camera in degrees (0/90 for north up/left)
 im_width     = 20.0   # full width of image in gravitational units
 im_res       = 10     # number of pixels per side
 im_step      = 0.1    # affine step size along each geodesic in units of current radius
-im_max_steps = 1000   # maximum number of steps allowed for each geodesic
+im_max_steps = 100    # maximum number of steps allowed for each geodesic
