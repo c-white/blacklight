@@ -5,6 +5,7 @@
 #include "exceptions.hpp"  // ray_trace_exception
 
 // Instantiations
+template struct array<bool>;
 template struct array<int>;
 template struct array<float>;
 template struct array<double>;

@@ -1,12 +1,15 @@
 // Ray Trace ray tracer
 
 // C++ headers
-#include <cmath>  // acos, atan2, copysign, cos, fmax, hypot, sin, sqrt
+#include <algorithm>  // max
+#include <cmath>      // acos, atan2, copysign, cos, fmax, fmod, hypot, sin, sqrt
+#include <iostream>   // cout
 
 // Ray Trace headers
 #include "ray_tracer.hpp"
 #include "array.hpp"        // array
 #include "exceptions.hpp"   // ray_trace_exception
+#include "ray_trace.hpp"    // math
 #include "read_athena.hpp"  // athena_reader
 #include "read_input.hpp"   // input_reader
 
@@ -211,7 +214,8 @@ void ray_tracer::initialize_geodesics()
 // Output: (none)
 // Notes:
 //   Assumes im_pos and im_dir have been set.
-//   Allocates and initializes sample_pos, sample_dir, and sample_len.
+//   Initializes im_steps.
+//   Allocates and initializes sample_pos, sample_dir, sample_len, and geodesic_flags.
 //   Assumes x^0 and x^3 are ignorable coordinates.
 //   Integrates via the midpoint method (2nd-order RK).
 void ray_tracer::integrate_geodesics()
@@ -221,13 +225,15 @@ void ray_tracer::integrate_geodesics()
   sample_dir.allocate(im_res, im_res, im_max_steps, 4);
   sample_len.allocate(im_res, im_res, im_max_steps);
   sample_len.zero();
+  geodesic_flags.allocate(im_res, im_res);
+  geodesic_flags.zero();
 
   // Allocate scratch arrays
   array<double> gcon(4, 4);
   array<double> dgcon(2, 4, 4);
 
   // Go through image pixels
-  bool max_steps_exceeded = false;
+  im_steps = 0;
   for (int m = 0; m < im_res; m++)
     for (int l = 0; l < im_res; l++)
     {
@@ -262,6 +268,31 @@ void ray_tracer::integrate_geodesics()
         for (int mu = 0; mu < 4; mu++)
           sample_pos(m,l,n,mu) = x[mu] + step/2.0 * dx1[mu];
 
+        // Check for bad geodesic termination
+        double th = sample_pos(m,l,n,2);
+        double ph = sample_pos(m,l,n,3);
+        if (th < -1.0/2.0 * math::pi or th > 3.0/2.0 * math::pi or ph < -2.0 * math::pi
+            or ph > 4.0 * math::pi)
+        {
+          geodesic_flags(m,l) = true;
+          break;
+        }
+
+        // Account for wrapping of angular coordinates
+        if (th < 0.0)
+        {
+          th = -th;
+          ph += math::pi;
+        }
+        if (th > math::pi)
+        {
+          th = 2.0 * math::pi - th;
+          ph += math::pi;
+        }
+        ph = std::fmod(ph, 2.0 * math::pi) + (ph >= 0.0 ? 0.0 : 2.0 * math::pi);
+        sample_pos(m,l,n,2) = th;
+        sample_pos(m,l,n,3) = ph;
+
         // Calculate momentum at half step
         dgcon_func(x[1], x[2], dgcon);
         double dp1[4] = {};
@@ -281,6 +312,33 @@ void ray_tracer::integrate_geodesics()
         for (int mu = 0; mu < 4; mu++)
           x[mu] += step * dx2[mu];
 
+        // Check for bad geodesic termination
+        th = x[2];
+        ph = x[3];
+        if (th < -1.0/2.0 * math::pi or th > 3.0/2.0 * math::pi or ph < -2.0 * math::pi
+            or ph > 4.0 * math::pi)
+        {
+          geodesic_flags(m,l) = true;
+          break;
+        }
+
+        // Account for wrapping of angular coordinates
+        th = x[2];
+        ph = x[3];
+        if (th < 0.0)
+        {
+          th = -th;
+          ph += math::pi;
+        }
+        if (th > math::pi)
+        {
+          th = 2.0 * math::pi - th;
+          ph += math::pi;
+        }
+        ph = std::fmod(ph, 2.0 * math::pi) + (ph >= 0.0 ? 0.0 : 2.0 * math::pi);
+        x[2] = th;
+        x[3] = ph;
+
         // Calculate momentum at full step
         dgcon_func(sample_pos(m,l,n,1), sample_pos(m,l,n,2), dgcon);
         double dp2[4] = {};
@@ -296,11 +354,129 @@ void ray_tracer::integrate_geodesics()
 
         // Check for too many steps taken
         if (n == im_max_steps - 1 and not ((x[1] > im_r and dx1[1] < 0.0) or x[1] < r_hor))
-          max_steps_exceeded = true;
+          geodesic_flags(m,l) = true;
+        im_steps = std::max(im_steps, n + 1);
       }
     }
-  if (max_steps_exceeded)
-    throw ray_trace_exception("Error: Geodesic requires too many steps\n");
+
+  // Note how many geodesics do not terminate properly
+  int num_bad_geodesics = 0;
+  for (int m = 0; m < im_res; m++)
+    for (int l = 0; l < im_res; l++)
+      if (geodesic_flags(m,l))
+        num_bad_geodesics++;
+  if (num_bad_geodesics > 0)
+    std::cout << "Warning: " << num_bad_geodesics << " out of " << im_res * im_res
+        << " geodesics terminate unexpectedly.\n";
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for resampling cell data onto rays.
+// Inputs: (none)
+// Output: (none)
+// Notes:
+//   Assumes im_steps, sample_pos, sample_len, and geodesic_flags have been set.
+//   Allocates and initializes sample_rho.
+void ray_tracer::sample_along_geodesics()
+{
+  // Allocate resampling arrays
+  sample_rho.allocate(im_res, im_res, im_steps);
+
+  // Prepare bookkeeping
+  int n_b = rf.n2;
+  int n_i = rf.n1 - 1;
+  int n_j = thf.n1 - 1;
+  int n_k = phf.n1 - 1;
+  int b = 0;
+  int i = 0;
+  int j = 0;
+  int k = 0;
+  double r_min_block = rf(b,0);
+  double r_max_block = rf(b,n_i);
+  double th_min_block = thf(b,0);
+  double th_max_block = thf(b,n_j);
+  double ph_min_block = phf(b,0);
+  double ph_max_block = phf(b,n_k);
+
+  // Resample cell data onto geodesics
+  for (int m = 0; m < im_res; m++)
+    for (int l = 0; l < im_res; l++)
+    {
+      // Set fallback values if geodesic poorly terminated
+      if (geodesic_flags(m,l))
+      {
+        for (int n = 0; n < im_steps; n++)
+          sample_rho(m,l,n) = rho_fallback;
+        continue;
+      }
+
+      // Go along geodesic
+      for (int n = 0; n < im_steps; n++)
+      {
+        // End if geodesic terminated
+        if (sample_len(m,l,n) == 0.0)
+          continue;
+
+        // Extract coordinates
+        double r = sample_pos(m,l,n,1);
+        double th = sample_pos(m,l,n,2);
+        double ph = sample_pos(m,l,n,3);
+
+        // Determine block
+        if (r < r_min_block or r > r_max_block or th < th_min_block or th > th_max_block
+            or ph < ph_min_block or ph > ph_max_block)
+        {
+          // Check if block contains position
+          for (b = 0; b < n_b; b++)
+          {
+            double r_min_temp = rf(b,0);
+            double r_max_temp = rf(b,n_i);
+            if (r < r_min_temp or r > r_max_temp)
+              continue;
+            double th_min_temp = thf(b,0);
+            double th_max_temp = thf(b,n_j);
+            if (th < th_min_temp or th > th_max_temp)
+              continue;
+            double ph_min_temp = phf(b,0);
+            double ph_max_temp = phf(b,n_k);
+            if (ph < ph_min_temp or ph > ph_max_temp)
+              continue;
+            i = 0;
+            j = 0;
+            k = 0;
+            r_min_block = r_min_temp;
+            r_max_block = r_max_temp;
+            th_min_block = th_min_temp;
+            th_max_block = th_max_temp;
+            ph_min_block = ph_min_temp;
+            ph_max_block = ph_max_temp;
+          }
+
+          // Set fallback values if off grid
+          if (b == n_b)
+          {
+            sample_rho(m,l,n) = rho_fallback;
+            continue;
+          }
+        }
+
+        // Determine cell
+        for (i = 0; i < n_i; i++)
+          if (static_cast<double>(rf(b,i+1)) >= r)
+            break;
+        for (j = 0; j < n_j; j++)
+          if (static_cast<double>(thf(b,j+1)) >= th)
+            break;
+        for (k = 0; k < n_k; k++)
+          if (static_cast<double>(phf(b,k+1)) >= ph)
+            break;
+
+        // Resample values
+        sample_rho(m,l,n) = rho(b,k,j,i);
+      }
+    }
   return;
 }
 
