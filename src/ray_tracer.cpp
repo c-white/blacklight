@@ -3,12 +3,13 @@
 // C++ headers
 #include <algorithm>  // max
 #include <cmath>      // acos, atan2, copysign, cos, fmax, fmod, hypot, sin, sqrt
-#include <iostream>   // cout
+#include <sstream>    // stringstream
+#include <string>     // string
 
 // Ray Trace headers
 #include "ray_tracer.hpp"
 #include "array.hpp"        // array
-#include "exceptions.hpp"   // ray_trace_exception
+#include "exceptions.hpp"   // ray_trace_warning
 #include "ray_trace.hpp"    // math
 #include "read_athena.hpp"  // athena_reader
 #include "read_input.hpp"   // input_reader
@@ -366,8 +367,12 @@ void ray_tracer::integrate_geodesics()
       if (geodesic_flags(m,l))
         num_bad_geodesics++;
   if (num_bad_geodesics > 0)
-    std::cout << "Warning: " << num_bad_geodesics << " out of " << im_res * im_res
-        << " geodesics terminate unexpectedly.\n";
+  {
+    std::stringstream message;
+    message << num_bad_geodesics << " out of " << im_res * im_res
+        << " geodesics terminate unexpectedly.";
+    ray_trace_warning(message.str().c_str());
+  }
   return;
 }
 

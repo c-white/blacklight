@@ -24,7 +24,7 @@ athena_reader::athena_reader(const std::string data_file)
 {
   // Check that file is open
   if (not data_stream.is_open())
-    throw ray_trace_exception("Error: Could not open data file.\n");
+    throw ray_trace_exception("Could not open data file.");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -96,26 +96,26 @@ void athena_reader::read_hdf5_superblock()
   const unsigned char expected_signature[] = {0x89, 0x48, 0x44, 0x46, 0x0d, 0x0a, 0x1a, 0x0a};
   for (int n = 0; n < 8; n++)
     if (data_stream.get() != expected_signature[n])
-      throw ray_trace_exception("Error: Unexpected HDF5 format signature.\n");
+      throw ray_trace_exception("Unexpected HDF5 format signature.");
 
   // Check superblock version
   if (data_stream.get() != 0)
-    throw ray_trace_exception("Error: Unexpected HDF5 superblock version.\n");
+    throw ray_trace_exception("Unexpected HDF5 superblock version.");
 
   // Check other version numbers
   if (data_stream.get() != 0)
-    throw ray_trace_exception("Error: Unexpected HDF5 file free space storage version.\n");
+    throw ray_trace_exception("Unexpected HDF5 file free space storage version.");
   if (data_stream.get() != 0)
-    throw ray_trace_exception("Error: Unexpected HDF5 root group symbol table entry version.\n");
+    throw ray_trace_exception("Unexpected HDF5 root group symbol table entry version.");
   data_stream.ignore(1);
   if (data_stream.get() != 0)
-    throw ray_trace_exception("Error: Unexpected HDF5 shared header message format version.\n");
+    throw ray_trace_exception("Unexpected HDF5 shared header message format version.");
 
   // Check sizes
   if (data_stream.get() != 8)
-    throw ray_trace_exception("Error: Unexpected HDF5 size of offsets.\n");
+    throw ray_trace_exception("Unexpected HDF5 size of offsets.");
   if (data_stream.get() != 8)
-    throw ray_trace_exception("Error: Unexpected HDF5 size of lengths.\n");
+    throw ray_trace_exception("Unexpected HDF5 size of lengths.");
   data_stream.ignore(1);
 
   // Skip checking tree parameters and consistency flags
@@ -151,7 +151,7 @@ void athena_reader::read_root_group_symbol_table_entry()
   unsigned int cache_type;
   data_stream.read(reinterpret_cast<char *>(&cache_type), 4);
   if (cache_type != 1)
-    throw ray_trace_exception("Error: Unexpected HDF5 root group symbol table entry cache type.\n");
+    throw ray_trace_exception("Unexpected HDF5 root group symbol table entry cache type.");
   data_stream.ignore(4);
 
   // Read B-tree and name heap addresses
@@ -177,9 +177,9 @@ void athena_reader::read_hdf5_root_heap()
   const unsigned char expected_signature[] = {'H', 'E', 'A', 'P'};
   for (int n = 0; n < 4; n++)
     if (data_stream.get() != expected_signature[n])
-      throw ray_trace_exception("Error: Unexpected HDF5 heap signature.\n");
+      throw ray_trace_exception("Unexpected HDF5 heap signature.");
   if (data_stream.get() != 0)
-    throw ray_trace_exception("Error: Unexpected HDF5 heap version.\n");
+    throw ray_trace_exception("Unexpected HDF5 heap version.");
   data_stream.ignore(3);
 
   // Skip data segement size and offset to head of free list
@@ -210,7 +210,7 @@ void athena_reader::read_hdf5_root_object_header()
   // Check object header version
   data_stream.seekg(static_cast<std::streamoff>(root_object_header_address));
   if (data_stream.get() != 1)
-    throw ray_trace_exception("Error: Unexpected HDF5 object header version.\n");
+    throw ray_trace_exception("Unexpected HDF5 object header version.");
   data_stream.ignore(1);
 
   // Read number of header messages
@@ -242,7 +242,7 @@ void athena_reader::read_hdf5_root_object_header()
     data_stream.read(reinterpret_cast<char *>(&message_flags), 1);
     data_stream.ignore(3);
     if (message_flags & 0b00000010)
-      throw ray_trace_exception("Error: Unexpected HDF5 header message flag.\n");
+      throw ray_trace_exception("Unexpected HDF5 header message flag.");
 
     // Read message data
     unsigned char *message_data = new unsigned char[message_size];
@@ -262,7 +262,7 @@ void athena_reader::read_hdf5_root_object_header()
       // Check attribute message version
       int offset = 0;
       if (message_data[offset] != 1)
-        throw ray_trace_exception("Error: Unexpected HDF5 attribute message version.\n");
+        throw ray_trace_exception("Unexpected HDF5 attribute message version.");
       offset += 2;
 
       // Read attribute message metadata
@@ -343,10 +343,9 @@ void athena_reader::read_hdf5_root_object_header()
   // Check that appropriate messages were found
   if (not (root_grid_x1_found and root_grid_x2_found and root_grid_x3_found and dataset_names_found
       and variable_names_found and num_variables_found))
-    throw ray_trace_exception("Error: Could not find needed file-level attributes.\n");
+    throw ray_trace_exception("Could not find needed file-level attributes.");
   if (num_variables.n1 != num_dataset_names)
-    throw ray_trace_exception("Error: DatasetNames and NumVariables file-level attribute "
-        "mismatch.\n");
+    throw ray_trace_exception("DatasetNames and NumVariables file-level attribute mismatch.");
   verify_variables();
   return;
 }
@@ -362,21 +361,21 @@ void athena_reader::verify_variables()
 {
   // Check that primitives and magnetic fields are present in expected order
   if (num_dataset_names < 2)
-    throw ray_trace_exception("Error: Insufficient datasets in data file.\n");
+    throw ray_trace_exception("Insufficient datasets in data file.");
   if (not dataset_names[ind_prim].compare("prim"))
-    throw ray_trace_exception("Error: Primitives not found in data file.\n");
+    throw ray_trace_exception("Primitives not found in data file.");
   if (not dataset_names[ind_bb].compare("B"))
-    throw ray_trace_exception("Error: Magnetic fields not found in data file.\n");
+    throw ray_trace_exception("Magnetic fields not found in data file.");
 
   // Check that primitives and magnetic fields have expected sizes
   if (num_variables(ind_prim) != 5)
-    throw ray_trace_exception("Error: Primitives from data file do not have 5 variables.\n");
+    throw ray_trace_exception("Primitives from data file do not have 5 variables.");
   if (num_variables(ind_bb) != 3)
-    throw ray_trace_exception("Error: Magnetic fields from data file do not have 5 variables.\n");
+    throw ray_trace_exception("Magnetic fields from data file do not have 5 variables.");
 
   // Check that variables are in expected locations
   if (not variable_names[ind_rho].compare("rho"))
-    throw ray_trace_exception("Error: Density not found.\n");
+    throw ray_trace_exception("Density not found.");
   return;
 }
 
@@ -402,13 +401,13 @@ void athena_reader::read_hdf5_tree()
   const unsigned char expected_signature[] = {'T', 'R', 'E', 'E'};
   for (int n = 0; n < 4; n++)
     if (data_stream.get() != expected_signature[n])
-      throw ray_trace_exception("Error: Unexpected HDF5 B-tree signature.\n");
+      throw ray_trace_exception("Unexpected HDF5 B-tree signature.");
 
   // Check node type and level
   if (data_stream.get() != 0)
-    throw ray_trace_exception("Error: Unexpected HDF5 node type.\n");
+    throw ray_trace_exception("Unexpected HDF5 node type.");
   if (data_stream.get() != 0)
-    throw ray_trace_exception("Error: Unexpected HDF5 node level.\n");
+    throw ray_trace_exception("Unexpected HDF5 node level.");
 
   // Read number of children
   unsigned short int num_entries;
@@ -503,9 +502,9 @@ unsigned long int athena_reader::read_hdf5_dataset_header_address(const char *na
     const unsigned char expected_signature[] = {'S', 'N', 'O', 'D'};
     for (int m = 0; m < 4; m++)
       if (data_stream.get() != expected_signature[m])
-        throw ray_trace_exception("Error: Unexpected HDF5 symbol table node signature.\n");
+        throw ray_trace_exception("Unexpected HDF5 symbol table node signature.");
     if (data_stream.get() != 1)
-      throw ray_trace_exception("Error: Unexpected HDF5 symbol table node version.\n");
+      throw ray_trace_exception("Unexpected HDF5 symbol table node version.");
     data_stream.ignore(1);
 
     // Read number of symbols
@@ -524,7 +523,7 @@ unsigned long int athena_reader::read_hdf5_dataset_header_address(const char *na
       unsigned int cache_type;
       data_stream.read(reinterpret_cast<char *>(&cache_type), 4);
       if (cache_type != 0)
-        throw ray_trace_exception("Error: Unexpected HDF5 symbol table entry cache type.\n");
+        throw ray_trace_exception("Unexpected HDF5 symbol table entry cache type.");
 
       // Skip remaining entry
       data_stream.ignore(20);
@@ -541,7 +540,7 @@ unsigned long int athena_reader::read_hdf5_dataset_header_address(const char *na
   }
 
   // Report failure to find named dataset
-  throw ray_trace_exception("Error: Could not find HDF5 dataset in file.\n");
+  throw ray_trace_exception("Could not find HDF5 dataset in file.");
   return 0;
 }
 
@@ -567,7 +566,7 @@ void athena_reader::read_hdf5_data_object_header(unsigned long int data_object_h
   // Check object header version
   data_stream.seekg(static_cast<std::streamoff>(data_object_header_address));
   if (data_stream.get() != 1)
-    throw ray_trace_exception("Error: Unexpected HDF5 object header version.\n");
+    throw ray_trace_exception("Unexpected HDF5 object header version.");
   data_stream.ignore(1);
 
   // Read number of header messages
@@ -600,7 +599,7 @@ void athena_reader::read_hdf5_data_object_header(unsigned long int data_object_h
     data_stream.read(reinterpret_cast<char *>(&message_flags), 1);
     data_stream.ignore(3);
     if (message_flags & 0b00000010)
-      throw ray_trace_exception("Error: Unexpected HDF5 header message flag.\n");
+      throw ray_trace_exception("Unexpected HDF5 header message flag.");
 
     // Read message data
     unsigned char *message_data = new unsigned char[message_size];
@@ -617,7 +616,7 @@ void athena_reader::read_hdf5_data_object_header(unsigned long int data_object_h
     // Inspect any datatype messages
     } else if (message_type == 3) {
       if (datatype_found)
-        throw ray_trace_exception("Error: Too many HDF5 datatypes for dataset.\n");
+        throw ray_trace_exception("Too many HDF5 datatypes for dataset.");
       datatype_found = true;
       *p_datatype_raw = new unsigned char[message_size];
       std::memcpy(*p_datatype_raw, message_data, message_size);
@@ -625,7 +624,7 @@ void athena_reader::read_hdf5_data_object_header(unsigned long int data_object_h
     // Inspect any dataspace messages
     } else if (message_type == 1) {
       if (dataspace_found)
-        throw ray_trace_exception("Error: Too many HDF5 dataspaces for dataset.\n");
+        throw ray_trace_exception("Too many HDF5 dataspaces for dataset.");
       dataspace_found = true;
       *p_dataspace_raw = new unsigned char[message_size];
       std::memcpy(*p_dataspace_raw, message_data, message_size);
@@ -635,15 +634,15 @@ void athena_reader::read_hdf5_data_object_header(unsigned long int data_object_h
 
       // Note if data layout has already been found
       if (data_layout_found)
-        throw ray_trace_exception("Error: Too many HDF5 data layouts for dataset.\n");
+        throw ray_trace_exception("Too many HDF5 data layouts for dataset.");
       data_layout_found = true;
 
       // Check layout version and class
       int offset = 0;
       if (message_data[offset++] != 3)
-        throw ray_trace_exception("Error: Unexpected HDF5 data layout message version.\n");
+        throw ray_trace_exception("Unexpected HDF5 data layout message version.");
       if (message_data[offset++] != 1)
-        throw ray_trace_exception("Error: Unexpected HDF5 data layout class.\n");
+        throw ray_trace_exception("Unexpected HDF5 data layout class.");
 
       // Read data layout
       std::memcpy(&data_address, message_data + offset, 8);
@@ -662,7 +661,7 @@ void athena_reader::read_hdf5_data_object_header(unsigned long int data_object_h
 
   // Check that appropriate messages were found
   if (not (datatype_found and dataspace_found and data_layout_found))
-    throw ray_trace_exception("Error: Could not find needed dataset properties.\n");
+    throw ray_trace_exception("Could not find needed dataset properties.");
 
   // Read raw data
   *p_data_raw = new unsigned char[data_size];
@@ -692,9 +691,9 @@ void athena_reader::set_hdf5_string_array(const unsigned char *datatype_raw,
   int offset = 0;
   unsigned char version_class = datatype_raw[offset++];
   if (version_class >> 4 != 1)
-    throw ray_trace_exception("Error: Unexpected HDF5 datatype version.\n");
+    throw ray_trace_exception("Unexpected HDF5 datatype version.");
   if ((version_class & 0b00001111) != 3)
-    throw ray_trace_exception("Error: Unexpected HDF5 datatype class.\n");
+    throw ray_trace_exception("Unexpected HDF5 datatype class.");
 
   // Read datatype metadata
   unsigned char class_1 = datatype_raw[offset++];
@@ -707,14 +706,14 @@ void athena_reader::set_hdf5_string_array(const unsigned char *datatype_raw,
 
   // Check character set
   if (class_1 >> 4 != 0)
-    throw ray_trace_exception("Error: Unexpected HDF5 string encoding.\n");
+    throw ray_trace_exception("Unexpected HDF5 string encoding.");
 
   // Read and check dimensions
   unsigned long int *dims;
   int num_dims;
   read_hdf5_dataspace_dims(dataspace_raw, &dims, &num_dims);
   if (num_dims != 1)
-    throw ray_trace_exception("Error: Unexpected HDF5 string array size.\n");
+    throw ray_trace_exception("Unexpected HDF5 string array size.");
   *p_array_length = static_cast<int>(dims[0]);
 
   // Allocate and initialize array
@@ -754,9 +753,9 @@ void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
   int offset = 0;
   unsigned char version_class = datatype_raw[offset++];
   if (version_class >> 4 != 1)
-    throw ray_trace_exception("Error: Unexpected HDF5 datatype version.\n");
+    throw ray_trace_exception("Unexpected HDF5 datatype version.");
   if ((version_class & 0b00001111) != 0)
-    throw ray_trace_exception("Error: Unexpected HDF5 datatype class.\n");
+    throw ray_trace_exception("Unexpected HDF5 datatype class.");
 
   // Read datatype metadata
   unsigned char class_1 = datatype_raw[offset++];
@@ -767,12 +766,12 @@ void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
   std::memcpy(&size, datatype_raw + offset, 4);
   offset += 4;
   if (size != 4 and size != 8)
-    throw ray_trace_exception("Error: Unexpected int size.\n");
+    throw ray_trace_exception("Unexpected int size.");
 
   // Read and check properties
   bool rev_endian = class_1 & 0b00000001;
   if (class_1 & 0b00000010 or class_1 & 0b00000100)
-    throw ray_trace_exception("Error: Unexpected HDF5 fixed-point padding.\n");
+    throw ray_trace_exception("Unexpected HDF5 fixed-point padding.");
   bool signed_val = class_1 & 0b00001000;
   unsigned short int bit_offset, bit_precision;
   std::memcpy(&bit_offset, datatype_raw + offset, 2);
@@ -780,7 +779,7 @@ void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
   std::memcpy(&bit_precision, datatype_raw + offset, 2);
   offset += 2;
   if (bit_offset != 0 or bit_precision != 8 * size)
-    throw ray_trace_exception("Error: Unexpected HDF5 fixed-point bit layout.\n");
+    throw ray_trace_exception("Unexpected HDF5 fixed-point bit layout.");
 
   // Read dimensions
   unsigned long int *dims;
@@ -796,7 +795,7 @@ void athena_reader::set_hdf5_int_array(const unsigned char *datatype_raw,
   else if (num_dims == 2)
     int_array.allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]));
   else
-    throw ray_trace_exception("Error: Unexpected HDF5 fixed-point array size.\n");
+    throw ray_trace_exception("Unexpected HDF5 fixed-point array size.");
 
   // Initialize array
   char *buffer = new char[size];
@@ -839,9 +838,9 @@ void athena_reader::set_hdf5_float_array(const unsigned char *datatype_raw,
   int offset = 0;
   unsigned char version_class = datatype_raw[offset++];
   if (version_class >> 4 != 1)
-    throw ray_trace_exception("Error: Unexpected HDF5 datatype version.\n");
+    throw ray_trace_exception("Unexpected HDF5 datatype version.");
   if ((version_class & 0b00001111) != 1)
-    throw ray_trace_exception("Error: Unexpected HDF5 datatype class.\n");
+    throw ray_trace_exception("Unexpected HDF5 datatype class.");
 
   // Read datatype metadata
   unsigned char class_1 = datatype_raw[offset++];
@@ -853,18 +852,18 @@ void athena_reader::set_hdf5_float_array(const unsigned char *datatype_raw,
   std::memcpy(&size, datatype_raw + offset, 4);
   offset += 4;
   if (size != 4)
-    throw ray_trace_exception("Error: Unexpected float size.\n");
+    throw ray_trace_exception("Unexpected float size.");
 
   // Check properties
   bool rev_endian = class_1 & 0b00000001;
   if (class_1 & 0b01000000)
-    throw ray_trace_exception("Error: Unexpected HDF5 floating-point byte order.\n");
+    throw ray_trace_exception("Unexpected HDF5 floating-point byte order.");
   if (class_1 & 0b00001110)
-    throw ray_trace_exception("Error: Unexpected HDF5 floating-point padding.\n");
+    throw ray_trace_exception("Unexpected HDF5 floating-point padding.");
   if ((class_1 & 0b00110000) != 0b00100000)
-    throw ray_trace_exception("Error: Unexpected HDF5 floating-point mantissa normalization.\n");
+    throw ray_trace_exception("Unexpected HDF5 floating-point mantissa normalization.");
   if (class_2 != 31)
-    throw ray_trace_exception("Error: Unexpected HDF5 floating-point sign location.\n");
+    throw ray_trace_exception("Unexpected HDF5 floating-point sign location.");
   unsigned short int bit_offset, bit_precision;
   unsigned char exp_loc, exp_size, man_loc, man_size;
   unsigned int exp_bias;
@@ -880,7 +879,7 @@ void athena_reader::set_hdf5_float_array(const unsigned char *datatype_raw,
   offset += 4;
   if (bit_offset != 0 or bit_precision != 32 or exp_loc != 23 or exp_size != 8 or man_loc != 0
       or man_size != 23 or exp_bias != 127)
-    throw ray_trace_exception("Error: Unexpected HDF5 floating-point bit layout.\n");
+    throw ray_trace_exception("Unexpected HDF5 floating-point bit layout.");
 
   // Read dimensions
   unsigned long int *dims;
@@ -899,7 +898,7 @@ void athena_reader::set_hdf5_float_array(const unsigned char *datatype_raw,
     float_array.allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]),
         static_cast<int>(dims[2]), static_cast<int>(dims[3]), static_cast<int>(dims[4]));
   else
-    throw ray_trace_exception("Error: Unexpected HDF5 floating-point array size.\n");
+    throw ray_trace_exception("Unexpected HDF5 floating-point array size.");
 
   // Initialize array
   char *buffer = new char[size];
@@ -936,11 +935,11 @@ void athena_reader::read_hdf5_dataspace_dims(const unsigned char *dataspace_raw,
   // Read and check metadata
   int offset = 0;
   if (dataspace_raw[offset++] != 1)
-    throw ray_trace_exception("Error: Unexpected HDF5 dataspace version.\n");
+    throw ray_trace_exception("Unexpected HDF5 dataspace version.");
   *p_num_dims = dataspace_raw[offset++];
   unsigned char flags = dataspace_raw[offset++];
   if (flags & 0b00000010)
-    throw ray_trace_exception("Error: Unexpected HDF5 dataspace permutation indices.\n");
+    throw ray_trace_exception("Unexpected HDF5 dataspace permutation indices.");
   offset += 5;
 
   // Allocate and extract dimensions

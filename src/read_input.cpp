@@ -31,7 +31,7 @@ void input_reader::read()
   // Open input file
   std::ifstream input_stream(input_file);
   if (not input_stream.is_open())
-    throw ray_trace_exception("Error: Could not open input file.\n");
+    throw ray_trace_exception("Could not open input file.");
 
   // Process file line by line
   for (std::string line; std::getline(input_stream, line); )
@@ -51,7 +51,7 @@ void input_reader::read()
     // Split on '='
     pos = line.find('=');
     if (pos == std::string::npos)
-      throw ray_trace_exception("Error: Invalid assignment in input file.\n");
+      throw ray_trace_exception("Invalid assignment in input file.");
     std::string key = line.substr(0, pos);
     std::string val = line.substr(pos + 1, line.size());
 
@@ -81,7 +81,7 @@ void input_reader::read()
     else if (key == "im_max_steps")
       im_max_steps = std::stoi(val);
     else
-      throw ray_trace_exception("Error: Unknown key in input file.\n");
+      throw ray_trace_exception("Unknown key in input file.");
   }
   return;
 }

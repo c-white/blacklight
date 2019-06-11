@@ -158,11 +158,11 @@ template<typename type>
 void array<type>::allocate()
 {
   if (allocated)
-    throw ray_trace_exception("Error: Attempting to reallocate array.");
+    throw ray_trace_exception("Attempting to reallocate array.");
   allocated = true;
   n_tot = n1 * n2 * n3 * n4 * n5;
   if (n_tot <= 0)
-    throw ray_trace_exception("Error: Attempting to allocate empty array.");
+    throw ray_trace_exception("Attempting to allocate empty array.");
   data = new type[n_tot];
 }
 
@@ -475,7 +475,7 @@ void array<type>::slice(int dimension, int index)
 {
   // Check that this is a shallow copy
   if (not is_copy)
-    throw ray_trace_exception("Error: Attempting to slice array that is not shallow copy.");
+    throw ray_trace_exception("Attempting to slice array that is not shallow copy.");
 
   // Slice array
   switch (dimension)
@@ -483,7 +483,7 @@ void array<type>::slice(int dimension, int index)
     // 1D
     case 1:
       if (index < 0 or index >= n1)
-        throw ray_trace_exception("Error: Attempting to slice outside array bounds.");
+        throw ray_trace_exception("Attempting to slice outside array bounds.");
       data += index;
       n2 = 1;
       n3 = 1;
@@ -494,7 +494,7 @@ void array<type>::slice(int dimension, int index)
     // 2D
     case 2:
       if (index < 0 or index >= n2)
-        throw ray_trace_exception("Error: Attempting to slice outside array bounds.");
+        throw ray_trace_exception("Attempting to slice outside array bounds.");
       data += index * n1;
       n3 = 1;
       n4 = 1;
@@ -504,7 +504,7 @@ void array<type>::slice(int dimension, int index)
     // 3D
     case 3:
       if (index < 0 or index >= n3)
-        throw ray_trace_exception("Error: Attempting to slice outside array bounds.");
+        throw ray_trace_exception("Attempting to slice outside array bounds.");
       data += index * n2 * n1;
       n4 = 1;
       n5 = 1;
@@ -513,7 +513,7 @@ void array<type>::slice(int dimension, int index)
     // 4D
     case 4:
       if (index < 0 or index >= n4)
-        throw ray_trace_exception("Error: Attempting to slice outside array bounds.");
+        throw ray_trace_exception("Attempting to slice outside array bounds.");
       data += index * n3 * n2 * n1;
       n4 = 1;
       n5 = 1;
@@ -522,7 +522,7 @@ void array<type>::slice(int dimension, int index)
     // 5D
     case 5:
       if (index < 0 or index >= n5)
-        throw ray_trace_exception("Error: Attempting to slice outside array bounds.");
+        throw ray_trace_exception("Attempting to slice outside array bounds.");
       data += index * n4 * n3 * n2 * n1;
       n5 = 1;
       break;
@@ -530,7 +530,7 @@ void array<type>::slice(int dimension, int index)
     // Invalid dimension
     default:
       if (dimension < 1 or dimension > max_dims)
-        throw ray_trace_exception("Error: Attempting to slice at invalid dimension.");
+        throw ray_trace_exception("Attempting to slice at invalid dimension.");
   }
 
   // Recalculate number of elements
