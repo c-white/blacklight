@@ -8,7 +8,7 @@
 
 // Ray Trace headers
 #include "read_input.hpp"
-#include "exceptions.hpp"  // ray_trace_exception
+#include "exceptions.hpp"  // RayTraceException
 #include "ray_trace.hpp"   // math
 
 //--------------------------------------------------------------------------------------------------
@@ -16,7 +16,7 @@
 // Input reader constructor
 // Inputs:
 //   input_file_: name of input file
-input_reader::input_reader(const std::string input_file_)
+InputReader::InputReader(const std::string input_file_)
   : input_file(input_file_) {}
 
 //--------------------------------------------------------------------------------------------------
@@ -26,18 +26,18 @@ input_reader::input_reader(const std::string input_file_)
 // Outputs: (none)
 // Notes:
 //   Initializes all member objects.
-void input_reader::read()
+void InputReader::Read()
 {
   // Open input file
   std::ifstream input_stream(input_file);
   if (not input_stream.is_open())
-    throw ray_trace_exception("Could not open input file.");
+    throw RayTraceException("Could not open input file.");
 
   // Process file line by line
   for (std::string line; std::getline(input_stream, line); )
   {
     // Remove spaces
-    line.erase(std::remove_if(line.begin(), line.end(), removeable_space), line.end());
+    line.erase(std::remove_if(line.begin(), line.end(), RemoveableSpace), line.end());
 
     // Remove comments
     std::string::size_type pos = line.find('#');
@@ -51,19 +51,23 @@ void input_reader::read()
     // Split on '='
     pos = line.find('=');
     if (pos == std::string::npos)
-      throw ray_trace_exception("Invalid assignment in input file.");
+      throw RayTraceException("Invalid assignment in input file.");
     std::string key = line.substr(0, pos);
     std::string val = line.substr(pos + 1, line.size());
 
-    // Store values
+    // Store file name data
     if (key == "data_file")
       data_file = val;
     else if (key == "output_file")
       output_file = val;
+
+    // Store coordinate data
     else if (key == "m")
       bh_m = std::stod(val);
     else if (key == "a")
       bh_a = std::stod(val);
+
+    // Store image data
     else if (key == "im_radius")
       im_r = std::stod(val);
     else if (key == "im_theta")
@@ -80,8 +84,10 @@ void input_reader::read()
       im_step = std::stod(val);
     else if (key == "im_max_steps")
       im_max_steps = std::stoi(val);
+
+    // Handle unknown entry
     else
-      throw ray_trace_exception("Unknown key in input file.");
+      throw RayTraceException("Unknown key in input file.");
   }
   return;
 }
@@ -93,7 +99,7 @@ void input_reader::read()
 //   c: character to be tested
 // Outputs:
 //   returned value: flag indicating character is a removable space
-bool input_reader::removeable_space(unsigned char c)
+bool InputReader::RemoveableSpace(unsigned char c)
 {
   return std::isspace(c) != 0;
 }

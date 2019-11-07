@@ -8,11 +8,11 @@
 
 // Ray Trace headers
 #include "ray_tracer.hpp"
-#include "array.hpp"        // array
-#include "exceptions.hpp"   // ray_trace_warning
+#include "array.hpp"        // Array
+#include "exceptions.hpp"   // RayTraceWarning
 #include "ray_trace.hpp"    // math
-#include "read_athena.hpp"  // athena_reader
-#include "read_input.hpp"   // input_reader
+#include "read_athena.hpp"  // AthenaReader
+#include "read_input.hpp"   // InputReader
 
 //--------------------------------------------------------------------------------------------------
 
@@ -20,7 +20,7 @@
 // Inputs:
 //   inputs: object containing input parameters read from input file
 //   raw_data: object containing raw data read from data file
-ray_tracer::ray_tracer(const input_reader &inputs, const athena_reader &raw_data)
+RayTracer::RayTracer(const InputReader &inputs, const AthenaReader &raw_data)
 {
   // Copy coordinate input data
   bh_m = inputs.bh_m;
@@ -49,7 +49,7 @@ ray_tracer::ray_tracer(const input_reader &inputs, const athena_reader &raw_data
   thf = raw_data.thf;
   phf = raw_data.phf;
   rho = raw_data.prim;
-  rho.slice(5, raw_data.ind_rho);
+  rho.Slice(5, raw_data.ind_rho);
 
   // Calculate horizon radius
   r_hor = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
@@ -58,7 +58,7 @@ ray_tracer::ray_tracer(const input_reader &inputs, const athena_reader &raw_data
 //--------------------------------------------------------------------------------------------------
 
 // Ray tracer destructor
-ray_tracer::~ray_tracer() {}
+RayTracer::~RayTracer() {}
 
 //--------------------------------------------------------------------------------------------------
 
@@ -67,11 +67,11 @@ ray_tracer::~ray_tracer() {}
 // Output: (none)
 // Notes:
 //   Assumes all data arrays have been set.
-void ray_tracer::make_image()
+void RayTracer::MakeImage()
 {
-  initialize_camera();
-  initialize_geodesics();
-  integrate_geodesics();
+  InitializeCamera();
+  InitializeGeodesics();
+  IntegrateGeodesics();
   return;
 }
 
@@ -87,7 +87,7 @@ void ray_tracer::make_image()
 //     n: unit outward normal
 //     u: unit right vector
 //     v: unit up vector
-void ray_tracer::initialize_camera()
+void RayTracer::InitializeCamera()
 {
   // Calculate camera position
   double im_x = im_r * std::sin(im_th) * std::cos(im_ph);
@@ -116,8 +116,8 @@ void ray_tracer::initialize_camera()
   double im_vz = -std::sin(im_th) * im_vthh;
 
   // Allocate arrays
-  im_pos.allocate(im_res, im_res, 4);
-  im_dir.allocate(im_res, im_res, 4);
+  im_pos.Allocate(im_res, im_res, 4);
+  im_dir.Allocate(im_res, im_res, 4);
 
   // Initialize arrays
   for (int m = 0; m < im_res; m++)
@@ -161,10 +161,10 @@ void ray_tracer::initialize_camera()
 //   Assumes im_pos and im_dir have been set except for time components of im_dir.
 //   Initializes time components of im_dir.
 //   Lowers all components of im_dir.
-void ray_tracer::initialize_geodesics()
+void RayTracer::InitializeGeodesics()
 {
   // Allocate scratch array
-  array<double> gcov(4, 4);
+  Array<double> gcov(4, 4);
 
   // Go through image pixels
   for (int m = 0; m < im_res; m++)
@@ -184,7 +184,7 @@ void ray_tracer::initialize_geodesics()
       p[3] = im_dir(m,l,3);
 
       // Calculate time component of momentum
-      gcov_func(x[1], x[2], gcov);
+      GCovariant(x[1], x[2], gcov);
       double temp_a = gcov(0,0);
       double temp_b = 0.0;
       for (int a = 1; a < 4; a++)
@@ -219,19 +219,19 @@ void ray_tracer::initialize_geodesics()
 //   Allocates and initializes sample_pos, sample_dir, sample_len, and geodesic_flags.
 //   Assumes x^0 and x^3 are ignorable coordinates.
 //   Integrates via the midpoint method (2nd-order RK).
-void ray_tracer::integrate_geodesics()
+void RayTracer::IntegrateGeodesics()
 {
   // Allocate arrays
-  sample_pos.allocate(im_res, im_res, im_max_steps, 4);
-  sample_dir.allocate(im_res, im_res, im_max_steps, 4);
-  sample_len.allocate(im_res, im_res, im_max_steps);
-  sample_len.zero();
-  geodesic_flags.allocate(im_res, im_res);
-  geodesic_flags.zero();
+  sample_pos.Allocate(im_res, im_res, im_max_steps, 4);
+  sample_dir.Allocate(im_res, im_res, im_max_steps, 4);
+  sample_len.Allocate(im_res, im_res, im_max_steps);
+  sample_len.Zero();
+  geodesic_flags.Allocate(im_res, im_res);
+  geodesic_flags.Zero();
 
   // Allocate scratch arrays
-  array<double> gcon(4, 4);
-  array<double> dgcon(2, 4, 4);
+  Array<double> gcon(4, 4);
+  Array<double> dgcon(2, 4, 4);
 
   // Go through image pixels
   im_steps = 0;
@@ -259,7 +259,7 @@ void ray_tracer::integrate_geodesics()
         double step = -im_step * x[1];
 
         // Calculate position at half step, checking that step is worth taking
-        gcon_func(x[1], x[2], gcon);
+        GContravariant(x[1], x[2], gcon);
         double dx1[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
@@ -295,7 +295,7 @@ void ray_tracer::integrate_geodesics()
         sample_pos(m,l,n,3) = ph;
 
         // Calculate momentum at half step
-        dgcon_func(x[1], x[2], dgcon);
+        GContravariantDerivative(x[1], x[2], dgcon);
         double dp1[4] = {};
         for (int a = 1; a <= 2; a++)
           for (int mu = 0; mu < 4; mu++)
@@ -305,7 +305,7 @@ void ray_tracer::integrate_geodesics()
           sample_dir(m,l,n,mu) = p[mu] + step/2.0 * dp1[mu];
 
         // Calculate position at full step
-        gcon_func(sample_pos(m,l,n,1), sample_pos(m,l,n,2), gcon);
+        GContravariant(sample_pos(m,l,n,1), sample_pos(m,l,n,2), gcon);
         double dx2[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
@@ -341,7 +341,7 @@ void ray_tracer::integrate_geodesics()
         x[3] = ph;
 
         // Calculate momentum at full step
-        dgcon_func(sample_pos(m,l,n,1), sample_pos(m,l,n,2), dgcon);
+        GContravariantDerivative(sample_pos(m,l,n,1), sample_pos(m,l,n,2), dgcon);
         double dp2[4] = {};
         for (int a = 1; a <= 2; a++)
           for (int mu = 0; mu < 4; mu++)
@@ -371,7 +371,7 @@ void ray_tracer::integrate_geodesics()
     std::stringstream message;
     message << num_bad_geodesics << " out of " << im_res * im_res
         << " geodesics terminate unexpectedly.";
-    ray_trace_warning(message.str().c_str());
+    RayTraceWarning(message.str().c_str());
   }
   return;
 }
@@ -384,10 +384,10 @@ void ray_tracer::integrate_geodesics()
 // Notes:
 //   Assumes im_steps, sample_pos, sample_len, and geodesic_flags have been set.
 //   Allocates and initializes sample_rho.
-void ray_tracer::sample_along_geodesics()
+void RayTracer::SampleAlongGeodesics()
 {
   // Allocate resampling arrays
-  sample_rho.allocate(im_res, im_res, im_steps);
+  sample_rho.Allocate(im_res, im_res, im_steps);
 
   // Prepare bookkeeping
   int n_b = rf.n2;
@@ -496,7 +496,7 @@ void ray_tracer::sample_along_geodesics()
 // Notes:
 //   Assumes gcov is allocated to be 4*4.
 //   Assumes spherical Kerr-Schild coordinates.
-void ray_tracer::gcov_func(double r, double th, array<double> &gcov)
+void RayTracer::GCovariant(double r, double th, Array<double> &gcov)
 {
   double sth = std::sin(th);
   double s2th = sth * sth;
@@ -526,7 +526,7 @@ void ray_tracer::gcov_func(double r, double th, array<double> &gcov)
 // Notes:
 //   Assumes gcon is allocated to be 4*4.
 //   Assumes spherical Kerr-Schild coordinates.
-void ray_tracer::gcon_func(double r, double th, array<double> &gcon)
+void RayTracer::GContravariant(double r, double th, Array<double> &gcon)
 {
   double sth = std::sin(th);
   double s2th = sth * sth;
@@ -557,7 +557,7 @@ void ray_tracer::gcon_func(double r, double th, array<double> &gcon)
 // Notes:
 //   Assumes dgcon is allocated to be 2*4*4.
 //   Assumes spherical Kerr-Schild coordinates.
-void ray_tracer::dgcon_func(double r, double th, array<double> &dgcon)
+void RayTracer::GContravariantDerivative(double r, double th, Array<double> &dgcon)
 {
   double sth = std::sin(th);
   double cth = std::cos(th);

@@ -9,10 +9,10 @@
 //--------------------------------------------------------------------------------------------------
 
 // Input reader
-struct input_reader
+struct InputReader
 {
   // Constructor
-  input_reader(const std::string input_file_);
+  InputReader(const std::string input_file_);
 
   // Data - general
   const std::string input_file;
@@ -36,8 +36,8 @@ struct input_reader
   int im_max_steps;
 
   // Functions
-  void read();
-  static bool removeable_space(unsigned char c);
+  void Read();
+  static bool RemoveableSpace(unsigned char c);
 };
 
 #endif

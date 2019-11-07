@@ -11,12 +11,12 @@
 //--------------------------------------------------------------------------------------------------
 
 // Ray Trace exception
-struct ray_trace_exception
+struct RayTraceException
   : std::runtime_error
 {
-  explicit ray_trace_exception(const char *message)
-    : std::runtime_error::runtime_error(compose_message(message)) {}
-  std::string compose_message(const char *message)
+  explicit RayTraceException(const char *message)
+    : std::runtime_error::runtime_error(ComposeMessage(message)) {}
+  std::string ComposeMessage(const char *message)
   {
     std::string message_str(message);
     message_str.insert(0, "Error: ");
@@ -28,9 +28,9 @@ struct ray_trace_exception
 //--------------------------------------------------------------------------------------------------
 
 // Ray Trace warning
-struct ray_trace_warning
+struct RayTraceWarning
 {
-  explicit ray_trace_warning(const char *message)
+  explicit RayTraceWarning(const char *message)
   {
     std::string message_str(message);
     message_str.insert(0, "Warning: ");

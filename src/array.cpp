@@ -2,20 +2,20 @@
 
 // Ray Trace headers
 #include "array.hpp"
-#include "exceptions.hpp"  // ray_trace_exception
+#include "exceptions.hpp"  // RayTraceException
 
 // Instantiations
-template struct array<bool>;
-template struct array<int>;
-template struct array<float>;
-template struct array<double>;
+template struct Array<bool>;
+template struct Array<int>;
+template struct Array<float>;
+template struct Array<double>;
 
 //--------------------------------------------------------------------------------------------------
 
 // Multidimensional array constructor (empty)
 // Inputs: (none)
 template<typename type>
-array<type>::array() {}
+Array<type>::Array() {}
 
 //--------------------------------------------------------------------------------------------------
 
@@ -23,14 +23,14 @@ array<type>::array() {}
 // Inputs:
 //   n1_: size of only dimension
 template<typename type>
-array<type>::array(int n1_)
+Array<type>::Array(int n1_)
   : n1(n1_),
     n2(1),
     n3(1),
     n4(1),
     n5(1)
 {
-  allocate();
+  Allocate();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -40,14 +40,14 @@ array<type>::array(int n1_)
 //   n2_: size of outermost dimension
 //   n1_: size of innermost dimension
 template<typename type>
-array<type>::array(int n2_, int n1_)
+Array<type>::Array(int n2_, int n1_)
   : n1(n1_),
     n2(n2_),
     n3(1),
     n4(1),
     n5(1)
 {
-  allocate();
+  Allocate();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -58,14 +58,14 @@ array<type>::array(int n2_, int n1_)
 //   n2_: size of intermediate dimension
 //   n1_: size of innermost dimension
 template<typename type>
-array<type>::array(int n3_, int n2_, int n1_)
+Array<type>::Array(int n3_, int n2_, int n1_)
   : n1(n1_),
     n2(n2_),
     n3(n3_),
     n4(1),
     n5(1)
 {
-  allocate();
+  Allocate();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -76,14 +76,14 @@ array<type>::array(int n3_, int n2_, int n1_)
 //   n3_, n2_: sizes of intermediate dimensions
 //   n1_: size of innermost dimension
 template<typename type>
-array<type>::array(int n4_, int n3_, int n2_, int n1_)
+Array<type>::Array(int n4_, int n3_, int n2_, int n1_)
   : n1(n1_),
     n2(n2_),
     n3(n3_),
     n4(n4_),
     n5(1)
 {
-  allocate();
+  Allocate();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -94,21 +94,21 @@ array<type>::array(int n4_, int n3_, int n2_, int n1_)
 //   n4_, n3_, n2_: sizes of intermediate dimensions
 //   n1_: size of innermost dimension
 template<typename type>
-array<type>::array(int n5_, int n4_, int n3_, int n2_, int n1_)
+Array<type>::Array(int n5_, int n4_, int n3_, int n2_, int n1_)
   : n1(n1_),
     n2(n2_),
     n3(n3_),
     n4(n4_),
     n5(n5_)
 {
-  allocate();
+  Allocate();
 }
 
 //--------------------------------------------------------------------------------------------------
 
 // Multidimensional array copy constructor
 template<typename type>
-array<type>::array(const array<type> &source)
+Array<type>::Array(const Array<type> &source)
 {
   data = source.data;
   n1 = source.n1;
@@ -125,7 +125,7 @@ array<type>::array(const array<type> &source)
 
 // Multidimensional array copy assignment constructor
 template<typename type>
-array<type> &array<type>::operator=(const array<type> &source)
+Array<type> &Array<type>::operator=(const Array<type> &source)
 {
   data = source.data;
   n1 = source.n1;
@@ -143,7 +143,7 @@ array<type> &array<type>::operator=(const array<type> &source)
 
 // Multidimensional array destructor
 template<typename type>
-array<type>::~array()
+Array<type>::~Array()
 {
   if (allocated and not is_copy)
     delete[] data;
@@ -155,14 +155,14 @@ array<type>::~array()
 // Inputs: (none)
 // Outputs: (none)
 template<typename type>
-void array<type>::allocate()
+void Array<type>::Allocate()
 {
   if (allocated)
-    throw ray_trace_exception("Attempting to reallocate array.");
+    throw RayTraceException("Attempting to reallocate array.");
   allocated = true;
   n_tot = n1 * n2 * n3 * n4 * n5;
   if (n_tot <= 0)
-    throw ray_trace_exception("Attempting to allocate empty array.");
+    throw RayTraceException("Attempting to allocate empty array.");
   data = new type[n_tot];
 }
 
@@ -173,14 +173,14 @@ void array<type>::allocate()
 //   n1_: size of only dimension
 // Outputs: (none)
 template<typename type>
-void array<type>::allocate(int n1_)
+void Array<type>::Allocate(int n1_)
 {
   n1 = n1_;
   n2 = 1;
   n3 = 1;
   n4 = 1;
   n5 = 1;
-  allocate();
+  Allocate();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -191,14 +191,14 @@ void array<type>::allocate(int n1_)
 //   n1_: size of innermost dimension
 // Outputs: (none)
 template<typename type>
-void array<type>::allocate(int n2_, int n1_)
+void Array<type>::Allocate(int n2_, int n1_)
 {
   n1 = n1_;
   n2 = n2_;
   n3 = 1;
   n4 = 1;
   n5 = 1;
-  allocate();
+  Allocate();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -210,14 +210,14 @@ void array<type>::allocate(int n2_, int n1_)
 //   n1_: size of innermost dimension
 // Outputs: (none)
 template<typename type>
-void array<type>::allocate(int n3_, int n2_, int n1_)
+void Array<type>::Allocate(int n3_, int n2_, int n1_)
 {
   n1 = n1_;
   n2 = n2_;
   n3 = n3_;
   n4 = 1;
   n5 = 1;
-  allocate();
+  Allocate();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -229,14 +229,14 @@ void array<type>::allocate(int n3_, int n2_, int n1_)
 //   n1_: size of innermost dimension
 // Outputs: (none)
 template<typename type>
-void array<type>::allocate(int n4_, int n3_, int n2_, int n1_)
+void Array<type>::Allocate(int n4_, int n3_, int n2_, int n1_)
 {
   n1 = n1_;
   n2 = n2_;
   n3 = n3_;
   n4 = n4_;
   n5 = 1;
-  allocate();
+  Allocate();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -248,14 +248,14 @@ void array<type>::allocate(int n4_, int n3_, int n2_, int n1_)
 //   n1_: size of innermost dimension
 // Outputs: (none)
 template<typename type>
-void array<type>::allocate(int n5_, int n4_, int n3_, int n2_, int n1_)
+void Array<type>::Allocate(int n5_, int n4_, int n3_, int n2_, int n1_)
 {
   n1 = n1_;
   n2 = n2_;
   n3 = n3_;
   n4 = n4_;
   n5 = n5_;
-  allocate();
+  Allocate();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -266,12 +266,12 @@ void array<type>::allocate(int n5_, int n4_, int n3_, int n2_, int n1_)
 // Outputs:
 //   returned value: element
 template<typename type>
-type array<type>::operator()(int i1) const
+type Array<type>::operator()(int i1) const
 {
   return data[i1];
 }
 template<typename type>
-type array<type>::operator()(unsigned int i1) const
+type Array<type>::operator()(unsigned int i1) const
 {
   return data[i1];
 }
@@ -285,12 +285,12 @@ type array<type>::operator()(unsigned int i1) const
 // Outputs:
 //   returned value: element
 template<typename type>
-type array<type>::operator()(int i2, int i1) const
+type Array<type>::operator()(int i2, int i1) const
 {
   return data[i1 + n1 * i2];
 }
 template<typename type>
-type array<type>::operator()(unsigned int i2, unsigned int i1) const
+type Array<type>::operator()(unsigned int i2, unsigned int i1) const
 {
   return data[i1 + static_cast<unsigned int>(n1) * i2];
 }
@@ -305,12 +305,12 @@ type array<type>::operator()(unsigned int i2, unsigned int i1) const
 // Outputs:
 //   returned value: element
 template<typename type>
-type array<type>::operator()(int i3, int i2, int i1) const
+type Array<type>::operator()(int i3, int i2, int i1) const
 {
   return data[i1 + n1 * (i2 + n2 * i3)];
 }
 template<typename type>
-type array<type>::operator()(unsigned int i3, unsigned int i2, unsigned int i1) const
+type Array<type>::operator()(unsigned int i3, unsigned int i2, unsigned int i1) const
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2) * i3)];
 }
@@ -325,12 +325,12 @@ type array<type>::operator()(unsigned int i3, unsigned int i2, unsigned int i1) 
 // Outputs:
 //   returned value: element
 template<typename type>
-type array<type>::operator()(int i4, int i3, int i2, int i1) const
+type Array<type>::operator()(int i4, int i3, int i2, int i1) const
 {
   return data[i1 + n1 * (i2 + n2 * (i3 + n3 * i4))];
 }
 template<typename type>
-type array<type>::operator()(unsigned int i4, unsigned int i3, unsigned int i2, unsigned int i1)
+type Array<type>::operator()(unsigned int i4, unsigned int i3, unsigned int i2, unsigned int i1)
     const
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
@@ -347,12 +347,12 @@ type array<type>::operator()(unsigned int i4, unsigned int i3, unsigned int i2, 
 // Outputs:
 //   returned value: element
 template<typename type>
-type array<type>::operator()(int i5, int i4, int i3, int i2, int i1) const
+type Array<type>::operator()(int i5, int i4, int i3, int i2, int i1) const
 {
   return data[i1 + n1 * (i2 + n2 * (i3 + n3 * (i4 + n4 * i5)))];
 }
 template<typename type>
-type array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3, unsigned int i2,
+type Array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3, unsigned int i2,
     unsigned int i1) const
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
@@ -367,12 +367,12 @@ type array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3, 
 // Outputs:
 //   returned value: element
 template<typename type>
-type &array<type>::operator()(int i1)
+type &Array<type>::operator()(int i1)
 {
   return data[i1];
 }
 template<typename type>
-type &array<type>::operator()(unsigned int i1)
+type &Array<type>::operator()(unsigned int i1)
 {
   return data[i1];
 }
@@ -386,12 +386,12 @@ type &array<type>::operator()(unsigned int i1)
 // Outputs:
 //   returned value: element
 template<typename type>
-type &array<type>::operator()(int i2, int i1)
+type &Array<type>::operator()(int i2, int i1)
 {
   return data[i1 + n1 * i2];
 }
 template<typename type>
-type &array<type>::operator()(unsigned int i2, unsigned int i1)
+type &Array<type>::operator()(unsigned int i2, unsigned int i1)
 {
   return data[i1 + static_cast<unsigned int>(n1) * i2];
 }
@@ -406,12 +406,12 @@ type &array<type>::operator()(unsigned int i2, unsigned int i1)
 // Outputs:
 //   returned value: element
 template<typename type>
-type &array<type>::operator()(int i3, int i2, int i1)
+type &Array<type>::operator()(int i3, int i2, int i1)
 {
   return data[i1 + n1 * (i2 + n2 * i3)];
 }
 template<typename type>
-type &array<type>::operator()(unsigned int i3, unsigned int i2, unsigned int i1)
+type &Array<type>::operator()(unsigned int i3, unsigned int i2, unsigned int i1)
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2) * i3)];
 }
@@ -426,12 +426,12 @@ type &array<type>::operator()(unsigned int i3, unsigned int i2, unsigned int i1)
 // Outputs:
 //   returned value: element
 template<typename type>
-type &array<type>::operator()(int i4, int i3, int i2, int i1)
+type &Array<type>::operator()(int i4, int i3, int i2, int i1)
 {
   return data[i1 + n1 * (i2 + n2 * (i3 + n3 * i4))];
 }
 template<typename type>
-type &array<type>::operator()(unsigned int i4, unsigned int i3, unsigned int i2, unsigned int i1)
+type &Array<type>::operator()(unsigned int i4, unsigned int i3, unsigned int i2, unsigned int i1)
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
       * (i3 + static_cast<unsigned int>(n3) * i4))];
@@ -447,12 +447,12 @@ type &array<type>::operator()(unsigned int i4, unsigned int i3, unsigned int i2,
 // Outputs:
 //   returned value: element
 template<typename type>
-type &array<type>::operator()(int i5, int i4, int i3, int i2, int i1)
+type &Array<type>::operator()(int i5, int i4, int i3, int i2, int i1)
 {
   return data[i1 + n1 * (i2 + n2 * (i3 + n3 * (i4 + n4 * i5)))];
 }
 template<typename type>
-type &array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3, unsigned int i2,
+type &Array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3, unsigned int i2,
     unsigned int i1)
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
@@ -471,11 +471,11 @@ type &array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3,
 //   Checks to make sure only a shallow copy is being sliced so that destructor will not try to
 //       deallocate memory.
 template<typename type>
-void array<type>::slice(int dimension, int index)
+void Array<type>::Slice(int dimension, int index)
 {
   // Check that this is a shallow copy
   if (not is_copy)
-    throw ray_trace_exception("Attempting to slice array that is not shallow copy.");
+    throw RayTraceException("Attempting to slice array that is not shallow copy.");
 
   // Slice array
   switch (dimension)
@@ -483,7 +483,7 @@ void array<type>::slice(int dimension, int index)
     // 1D
     case 1:
       if (index < 0 or index >= n1)
-        throw ray_trace_exception("Attempting to slice outside array bounds.");
+        throw RayTraceException("Attempting to slice outside array bounds.");
       data += index;
       n2 = 1;
       n3 = 1;
@@ -494,7 +494,7 @@ void array<type>::slice(int dimension, int index)
     // 2D
     case 2:
       if (index < 0 or index >= n2)
-        throw ray_trace_exception("Attempting to slice outside array bounds.");
+        throw RayTraceException("Attempting to slice outside array bounds.");
       data += index * n1;
       n3 = 1;
       n4 = 1;
@@ -504,7 +504,7 @@ void array<type>::slice(int dimension, int index)
     // 3D
     case 3:
       if (index < 0 or index >= n3)
-        throw ray_trace_exception("Attempting to slice outside array bounds.");
+        throw RayTraceException("Attempting to slice outside array bounds.");
       data += index * n2 * n1;
       n4 = 1;
       n5 = 1;
@@ -513,7 +513,7 @@ void array<type>::slice(int dimension, int index)
     // 4D
     case 4:
       if (index < 0 or index >= n4)
-        throw ray_trace_exception("Attempting to slice outside array bounds.");
+        throw RayTraceException("Attempting to slice outside array bounds.");
       data += index * n3 * n2 * n1;
       n4 = 1;
       n5 = 1;
@@ -522,7 +522,7 @@ void array<type>::slice(int dimension, int index)
     // 5D
     case 5:
       if (index < 0 or index >= n5)
-        throw ray_trace_exception("Attempting to slice outside array bounds.");
+        throw RayTraceException("Attempting to slice outside array bounds.");
       data += index * n4 * n3 * n2 * n1;
       n5 = 1;
       break;
@@ -530,7 +530,7 @@ void array<type>::slice(int dimension, int index)
     // Invalid dimension
     default:
       if (dimension < 1 or dimension > max_dims)
-        throw ray_trace_exception("Attempting to slice at invalid dimension.");
+        throw RayTraceException("Attempting to slice at invalid dimension.");
   }
 
   // Recalculate number of elements
@@ -546,7 +546,7 @@ void array<type>::slice(int dimension, int index)
 // Notes:
 //   Sets any allocated array to be zero.
 template<typename type>
-void array<type>::zero()
+void Array<type>::Zero()
 {
   if (allocated)
     for (int n = 0; n < n_tot; n++)

@@ -7,18 +7,18 @@
 
 // Multidimensional array
 template<typename type>
-struct array
+struct Array
 {
   // Constructors and destructor
-  array();
-  array(int n1_);
-  array(int n2_, int n1_);
-  array(int n3_, int n2_, int n1_);
-  array(int n4_, int n3_, int n2_, int n1_);
-  array(int n5_, int n4_, int n3_, int n2_, int n1_);
-  array(const array<type> &source);
-  array &operator=(const array<type> &source);
-  ~array();
+  Array();
+  Array(int n1_);
+  Array(int n2_, int n1_);
+  Array(int n3_, int n2_, int n1_);
+  Array(int n4_, int n3_, int n2_, int n1_);
+  Array(int n5_, int n4_, int n3_, int n2_, int n1_);
+  Array(const Array<type> &source);
+  Array &operator=(const Array<type> &source);
+  ~Array();
 
   // Data
   type *data;
@@ -29,12 +29,12 @@ struct array
   static constexpr int max_dims = 5;
 
   // Functions - allocators
-  void allocate();
-  void allocate(int n1_);
-  void allocate(int n2_, int n1_);
-  void allocate(int n3_, int n2_, int n1_);
-  void allocate(int n4_, int n3_, int n2_, int n1_);
-  void allocate(int n5_, int n4_, int n3_, int n2_, int n1_);
+  void Allocate();
+  void Allocate(int n1_);
+  void Allocate(int n2_, int n1_);
+  void Allocate(int n3_, int n2_, int n1_);
+  void Allocate(int n4_, int n3_, int n2_, int n1_);
+  void Allocate(int n5_, int n4_, int n3_, int n2_, int n1_);
 
   // Functions - read accessors
   type operator()(int i1_) const;
@@ -63,8 +63,8 @@ struct array
       unsigned int i1_);
 
   // Functions - miscellaneous
-  void slice(int dimension, int index);
-  void zero();
+  void Slice(int dimension, int index);
+  void Zero();
 };
 
 #endif

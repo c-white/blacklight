@@ -1,15 +1,15 @@
 // Ray Trace main file
 
 // C++ headers
-#include <iostream>   // cout
-#include <string>     // string
+#include <iostream>  // cout
+#include <string>    // string
 
 // Ray Trace headers
 #include "ray_trace.hpp"
-#include "exceptions.hpp"   // ray_trace_exception
-#include "ray_tracer.hpp"   // ray_tracer
-#include "read_athena.hpp"  // athena_reader
-#include "read_input.hpp"   // input_reader
+#include "exceptions.hpp"   // RayTraceException
+#include "ray_tracer.hpp"   // RayTracer
+#include "read_athena.hpp"  // AthenaReader
+#include "read_input.hpp"   // InputReader
 
 //--------------------------------------------------------------------------------------------------
 
@@ -32,11 +32,11 @@ int main(int argc, char *argv[])
   const std::string input_file(argv[1]);
 
   // Read input file
-  input_reader inputs(input_file);
+  InputReader inputs(input_file);
   try
   {
-    inputs.read();
-  } catch (const ray_trace_exception &exception) {
+    inputs.Read();
+  } catch (const RayTraceException &exception) {
     std::cout << exception.what();
     return 1;
   } catch (...) {
@@ -45,11 +45,11 @@ int main(int argc, char *argv[])
   }
 
   // Read data file
-  athena_reader raw_data(inputs.data_file);
+  AthenaReader raw_data(inputs.data_file);
   try
   {
-    raw_data.read();
-  } catch (const ray_trace_exception &exception) {
+    raw_data.Read();
+  } catch (const RayTraceException &exception) {
     std::cout << exception.what();
     return 1;
   } catch (...) {
@@ -58,11 +58,11 @@ int main(int argc, char *argv[])
   }
 
   // Process data
-  ray_tracer ray_tracing(inputs, raw_data);
+  RayTracer ray_tracing(inputs, raw_data);
   try
   {
-    ray_tracing.make_image();
-  } catch (const ray_trace_exception &exception) {
+    ray_tracing.MakeImage();
+  } catch (const RayTraceException &exception) {
     std::cout << exception.what();
     return 1;
   } catch (...) {

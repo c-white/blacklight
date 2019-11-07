@@ -4,20 +4,20 @@
 #define RAY_TRACER_H_
 
 // Ray Trace headers
-#include "array.hpp"        // array
-#include "read_athena.hpp"  // athena_reader
-#include "read_input.hpp"   // input_reader
+#include "array.hpp"        // Array
+#include "read_athena.hpp"  // AthenaReader
+#include "read_input.hpp"   // InputReader
 
 //--------------------------------------------------------------------------------------------------
 
 // Ray tracer
-struct ray_tracer
+struct RayTracer
 {
   // Constructors and destructor
-  ray_tracer(const input_reader &inputs, const athena_reader &raw_data);
-  ray_tracer(const ray_tracer &source) = delete;
-  ray_tracer &operator=(const ray_tracer &source) = delete;
-  ~ray_tracer();
+  RayTracer(const InputReader &inputs, const AthenaReader &raw_data);
+  RayTracer(const RayTracer &source) = delete;
+  RayTracer &operator=(const RayTracer &source) = delete;
+  ~RayTracer();
 
   // Input data - coordinates
   double bh_m;
@@ -35,8 +35,8 @@ struct ray_tracer
 
   // Grid data
   double r_min, r_max, th_min, th_max, ph_min, ph_max;
-  array<float> rf, thf, phf;
-  array<float> rho;
+  Array<float> rf, thf, phf;
+  Array<float> rho;
 
   // Fallback data
   const float rho_fallback = 0.0;
@@ -44,20 +44,20 @@ struct ray_tracer
   // Sample and image data
   double r_hor;
   int im_steps;
-  array<double> im_pos, im_dir;
-  array<double> sample_pos, sample_dir, sample_len;
-  array<bool> geodesic_flags;
-  array<float> sample_rho;
+  Array<double> im_pos, im_dir;
+  Array<double> sample_pos, sample_dir, sample_len;
+  Array<bool> geodesic_flags;
+  Array<float> sample_rho;
 
   // Functions
-  void make_image();
-  void initialize_camera();
-  void initialize_geodesics();
-  void integrate_geodesics();
-  void sample_along_geodesics();
-  void gcov_func(double r, double th, array<double> &gcov);
-  void gcon_func(double r, double th, array<double> &gcon);
-  void dgcon_func(double r, double th, array<double> &dgcon);
+  void MakeImage();
+  void InitializeCamera();
+  void InitializeGeodesics();
+  void IntegrateGeodesics();
+  void SampleAlongGeodesics();
+  void GCovariant(double r, double th, Array<double> &gcov);
+  void GContravariant(double r, double th, Array<double> &gcon);
+  void GContravariantDerivative(double r, double th, Array<double> &dgcon);
 };
 
 #endif

@@ -8,19 +8,18 @@
 #include <string>   // string
 
 // Ray Trace headers
-#include "array.hpp"       // array
-#include "read_input.hpp"  // input_reader
+#include "array.hpp"  // Array
 
 //--------------------------------------------------------------------------------------------------
 
 // Athena++ reader
-struct athena_reader
+struct AthenaReader
 {
   // Constructors and destructor
-  athena_reader(const std::string data_file);
-  athena_reader(const athena_reader &source) = delete;
-  athena_reader &operator=(const athena_reader &source) = delete;
-  ~athena_reader();
+  AthenaReader(const std::string data_file);
+  AthenaReader(const AthenaReader &source) = delete;
+  AthenaReader &operator=(const AthenaReader &source) = delete;
+  ~AthenaReader();
 
   // Metadata
   std::ifstream data_stream;
@@ -32,7 +31,7 @@ struct athena_reader
   int num_dataset_names = 0;
   std::string *variable_names;
   int num_variable_names = 0;
-  array<int> num_variables;
+  Array<int> num_variables;
   unsigned long int *children_addresses;
   int num_children = 0;
   const int ind_prim = 0;
@@ -41,34 +40,34 @@ struct athena_reader
 
   // Data
   float r_min, r_max, th_min, th_max, ph_min, ph_max;
-  array<int> levels;
-  array<int> locations;
-  array<float> rf, thf, phf;
-  array<float> r, th, ph;
-  array<float> prim, bb;
+  Array<int> levels;
+  Array<int> locations;
+  Array<float> rf, thf, phf;
+  Array<float> r, th, ph;
+  Array<float> prim, bb;
 
   // Functions
-  void read();
-  void read_hdf5_superblock();
-  void read_root_group_symbol_table_entry();
-  void read_hdf5_root_heap();
-  void read_hdf5_root_object_header();
-  void verify_variables();
-  void read_hdf5_tree();
-  void read_hdf5_int_array(const char *name, array<int> &int_array);
-  void read_hdf5_float_array(const char *name, array<float> &float_array);
-  unsigned long int read_hdf5_dataset_header_address(const char *name);
-  void read_hdf5_data_object_header(unsigned long int data_object_header_address,
+  void Read();
+  void ReadHDF5Superblock();
+  void ReadRootGroupSymbolTableEntry();
+  void ReadHDF5RootHeap();
+  void ReadHDF5RootObjectHeader();
+  void VerifyVariables();
+  void ReadHDF5Tree();
+  void ReadHDF5IntArray(const char *name, Array<int> &int_array);
+  void ReadHDF5FloatArray(const char *name, Array<float> &float_array);
+  unsigned long int ReadHDF5DatasetHeaderAddress(const char *name);
+  void ReadHDF5DataObjectHeader(unsigned long int data_object_header_address,
       unsigned char **p_datatype_raw, unsigned char **p_dataspace_raw, unsigned char **p_data_raw);
-  static void set_hdf5_string_array(const unsigned char *datatype_raw,
-      const unsigned char *dataspace_raw, const unsigned char *data_raw,
-      std::string **string_array, int *p_array_length);
-  static void set_hdf5_int_array(const unsigned char *datatype_raw,
-      const unsigned char *dataspace_raw, const unsigned char *data_raw, array<int> &int_array);
-  static void set_hdf5_float_array(const unsigned char *datatype_raw,
-      const unsigned char *dataspace_raw, const unsigned char *data_raw, array<float> &float_array);
-  static void read_hdf5_dataspace_dims(const unsigned char *dataspace_raw,
-      unsigned long int **p_dims, int *p_num_dims);
+  static void SetHDF5StringArray(const unsigned char *datatype_raw,
+      const unsigned char *dataspace_raw, const unsigned char *data_raw, std::string **string_array,
+      int *p_array_length);
+  static void SetHDF5IntArray(const unsigned char *datatype_raw, const unsigned char *dataspace_raw,
+      const unsigned char *data_raw, Array<int> &int_array);
+  static void SetHDF5FloatArray(const unsigned char *datatype_raw,
+      const unsigned char *dataspace_raw, const unsigned char *data_raw, Array<float> &float_array);
+  static void ReadHDF5DataspaceDims(const unsigned char *dataspace_raw, unsigned long int **p_dims,
+      int *p_num_dims);
 };
 
 #endif
