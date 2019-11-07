@@ -184,7 +184,7 @@ void RayTracer::InitializeGeodesics()
       p[3] = im_dir(m,l,3);
 
       // Calculate time component of momentum
-      GCovariant(x[1], x[2], gcov);
+      CovariantMetric(x[1], x[2], gcov);
       double temp_a = gcov(0,0);
       double temp_b = 0.0;
       for (int a = 1; a < 4; a++)
@@ -259,7 +259,7 @@ void RayTracer::IntegrateGeodesics()
         double step = -im_step * x[1];
 
         // Calculate position at half step, checking that step is worth taking
-        GContravariant(x[1], x[2], gcon);
+        ContravariantMetric(x[1], x[2], gcon);
         double dx1[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
@@ -295,7 +295,7 @@ void RayTracer::IntegrateGeodesics()
         sample_pos(m,l,n,3) = ph;
 
         // Calculate momentum at half step
-        GContravariantDerivative(x[1], x[2], dgcon);
+        ContravariantMetricDerivative(x[1], x[2], dgcon);
         double dp1[4] = {};
         for (int a = 1; a <= 2; a++)
           for (int mu = 0; mu < 4; mu++)
@@ -305,7 +305,7 @@ void RayTracer::IntegrateGeodesics()
           sample_dir(m,l,n,mu) = p[mu] + step/2.0 * dp1[mu];
 
         // Calculate position at full step
-        GContravariant(sample_pos(m,l,n,1), sample_pos(m,l,n,2), gcon);
+        ContravariantMetric(sample_pos(m,l,n,1), sample_pos(m,l,n,2), gcon);
         double dx2[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
@@ -341,7 +341,7 @@ void RayTracer::IntegrateGeodesics()
         x[3] = ph;
 
         // Calculate momentum at full step
-        GContravariantDerivative(sample_pos(m,l,n,1), sample_pos(m,l,n,2), dgcon);
+        ContravariantMetricDerivative(sample_pos(m,l,n,1), sample_pos(m,l,n,2), dgcon);
         double dp2[4] = {};
         for (int a = 1; a <= 2; a++)
           for (int mu = 0; mu < 4; mu++)
@@ -496,7 +496,7 @@ void RayTracer::SampleAlongGeodesics()
 // Notes:
 //   Assumes gcov is allocated to be 4*4.
 //   Assumes spherical Kerr-Schild coordinates.
-void RayTracer::GCovariant(double r, double th, Array<double> &gcov)
+void RayTracer::CovariantMetric(double r, double th, Array<double> &gcov)
 {
   double sth = std::sin(th);
   double s2th = sth * sth;
@@ -526,7 +526,7 @@ void RayTracer::GCovariant(double r, double th, Array<double> &gcov)
 // Notes:
 //   Assumes gcon is allocated to be 4*4.
 //   Assumes spherical Kerr-Schild coordinates.
-void RayTracer::GContravariant(double r, double th, Array<double> &gcon)
+void RayTracer::ContravariantMetric(double r, double th, Array<double> &gcon)
 {
   double sth = std::sin(th);
   double s2th = sth * sth;
@@ -557,7 +557,7 @@ void RayTracer::GContravariant(double r, double th, Array<double> &gcon)
 // Notes:
 //   Assumes dgcon is allocated to be 2*4*4.
 //   Assumes spherical Kerr-Schild coordinates.
-void RayTracer::GContravariantDerivative(double r, double th, Array<double> &dgcon)
+void RayTracer::ContravariantMetricDerivative(double r, double th, Array<double> &dgcon)
 {
   double sth = std::sin(th);
   double cth = std::cos(th);

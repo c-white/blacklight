@@ -55,9 +55,9 @@ struct RayTracer
   void InitializeGeodesics();
   void IntegrateGeodesics();
   void SampleAlongGeodesics();
-  void GCovariant(double r, double th, Array<double> &gcov);
-  void GContravariant(double r, double th, Array<double> &gcon);
-  void GContravariantDerivative(double r, double th, Array<double> &dgcon);
+  void CovariantMetric(double r, double th, Array<double> &gcov);
+  void ContravariantMetric(double r, double th, Array<double> &gcon);
+  void ContravariantMetricDerivative(double r, double th, Array<double> &dgcon);
 };
 
 #endif
