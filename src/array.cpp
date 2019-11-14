@@ -1,5 +1,8 @@
 // Ray Trace multidimensional array
 
+// C++ headers
+#include <cstddef>  // size_t
+
 // Ray Trace headers
 #include "array.hpp"
 #include "exceptions.hpp"  // RayTraceException
@@ -552,4 +555,16 @@ void Array<type>::Zero()
     for (int n = 0; n < n_tot; n++)
       data[n] = static_cast<type>(0);
   return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Byte size of array
+// Inputs: (none)
+// Outputs:
+//   returned value: number of bytes in allocated array
+template<typename type>
+std::size_t Array<type>::GetNumBytes() const
+{
+  return static_cast<std::size_t>(n_tot) * sizeof(type);
 }

@@ -3,6 +3,9 @@
 #ifndef ARRAY_H_
 #define ARRAY_H_
 
+// C++ headers
+#include <cstddef>  // size_t
+
 //--------------------------------------------------------------------------------------------------
 
 // Multidimensional array
@@ -65,6 +68,7 @@ struct Array
   // Functions - miscellaneous
   void Slice(int dimension, int index);
   void Zero();
+  std::size_t GetNumBytes() const;
 };
 
 #endif
