@@ -48,6 +48,7 @@ struct RayTracer
   Array<double> sample_pos, sample_dir, sample_len;
   Array<bool> geodesic_flags;
   Array<float> sample_rho;
+  Array<float> image;
 
   // Functions
   void MakeImage();
@@ -55,6 +56,7 @@ struct RayTracer
   void InitializeGeodesics();
   void IntegrateGeodesics();
   void SampleAlongGeodesics();
+  void IntegrateRadiation();
   void CovariantMetric(double r, double th, Array<double> &gcov);
   void ContravariantMetric(double r, double th, Array<double> &gcon);
   void ContravariantMetricDerivative(double r, double th, Array<double> &dgcon);

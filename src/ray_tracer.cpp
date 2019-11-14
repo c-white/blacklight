@@ -72,6 +72,8 @@ void RayTracer::MakeImage()
   InitializeCamera();
   InitializeGeodesics();
   IntegrateGeodesics();
+  SampleAlongGeodesics();
+  IntegrateRadiation();
   return;
 }
 
@@ -482,6 +484,29 @@ void RayTracer::SampleAlongGeodesics()
         sample_rho(m,l,n) = rho(b,k,j,i);
       }
     }
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for integrating radiative transfer equation
+// Inputs: (none)
+// Output: (none)
+// Notes:
+//   Assumes im_steps, sample_dir, sample_len, and sample_rho have been set.
+//   Allocates and initializes image.
+//   TODO: use physically meaningful formula
+void RayTracer::IntegrateRadiation()
+{
+  // Allocate array
+  image.Allocate(im_res, im_res);
+  image.Zero();
+
+  // Integrate radiative transfer equation
+  for (int m = 0; m < im_res; m++)
+    for (int l = 0; l < im_res; l++)
+      for (int n = 0; n < im_steps; n++)
+        image(m,l) += sample_rho(m,l,n) * static_cast<float>(sample_len(m,l,n));
   return;
 }
 
