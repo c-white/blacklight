@@ -3,7 +3,7 @@
 // C++ headers
 #include <cstring>  // memcpy, size_t
 #include <fstream>  // ifstream
-#include <ios>      // streamoff
+#include <ios>      // ios_base, streamoff
 #include <string>   // getline, string
 
 // Ray Trace headers
@@ -19,7 +19,7 @@
 // Notes:
 //   Opens stream for reading.
 AthenaReader::AthenaReader(const std::string data_file)
-  : data_stream(data_file)
+  : data_stream(data_file, std::ios_base::in | std::ios_base::binary)
 {
   // Check that file is open
   if (not data_stream.is_open())

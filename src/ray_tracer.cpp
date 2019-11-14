@@ -18,38 +18,38 @@
 
 // Ray tracer constructor
 // Inputs:
-//   inputs: object containing input parameters read from input file
-//   raw_data: object containing raw data read from data file
-RayTracer::RayTracer(const InputReader &inputs, const AthenaReader &raw_data)
+//   input_reader: object containing input parameters read from input file
+//   athena_reader: object containing raw data read from data file
+RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena_reader)
 {
   // Copy coordinate input data
-  bh_m = inputs.bh_m;
-  bh_a = inputs.bh_a;
+  bh_m = input_reader.bh_m;
+  bh_a = input_reader.bh_a;
 
   // Copy image input data
-  im_r = inputs.im_r;
-  im_th = inputs.im_th;
-  im_ph = inputs.im_ph;
-  im_rot = inputs.im_rot;
-  im_width = inputs.im_width;
-  im_res = inputs.im_res;
-  im_step = inputs.im_step;
-  im_max_steps = inputs.im_max_steps;
+  im_r = input_reader.im_r;
+  im_th = input_reader.im_th;
+  im_ph = input_reader.im_ph;
+  im_rot = input_reader.im_rot;
+  im_width = input_reader.im_width;
+  im_res = input_reader.im_res;
+  im_step = input_reader.im_step;
+  im_max_steps = input_reader.im_max_steps;
 
   // Copy raw data scalars
-  r_min = raw_data.r_min;
-  r_max = raw_data.r_max;
-  th_min = raw_data.th_min;
-  th_max = raw_data.th_max;
-  ph_min = raw_data.ph_min;
-  ph_max = raw_data.ph_max;
+  r_min = athena_reader.r_min;
+  r_max = athena_reader.r_max;
+  th_min = athena_reader.th_min;
+  th_max = athena_reader.th_max;
+  ph_min = athena_reader.ph_min;
+  ph_max = athena_reader.ph_max;
 
   // Make shallow copies of raw data arrays
-  rf = raw_data.rf;
-  thf = raw_data.thf;
-  phf = raw_data.phf;
-  rho = raw_data.prim;
-  rho.Slice(5, raw_data.ind_rho);
+  rf = athena_reader.rf;
+  thf = athena_reader.thf;
+  phf = athena_reader.phf;
+  rho = athena_reader.prim;
+  rho.Slice(5, athena_reader.ind_rho);
 
   // Calculate horizon radius
   r_hor = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);

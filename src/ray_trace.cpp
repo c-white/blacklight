@@ -6,10 +6,11 @@
 
 // Ray Trace headers
 #include "ray_trace.hpp"
-#include "exceptions.hpp"   // RayTraceException
-#include "ray_tracer.hpp"   // RayTracer
-#include "read_athena.hpp"  // AthenaReader
-#include "read_input.hpp"   // InputReader
+#include "exceptions.hpp"    // RayTraceException
+#include "ray_tracer.hpp"    // RayTracer
+#include "read_athena.hpp"   // AthenaReader
+#include "read_input.hpp"    // InputReader
+#include "write_output.hpp"  // OutputReader
 
 //--------------------------------------------------------------------------------------------------
 
@@ -32,10 +33,10 @@ int main(int argc, char *argv[])
   const std::string input_file(argv[1]);
 
   // Read input file
-  InputReader inputs(input_file);
+  InputReader input_reader(input_file);
   try
   {
-    inputs.Read();
+    input_reader.Read();
   } catch (const RayTraceException &exception) {
     std::cout << exception.what();
     return 1;
@@ -45,10 +46,10 @@ int main(int argc, char *argv[])
   }
 
   // Read data file
-  AthenaReader raw_data(inputs.data_file);
+  AthenaReader athena_reader(input_reader.data_file);
   try
   {
-    raw_data.Read();
+    athena_reader.Read();
   } catch (const RayTraceException &exception) {
     std::cout << exception.what();
     return 1;
@@ -58,15 +59,28 @@ int main(int argc, char *argv[])
   }
 
   // Process data
-  RayTracer ray_tracing(inputs, raw_data);
+  RayTracer ray_tracer(input_reader, athena_reader);
   try
   {
-    ray_tracing.MakeImage();
+    ray_tracer.MakeImage();
   } catch (const RayTraceException &exception) {
     std::cout << exception.what();
     return 1;
   } catch (...) {
     std::cout << "Error: Could not process data.\n";
+    return 1;
+  }
+
+  // Write output file
+  OutputWriter output_writer(input_reader.output_file, ray_tracer);
+  try
+  {
+    output_writer.Write();
+  } catch (const RayTraceException &exception) {
+    std::cout << exception.what();
+    return 1;
+  } catch (...) {
+    std::cout << "Error: Could not write output file.\n";
     return 1;
   }
 

@@ -14,7 +14,7 @@
 struct RayTracer
 {
   // Constructors and destructor
-  RayTracer(const InputReader &inputs, const AthenaReader &raw_data);
+  RayTracer(const InputReader &input_reader, const AthenaReader &athena_reader);
   RayTracer(const RayTracer &source) = delete;
   RayTracer &operator=(const RayTracer &source) = delete;
   ~RayTracer();
