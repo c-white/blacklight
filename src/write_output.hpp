@@ -4,10 +4,10 @@
 #define WRITE_OUTPUT_H_
 
 // C++ headers
-#include <ios>     // streamsize
 #include <string>  // string
 
 // Ray Trace headers
+#include "array.hpp"       // Array
 #include "ray_tracer.hpp"  // RayTracer
 
 //--------------------------------------------------------------------------------------------------
@@ -20,8 +20,9 @@ struct OutputWriter
 
   // Metadata
   const std::string output_file;
-  const char * const data_pointer;
-  const std::streamsize data_size;
+
+  // Image data
+  Array<float> image;
 
   // Functions
   void Write();

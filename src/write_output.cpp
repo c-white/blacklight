@@ -18,9 +18,9 @@
 //   output_file_: name of output file
 //   ray_tracer: object containing processed image
 OutputWriter::OutputWriter(const std::string output_file_, const RayTracer &ray_tracer)
-  : output_file(output_file_),
-    data_pointer(reinterpret_cast<char *>(ray_tracer.image.data)),
-    data_size(static_cast<std::streamsize>(ray_tracer.image.GetNumBytes())) {}
+  : output_file(output_file_) {
+  image = ray_tracer.image;
+}
 
 //--------------------------------------------------------------------------------------------------
 
@@ -35,6 +35,8 @@ void OutputWriter::Write()
     throw RayTraceException("Could not open output file.");
 
   // Write image data
+  const char *data_pointer = reinterpret_cast<char *>(image.data);
+  std::streamsize data_size = static_cast<std::streamsize>(image.GetNumBytes());
   output_stream.write(data_pointer, data_size);
   return;
 }
