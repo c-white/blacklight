@@ -32,12 +32,16 @@ struct InputReader
   double im_rot;
   double im_width;
   int im_res;
-  double im_step;
-  int im_max_steps;
+
+  // Data - rays
+  double ray_step;
+  int ray_max_steps;
+  bool flat;
 
   // Functions
   void Read();
   static bool RemoveableSpace(unsigned char c);
+  bool ReadBool(const std::string &string);
 };
 
 #endif

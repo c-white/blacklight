@@ -13,5 +13,8 @@ im_phi       = 0.0    # azimuthal coordinate of camera in degrees
 im_rot       = 0.0    # rotation of camera in degrees (0/90 for north up/left)
 im_width     = 25.0   # full width of image in gravitational units
 im_res       = 50     # number of pixels per side
-im_step      = 0.01   # affine step size along each geodesic in units of current radius
-im_max_steps = 1500   # maximum number of steps allowed for each geodesic
+
+# Rays
+ray_step      = 0.01   # affine step size along each geodesic in units of current radius
+ray_max_steps = 1500   # maximum number of steps allowed for each geodesic
+flat          = false  # flag indicating ray tracing should assume flat spacetime

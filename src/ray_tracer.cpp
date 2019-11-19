@@ -33,8 +33,11 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   im_rot = input_reader.im_rot;
   im_width = input_reader.im_width;
   im_res = input_reader.im_res;
-  im_step = input_reader.im_step;
-  im_max_steps = input_reader.im_max_steps;
+
+  // Copy ray input data
+  ray_step = input_reader.ray_step;
+  ray_max_steps = input_reader.ray_max_steps;
+  flat = input_reader.flat;
 
   // Copy raw data scalars
   r_min = athena_reader.r_min;
@@ -93,6 +96,7 @@ void RayTracer::MakeImage()
 //     u: unit right vector
 //     v: unit up vector
 // TODO: calculate initial position, direction, and orientation more exactly
+// TODO: account for flatness when doing above
 void RayTracer::InitializeCamera()
 {
   // Calculate trigonometric quantities
@@ -222,9 +226,9 @@ void RayTracer::InitializeGeodesics()
 void RayTracer::IntegrateGeodesics()
 {
   // Allocate arrays
-  sample_pos.Allocate(im_res, im_res, im_max_steps, 4);
-  sample_dir.Allocate(im_res, im_res, im_max_steps, 4);
-  sample_len.Allocate(im_res, im_res, im_max_steps);
+  sample_pos.Allocate(im_res, im_res, ray_max_steps, 4);
+  sample_dir.Allocate(im_res, im_res, ray_max_steps, 4);
+  sample_len.Allocate(im_res, im_res, ray_max_steps);
   sample_len.Zero();
   geodesic_flags.Allocate(im_res, im_res);
   geodesic_flags.Zero();
@@ -253,11 +257,11 @@ void RayTracer::IntegrateGeodesics()
       p[3] = im_dir(m,l,3);
 
       // Take steps
-      for (int n = 0; n < im_max_steps; n++)
+      for (int n = 0; n < ray_max_steps; n++)
       {
         // Calculate step size for going back to source
         double r = RadialGeodesicCoordinate(x[1], x[2], x[3]);
-        double step = -im_step * r;
+        double step = -ray_step * r;
 
         // Calculate position at half step, checking that step is worth taking
         ContravariantGeodesicMetric(x[1], x[2], x[3], gcon);
@@ -307,7 +311,7 @@ void RayTracer::IntegrateGeodesics()
         sample_len(m,l,n) = -step;
 
         // Check for too many steps taken
-        if (n == im_max_steps - 1 and not ((x[1] > im_r and dx1[1] < 0.0) or x[1] < r_hor))
+        if (n == ray_max_steps - 1 and not ((x[1] > im_r and dx1[1] < 0.0) or x[1] < r_hor))
           geodesic_flags(m,l) = true;
         im_steps = std::max(im_steps, n + 1);
       }
@@ -569,9 +573,20 @@ double RayTracer::RadialGeodesicCoordinate(double x, double y, double z)
 //   gcov: components set
 // Notes:
 //   Assumes gcov is allocated to be 4*4.
-//   Assumes Cartesian Kerr-Schild coordinates.
+//   Assumes Cartesian Kerr-Schild coordinates (assumes Minkowski coordinates if flat == true).
 void RayTracer::CovariantGeodesicMetric(double x, double y, double z, Array<double> &gcov)
 {
+  // Handle flat case
+  if (flat)
+  {
+    gcov.Zero();
+    gcov(0,0) = -1.0;
+    gcov(1,1) = 1.0;
+    gcov(2,2) = 1.0;
+    gcov(3,3) = 1.0;
+    return;
+  }
+
   // Calculate useful quantities
   double a2 = bh_a * bh_a;
   double rr2 = x * x + y * y + z * z;
@@ -614,9 +629,20 @@ void RayTracer::CovariantGeodesicMetric(double x, double y, double z, Array<doub
 //   gcon: components set
 // Notes:
 //   Assumes gcon is allocated to be 4*4.
-//   Assumes Cartesian Kerr-Schild coordinates.
+//   Assumes Cartesian Kerr-Schild coordinates (assumes Minkowski coordinates if flat == true).
 void RayTracer::ContravariantGeodesicMetric(double x, double y, double z, Array<double> &gcon)
 {
+  // Handle flat case
+  if (flat)
+  {
+    gcon.Zero();
+    gcon(0,0) = -1.0;
+    gcon(1,1) = 1.0;
+    gcon(2,2) = 1.0;
+    gcon(3,3) = 1.0;
+    return;
+  }
+
   // Calculate useful quantities
   double a2 = bh_a * bh_a;
   double rr2 = x * x + y * y + z * z;
@@ -659,10 +685,17 @@ void RayTracer::ContravariantGeodesicMetric(double x, double y, double z, Array<
 //   dgcon: components set
 // Notes:
 //   Assumes dgcon is allocated to be 3*4*4.
-//   Assumes Cartesian Kerr-Schild coordinates.
+//   Assumes Cartesian Kerr-Schild coordinates (assumes Minkowski coordinates if flat == true).
 void RayTracer::ContravariantGeodesicMetricDerivative(double x, double y, double z,
     Array<double> &dgcon)
 {
+  // Handle flat case
+  if (flat)
+  {
+    dgcon.Zero();
+    return;
+  }
+
   // Calculate useful quantities
   double a2 = bh_a * bh_a;
   double rr2 = x * x + y * y + z * z;

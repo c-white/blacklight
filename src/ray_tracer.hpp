@@ -30,8 +30,11 @@ struct RayTracer
   double im_rot;
   double im_width;
   int im_res;
-  double im_step;
-  int im_max_steps;
+
+  // Input data - rays
+  double ray_step;
+  int ray_max_steps;
+  bool flat;
 
   // Grid data
   double r_min, r_max, th_min, th_max, ph_min, ph_max;

@@ -80,10 +80,14 @@ void InputReader::Read()
       im_width = std::stod(val);
     else if (key == "im_res")
       im_res = std::stoi(val);
-    else if (key == "im_step")
-      im_step = std::stod(val);
-    else if (key == "im_max_steps")
-      im_max_steps = std::stoi(val);
+
+    // Store ray data
+    else if (key == "ray_step")
+      ray_step = std::stod(val);
+    else if (key == "ray_max_steps")
+      ray_max_steps = std::stoi(val);
+    else if (key == "flat")
+      flat = ReadBool(val);
 
     // Handle unknown entry
     else
@@ -102,4 +106,23 @@ void InputReader::Read()
 bool InputReader::RemoveableSpace(unsigned char c)
 {
   return std::isspace(c) != 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as booleans
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: true or false
+// Notes:
+//   "true" evaluates to true, "false" to false, and anything else throws and exception.
+bool InputReader::ReadBool(const std::string &string)
+{
+  if (string == "true")
+    return true;
+  else if (string == "false")
+    return false;
+  else
+    throw RayTraceException("Unknown string used for boolean value.");
 }
