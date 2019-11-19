@@ -37,9 +37,11 @@ struct RayTracer
   double r_min, r_max, th_min, th_max, ph_min, ph_max;
   Array<float> rf, thf, phf;
   Array<float> rho;
+  Array<float> pgas;
 
   // Fallback data
-  const float rho_fallback = 0.0;
+  const float rho_fallback = 1.0e-6f;
+  const float pgas_fallback = 1.0e-8f;
 
   // Sample and image data
   double r_hor;
@@ -48,6 +50,7 @@ struct RayTracer
   Array<double> sample_pos, sample_dir, sample_len;
   Array<bool> geodesic_flags;
   Array<float> sample_rho;
+  Array<float> sample_pgas;
   Array<float> image;
 
   // Functions

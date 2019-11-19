@@ -375,6 +375,8 @@ void AthenaReader::VerifyVariables()
   // Check that variables are in expected locations
   if (not variable_names[ind_rho].compare("rho"))
     throw RayTraceException("Density not found.");
+  if (not variable_names[ind_pgas].compare("press"))
+    throw RayTraceException("Gas pressure not found.");
   return;
 }
 

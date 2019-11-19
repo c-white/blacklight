@@ -37,6 +37,7 @@ struct AthenaReader
   const int ind_prim = 0;
   const int ind_bb = 1;
   const int ind_rho = 0;
+  const int ind_pgas = 1;
 
   // Data
   float r_min, r_max, th_min, th_max, ph_min, ph_max;

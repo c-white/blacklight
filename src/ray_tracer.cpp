@@ -50,6 +50,8 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   phf = athena_reader.phf;
   rho = athena_reader.prim;
   rho.Slice(5, athena_reader.ind_rho);
+  pgas = athena_reader.prim;
+  pgas.Slice(5, athena_reader.ind_pgas);
 
   // Calculate horizon radius
   r_hor = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
@@ -396,11 +398,12 @@ void RayTracer::TransformGeodesics()
 // Notes:
 //   Assumes im_steps, sample_len, and geodesic_flags have been set.
 //   Assumes sample_pos has been transformed.
-//   Allocates and initializes sample_rho.
+//   Allocates and initializes sample_rho and sample_pgas.
 void RayTracer::SampleAlongGeodesics()
 {
   // Allocate resampling arrays
   sample_rho.Allocate(im_res, im_res, im_steps);
+  sample_pgas.Allocate(im_res, im_res, im_steps);
 
   // Prepare bookkeeping
   int n_b = rf.n2;
@@ -426,7 +429,10 @@ void RayTracer::SampleAlongGeodesics()
       if (geodesic_flags(m,l))
       {
         for (int n = 0; n < im_steps; n++)
+        {
           sample_rho(m,l,n) = rho_fallback;
+          sample_pgas(m,l,n) = pgas_fallback;
+        }
         continue;
       }
 
@@ -447,18 +453,19 @@ void RayTracer::SampleAlongGeodesics()
             or ph < ph_min_block or ph > ph_max_block)
         {
           // Check if block contains position
-          for (b = 0; b < n_b; b++)
+          int b_new;
+          for (b_new = 0; b_new < n_b; b_new++)
           {
-            double r_min_temp = rf(b,0);
-            double r_max_temp = rf(b,n_i);
+            double r_min_temp = rf(b_new,0);
+            double r_max_temp = rf(b_new,n_i);
             if (r < r_min_temp or r > r_max_temp)
               continue;
-            double th_min_temp = thf(b,0);
-            double th_max_temp = thf(b,n_j);
+            double th_min_temp = thf(b_new,0);
+            double th_max_temp = thf(b_new,n_j);
             if (th < th_min_temp or th > th_max_temp)
               continue;
-            double ph_min_temp = phf(b,0);
-            double ph_max_temp = phf(b,n_k);
+            double ph_min_temp = phf(b_new,0);
+            double ph_max_temp = phf(b_new,n_k);
             if (ph < ph_min_temp or ph > ph_max_temp)
               continue;
             i = 0;
@@ -473,11 +480,15 @@ void RayTracer::SampleAlongGeodesics()
           }
 
           // Set fallback values if off grid
-          if (b == n_b)
+          if (b_new == n_b)
           {
             sample_rho(m,l,n) = rho_fallback;
+            sample_pgas(m,l,n) = pgas_fallback;
             continue;
           }
+
+          // Proceed with searching block
+          b = b_new;
         }
 
         // Determine cell
@@ -493,6 +504,7 @@ void RayTracer::SampleAlongGeodesics()
 
         // Resample values
         sample_rho(m,l,n) = rho(b,k,j,i);
+        sample_pgas(m,l,n) = pgas(b,k,j,i);
       }
     }
   return;
@@ -504,7 +516,7 @@ void RayTracer::SampleAlongGeodesics()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes im_steps and sample_rho have been set.
+//   Assumes im_steps, sample_rho, and sample_pgas have been set.
 //   Assumes sample_dir and sample_len have been transformed.
 //   Allocates and initializes image.
 //   TODO: use physically meaningful formula
@@ -518,7 +530,15 @@ void RayTracer::IntegrateRadiation()
   for (int m = 0; m < im_res; m++)
     for (int l = 0; l < im_res; l++)
       for (int n = 0; n < im_steps; n++)
-        image(m,l) += sample_rho(m,l,n) * static_cast<float>(sample_len(m,l,n));
+      {
+        double length = sample_len(m,l,n);
+        if (length > 0.0)
+        {
+          float tt = sample_pgas(m,l,n) / sample_rho(m,l,n);
+          float tt4 = tt * tt * tt * tt;
+          image(m,l) += sample_rho(m,l,n) * tt4 * static_cast<float>(length);
+        }
+      }
   return;
 }
 
