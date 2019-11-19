@@ -195,10 +195,10 @@ void RayTracer::InitializeGeodesics()
       p[0] = std::fmax(temp_q / temp_a, temp_c / temp_q);
 
       // Lower momentum components
-      for (int mu = 1; mu < 4; mu++)
+      for (int mu = 0; mu < 4; mu++)
       {
         im_dir(m,l,mu) = 0.0;
-        for (int nu = 1; nu < 4; nu++)
+        for (int nu = 0; nu < 4; nu++)
           im_dir(m,l,mu) += gcov(mu,nu) * p[nu];
       }
     }
@@ -363,6 +363,8 @@ void RayTracer::TransformGeodesics()
         double r = std::sqrt(r2);
         double th = std::acos(z / r);
         double ph = std::atan2(y, x) - std::atan(bh_a / r);
+        ph += ph < 0.0 ? 2.0 * math::pi : 0.0;
+        ph -= ph > 2.0 * math::pi ? 2.0 * math::pi : 0.0;
         sample_pos(m,l,n,1) = r;
         sample_pos(m,l,n,2) = th;
         sample_pos(m,l,n,3) = ph;
