@@ -55,11 +55,13 @@ struct RayTracer
   void InitializeCamera();
   void InitializeGeodesics();
   void IntegrateGeodesics();
+  void TransformGeodesics();
   void SampleAlongGeodesics();
   void IntegrateRadiation();
-  void CovariantMetric(double r, double th, Array<double> &gcov);
-  void ContravariantMetric(double r, double th, Array<double> &gcon);
-  void ContravariantMetricDerivative(double r, double th, Array<double> &dgcon);
+  double RadialGeodesicCoordinate(double x, double y, double z);
+  void CovariantGeodesicMetric(double x, double y, double z, Array<double> &gcov);
+  void ContravariantGeodesicMetric(double x, double y, double z, Array<double> &gcon);
+  void ContravariantGeodesicMetricDerivative(double x, double y, double z, Array<double> &dgcon);
 };
 
 #endif
