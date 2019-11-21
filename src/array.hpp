@@ -31,13 +31,14 @@ struct Array
   bool is_copy = false;
   static constexpr int max_dims = 5;
 
-  // Functions - allocators
+  // Functions - allocators and deallocator
   void Allocate();
   void Allocate(int n1_);
   void Allocate(int n2_, int n1_);
   void Allocate(int n3_, int n2_, int n1_);
   void Allocate(int n4_, int n3_, int n2_, int n1_);
   void Allocate(int n5_, int n4_, int n3_, int n2_, int n1_);
+  void Deallocate();
 
   // Functions - read accessors
   type operator()(int i1_) const;

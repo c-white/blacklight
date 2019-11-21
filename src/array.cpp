@@ -148,8 +148,7 @@ Array<type> &Array<type>::operator=(const Array<type> &source)
 template<typename type>
 Array<type>::~Array()
 {
-  if (allocated and not is_copy)
-    delete[] data;
+  Deallocate();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -259,6 +258,22 @@ void Array<type>::Allocate(int n5_, int n4_, int n3_, int n2_, int n1_)
   n4 = n4_;
   n5 = n5_;
   Allocate();
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Multidimensional array deallocator
+// Inputs: (none)
+// Outputs: (none)
+template<typename type>
+void Array<type>::Deallocate()
+{
+  if (allocated and not is_copy)
+  {
+    delete[] data;
+    allocated = false;
+  }
+  return;
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -11,6 +11,7 @@
 //--------------------------------------------------------------------------------------------------
 
 // Ray tracer
+// TODO: decide if nan should be used for fallback
 struct RayTracer
 {
   // Constructors and destructor
@@ -51,10 +52,11 @@ struct RayTracer
   double r_hor;
   int im_steps;
   Array<double> im_pos, im_dir;
+  Array<double> geodesic_pos, geodesic_dir, geodesic_len;
+  Array<bool> sample_flags;
+  Array<int> sample_num;
   Array<double> sample_pos, sample_dir, sample_len;
-  Array<bool> geodesic_flags;
-  Array<float> sample_rho;
-  Array<float> sample_pgas;
+  Array<float> sample_rho, sample_pgas;
   Array<float> image;
 
   // Functions

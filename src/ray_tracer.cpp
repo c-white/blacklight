@@ -235,26 +235,28 @@ void RayTracer::InitializeGeodesics()
 // Notes:
 //   Assumes im_pos and im_dir have been set.
 //   Initializes im_steps.
-//   Allocates and initializes sample_pos, sample_dir, sample_len, and geodesic_flags.
+//   Allocates and initializes geodesic_pos, geodesic_dir, geodesic_len, sample_flags, and
+//       sample_num.
 //   Assumes x^0 is ignorable.
 //   Integrates via the midpoint method (2nd-order RK).
 // TODO: calculate better step size
 void RayTracer::IntegrateGeodesics()
 {
   // Allocate arrays
-  sample_pos.Allocate(im_res, im_res, ray_max_steps, 4);
-  sample_dir.Allocate(im_res, im_res, ray_max_steps, 4);
-  sample_len.Allocate(im_res, im_res, ray_max_steps);
-  sample_len.Zero();
-  geodesic_flags.Allocate(im_res, im_res);
-  geodesic_flags.Zero();
+  geodesic_pos.Allocate(im_res, im_res, ray_max_steps, 4);
+  geodesic_dir.Allocate(im_res, im_res, ray_max_steps, 4);
+  geodesic_len.Allocate(im_res, im_res, ray_max_steps);
+  geodesic_len.Zero();
+  sample_flags.Allocate(im_res, im_res);
+  sample_flags.Zero();
+  sample_num.Allocate(im_res, im_res);
+  sample_num.Zero();
 
   // Allocate scratch arrays
   Array<double> gcon(4, 4);
   Array<double> dgcon(3, 4, 4);
 
   // Go through image pixels
-  im_steps = 0;
   for (int m = 0; m < im_res; m++)
     for (int l = 0; l < im_res; l++)
     {
@@ -286,9 +288,9 @@ void RayTracer::IntegrateGeodesics()
           for (int nu = 0; nu < 4; nu++)
             dx1[mu] += gcon(mu,nu) * p[nu];
         for (int mu = 0; mu < 4; mu++)
-          sample_pos(m,l,n,mu) = x[mu] + step/2.0 * dx1[mu];
-        double delta_r = RadialGeodesicCoordinate(sample_pos(m,l,n,1), sample_pos(m,l,n,2),
-            sample_pos(m,l,n,3)) - r;
+          geodesic_pos(m,l,n,mu) = x[mu] + step/2.0 * dx1[mu];
+        double delta_r = RadialGeodesicCoordinate(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
+            geodesic_pos(m,l,n,3)) - r;
         if ((r > im_r and delta_r > 0.0) or r < r_hor)
           break;
 
@@ -300,44 +302,52 @@ void RayTracer::IntegrateGeodesics()
             for (int nu = 0; nu < 4; nu++)
               dp1[a] -= 0.5 * dgcon(a-1,mu,nu) * p[mu] * p[nu];
         for (int mu = 0; mu < 4; mu++)
-          sample_dir(m,l,n,mu) = p[mu] + step/2.0 * dp1[mu];
+          geodesic_dir(m,l,n,mu) = p[mu] + step/2.0 * dp1[mu];
 
         // Calculate position at full step
-        ContravariantGeodesicMetric(sample_pos(m,l,n,1), sample_pos(m,l,n,2), sample_pos(m,l,n,3),
-            gcon);
+        ContravariantGeodesicMetric(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
+            geodesic_pos(m,l,n,3), gcon);
         double dx2[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            dx2[mu] += gcon(mu,nu) * sample_dir(m,l,n,nu);
+            dx2[mu] += gcon(mu,nu) * geodesic_dir(m,l,n,nu);
         for (int mu = 0; mu < 4; mu++)
           x[mu] += step * dx2[mu];
 
         // Calculate momentum at full step
-        ContravariantGeodesicMetricDerivative(sample_pos(m,l,n,1), sample_pos(m,l,n,2),
-            sample_pos(m,l,n,3), dgcon);
+        ContravariantGeodesicMetricDerivative(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
+            geodesic_pos(m,l,n,3), dgcon);
         double dp2[4] = {};
         for (int a = 1; a <= 3; a++)
           for (int mu = 0; mu < 4; mu++)
             for (int nu = 0; nu < 4; nu++)
-              dp2[a] -= 0.5 * dgcon(a-1,mu,nu) * sample_dir(m,l,n,mu) * sample_dir(m,l,n,nu);
+              dp2[a] -= 0.5 * dgcon(a-1,mu,nu) * geodesic_dir(m,l,n,mu) * geodesic_dir(m,l,n,nu);
         for (int mu = 0; mu < 4; mu++)
           p[mu] += step * dp2[mu];
 
         // Store length of step
-        sample_len(m,l,n) = -step;
+        geodesic_len(m,l,n) = -step;
 
         // Check for too many steps taken
-        if (n == ray_max_steps - 1 and not ((x[1] > im_r and dx1[1] < 0.0) or x[1] < r_hor))
-          geodesic_flags(m,l) = true;
-        im_steps = std::max(im_steps, n + 1);
+        double r_new = RadialGeodesicCoordinate(x[1], x[2], x[3]);
+        delta_r = r_new - r;
+        if (n == ray_max_steps - 1 and not ((r > im_r and delta_r > 0.0) or r < r_hor))
+          sample_flags(m,l) = true;
+        sample_num(m,l)++;
       }
     }
+
+  // Calculate maximum number of steps actually taken
+  im_steps = 0;
+  for (int m = 0; m < im_res; m++)
+    for (int l = 0; l < im_res; l++)
+      im_steps = std::max(im_steps, sample_num(m,l));
 
   // Note how many geodesics do not terminate properly
   int num_bad_geodesics = 0;
   for (int m = 0; m < im_res; m++)
     for (int l = 0; l < im_res; l++)
-      if (geodesic_flags(m,l))
+      if (sample_flags(m,l))
         num_bad_geodesics++;
   if (num_bad_geodesics > 0)
   {
@@ -355,32 +365,45 @@ void RayTracer::IntegrateGeodesics()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes im_steps, sample_pos, sample_dir, and sample_len have been set.
-//   Transforms sample_pos, sample_dir, and sample_len from integrating metric to simulation metric.
+//   Assumes im_steps, geodesic_pos, geodesic_dir, geodesic_len, and sample_num have been set.
+//   Allocates and initializes sample_pos, sample_dir, and sample_len, except transformed from
+//       integrating metric to simulation metric and reversed in the sampling dimension.
+//   Deallocates geodesic_pos, geodesic_dir, and geodesic_len.
 //   Assumes integrating metric is Cartesian Kerr-Schild.
 //   Assumes simulation metric is spherical Kerr-Schild.
 //   Transformation of time components is trivial.
-//   Transformation of sample_len is trivial.
+//   Transformation of geodesic_len is trivial.
 void RayTracer::TransformGeodesics()
 {
+  // Allocate new arrays
+  sample_pos.Allocate(im_res, im_res, im_steps, 4);
+  sample_dir.Allocate(im_res, im_res, im_steps, 4);
+  sample_len.Allocate(im_res, im_res, im_steps);
+  sample_len.Zero();
+
   // Go through samples
   for (int m = 0; m < im_res; m++)
     for (int l = 0; l < im_res; l++)
-      for (int n = 0; n < im_steps; n++)
+    {
+      int num_steps = sample_num(m,l);
+      for (int n = 0; n < num_steps; n++)
       {
         // Skip terminated geodesics
-        if (sample_len(m,l,n) == 0.0)
+        double len = geodesic_len(m,l,n);
+        if (len == 0.0)
           break;
 
         // Extract Cartesian position
-        double x = sample_pos(m,l,n,1);
-        double y = sample_pos(m,l,n,2);
-        double z = sample_pos(m,l,n,3);
+        double t = geodesic_pos(m,l,n,0);
+        double x = geodesic_pos(m,l,n,1);
+        double y = geodesic_pos(m,l,n,2);
+        double z = geodesic_pos(m,l,n,3);
 
         // Extract Cartesian direction
-        double ux = sample_dir(m,l,n,1);
-        double uy = sample_dir(m,l,n,2);
-        double uz = sample_dir(m,l,n,3);
+        double ut = geodesic_dir(m,l,n,0);
+        double ux = geodesic_dir(m,l,n,1);
+        double uy = geodesic_dir(m,l,n,2);
+        double uz = geodesic_dir(m,l,n,3);
 
         // Calculate spherical position
         double a2 = bh_a * bh_a;
@@ -391,9 +414,6 @@ void RayTracer::TransformGeodesics()
         double ph = std::atan2(y, x) - std::atan(bh_a / r);
         ph += ph < 0.0 ? 2.0 * math::pi : 0.0;
         ph -= ph > 2.0 * math::pi ? 2.0 * math::pi : 0.0;
-        sample_pos(m,l,n,1) = r;
-        sample_pos(m,l,n,2) = th;
-        sample_pos(m,l,n,3) = ph;
 
         // Calculate Jacobian of transformation
         double dr_dx = r * x / (2.0 * r2 - rr2 + a2);
@@ -407,10 +427,27 @@ void RayTracer::TransformGeodesics()
         double dph_dz = bh_a * dr_dz;
 
         // Calculate spherical direction
-        sample_dir(m,l,n,1) = dr_dx * ux + dr_dy * uy + dr_dz * uz;
-        sample_dir(m,l,n,2) = dth_dx * ux + dth_dy * uy + dth_dz * uz;
-        sample_dir(m,l,n,3) = dph_dx * ux + dph_dy * uy + dph_dz * uz;
+        double ur = dr_dx * ux + dr_dy * uy + dr_dz * uz;
+        double uth = dth_dx * ux + dth_dy * uy + dth_dz * uz;
+        double uph = dph_dx * ux + dph_dy * uy + dph_dz * uz;
+
+        // Set new arrays in reverse order
+        sample_pos(m,l,num_steps-1-n,0) = t;
+        sample_pos(m,l,num_steps-1-n,1) = r;
+        sample_pos(m,l,num_steps-1-n,2) = th;
+        sample_pos(m,l,num_steps-1-n,3) = ph;
+        sample_dir(m,l,num_steps-1-n,0) = ut;
+        sample_dir(m,l,num_steps-1-n,1) = ur;
+        sample_dir(m,l,num_steps-1-n,2) = uth;
+        sample_dir(m,l,num_steps-1-n,3) = uph;
+        sample_len(m,l,num_steps-1-n) = len;
       }
+    }
+
+  // Deallocate old arrays
+  geodesic_pos.Deallocate();
+  geodesic_dir.Deallocate();
+  geodesic_len.Deallocate();
   return;
 }
 
@@ -420,8 +457,7 @@ void RayTracer::TransformGeodesics()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes im_steps, sample_len, and geodesic_flags have been set.
-//   Assumes sample_pos has been transformed.
+//   Assumes im_steps, sample_flags, sample_num, sample_pos, and sample_len have been set.
 //   Allocates and initializes sample_rho and sample_pgas.
 void RayTracer::SampleAlongGeodesics()
 {
@@ -449,10 +485,13 @@ void RayTracer::SampleAlongGeodesics()
   for (int m = 0; m < im_res; m++)
     for (int l = 0; l < im_res; l++)
     {
+      // Extract number of steps along this geodesic
+      int num_steps = sample_num(m,l);
+
       // Set fallback values if geodesic poorly terminated
-      if (geodesic_flags(m,l))
+      if (sample_flags(m,l))
       {
-        for (int n = 0; n < im_steps; n++)
+        for (int n = 0; n < num_steps; n++)
         {
           sample_rho(m,l,n) = rho_fallback;
           sample_pgas(m,l,n) = pgas_fallback;
@@ -461,7 +500,7 @@ void RayTracer::SampleAlongGeodesics()
       }
 
       // Go along geodesic
-      for (int n = 0; n < im_steps; n++)
+      for (int n = 0; n < num_steps; n++)
       {
         // End if geodesic terminated
         if (sample_len(m,l,n) == 0.0)
@@ -540,8 +579,7 @@ void RayTracer::SampleAlongGeodesics()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes im_steps, sample_rho, and sample_pgas have been set.
-//   Assumes sample_dir and sample_len have been transformed.
+//   Assumes sample_num, sample_dir, sample_len, sample_rho, and sample_pgas have been set.
 //   Allocates and initializes image.
 //   TODO: use physically meaningful formula
 void RayTracer::IntegrateRadiation()
@@ -553,7 +591,9 @@ void RayTracer::IntegrateRadiation()
   // Integrate radiative transfer equation
   for (int m = 0; m < im_res; m++)
     for (int l = 0; l < im_res; l++)
-      for (int n = 0; n < im_steps; n++)
+    {
+      int num_steps = sample_num(m,l);
+      for (int n = 0; n < num_steps; n++)
       {
         double length = sample_len(m,l,n);
         if (length > 0.0)
@@ -563,6 +603,7 @@ void RayTracer::IntegrateRadiation()
           image(m,l) += sample_rho(m,l,n) * tt4 * static_cast<float>(length);
         }
       }
+    }
   return;
 }
 
