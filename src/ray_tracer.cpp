@@ -352,6 +352,10 @@ void RayTracer::TransformGeodesics()
     for (int l = 0; l < im_res; l++)
       for (int n = 0; n < im_steps; n++)
       {
+        // Skip terminated geodesics
+        if (sample_len(m,l,n) == 0.0)
+          break;
+
         // Extract Cartesian position
         double x = sample_pos(m,l,n,1);
         double y = sample_pos(m,l,n,2);
@@ -458,29 +462,23 @@ void RayTracer::SampleAlongGeodesics()
         {
           // Check if block contains position
           int b_new;
+          double r_min_temp = r_min_block;
+          double r_max_temp = r_max_block;
+          double th_min_temp = th_min_block;
+          double th_max_temp = th_max_block;
+          double ph_min_temp = ph_min_block;
+          double ph_max_temp = ph_max_block;
           for (b_new = 0; b_new < n_b; b_new++)
           {
-            double r_min_temp = rf(b_new,0);
-            double r_max_temp = rf(b_new,n_i);
-            if (r < r_min_temp or r > r_max_temp)
-              continue;
-            double th_min_temp = thf(b_new,0);
-            double th_max_temp = thf(b_new,n_j);
-            if (th < th_min_temp or th > th_max_temp)
-              continue;
-            double ph_min_temp = phf(b_new,0);
-            double ph_max_temp = phf(b_new,n_k);
-            if (ph < ph_min_temp or ph > ph_max_temp)
-              continue;
-            i = 0;
-            j = 0;
-            k = 0;
-            r_min_block = r_min_temp;
-            r_max_block = r_max_temp;
-            th_min_block = th_min_temp;
-            th_max_block = th_max_temp;
-            ph_min_block = ph_min_temp;
-            ph_max_block = ph_max_temp;
+            r_min_temp = rf(b_new,0);
+            r_max_temp = rf(b_new,n_i);
+            th_min_temp = thf(b_new,0);
+            th_max_temp = thf(b_new,n_j);
+            ph_min_temp = phf(b_new,0);
+            ph_max_temp = phf(b_new,n_k);
+            if (r >= r_min_temp and r <= r_max_temp and th >= th_min_temp and th <= th_max_temp
+                and ph >= ph_min_temp and ph <= ph_max_temp)
+              break;
           }
 
           // Set fallback values if off grid
@@ -491,8 +489,14 @@ void RayTracer::SampleAlongGeodesics()
             continue;
           }
 
-          // Proceed with searching block
+          // Set newly found block as one to search
           b = b_new;
+          r_min_block = r_min_temp;
+          r_max_block = r_max_temp;
+          th_min_block = th_min_temp;
+          th_max_block = th_max_temp;
+          ph_min_block = ph_min_temp;
+          ph_max_block = ph_max_temp;
         }
 
         // Determine cell

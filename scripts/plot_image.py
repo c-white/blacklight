@@ -38,7 +38,7 @@ def main(**kwargs):
   image = np.reshape(image, (pix_res, pix_res))
 
   # Plot figure
-  plt.imshow(image, origin='lower')
+  plt.imshow(np.log10(image), origin='lower')
   plt.colorbar()
   plt.savefig(kwargs['image_plot_file'], dpi=dpi)
 
