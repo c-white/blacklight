@@ -32,6 +32,7 @@ struct InputReader
   double im_rot;
   double im_width;
   int im_res;
+  bool im_pole;
 
   // Data - rays
   double ray_step;
@@ -41,6 +42,7 @@ struct InputReader
   // Functions
   void Read();
   static bool RemoveableSpace(unsigned char c);
+  double ReadPole(const std::string &string, bool *p_pole_flag);
   bool ReadBool(const std::string &string);
 };
 

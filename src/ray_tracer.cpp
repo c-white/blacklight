@@ -33,6 +33,7 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   im_rot = input_reader.im_rot;
   im_width = input_reader.im_width;
   im_res = input_reader.im_res;
+  im_pole = input_reader.im_pole;
 
   // Copy ray input data
   ray_step = input_reader.ray_step;
@@ -117,17 +118,32 @@ void RayTracer::InitializeCamera()
   double im_ny = im_sth * im_sph;
   double im_nz = im_cth;
 
-  // Calculate camera orientation
-  double im_uthh = im_srot;
-  double im_uphh = im_crot;
-  double im_ux = im_cth * im_cph * im_uthh - im_sth * im_sph * im_uphh;
-  double im_uy = im_cth * im_sph * im_uthh + im_sth * im_cph * im_uphh;
-  double im_uz = -im_sth * im_uthh;
-  double im_vthh = -im_crot;
-  double im_vphh = im_srot;
-  double im_vx = im_cth * im_cph * im_vthh - im_sth * im_sph * im_vphh;
-  double im_vy = im_cth * im_sph * im_vthh + im_sth * im_cph * im_vphh;
-  double im_vz = -im_sth * im_vthh;
+  // Calculate camera vertical orientation without rotation
+  double up_x = 0.0;
+  double up_y = 0.0;
+  double up_z = 1.0;
+  if (im_pole)
+  {
+    up_y = 1.0;
+    up_z = 0.0;
+  }
+  double up_n = up_x * im_nx + up_y * im_ny + up_z * im_nz;
+  double vx = up_x - up_n * im_nx;
+  double vy = up_y - up_n * im_ny;
+  double vz = up_z - up_n * im_nz;
+
+  // Calculate camera horizontal orientation without rotation
+  double ux = vy * im_nz - vz * im_ny;
+  double uy = vz * im_nx - vx * im_nz;
+  double uz = vx * im_ny - vy * im_nx;
+
+  // Calculate camera orientation with rotation
+  double im_ux = ux * im_crot - vx * im_srot;
+  double im_uy = uy * im_crot - vy * im_srot;
+  double im_uz = uz * im_crot - vz * im_srot;
+  double im_vx = vx * im_crot + ux * im_srot;
+  double im_vy = vy * im_crot + uy * im_srot;
+  double im_vz = vz * im_crot + uz * im_srot;
 
   // Allocate arrays
   im_pos.Allocate(im_res, im_res, 4);

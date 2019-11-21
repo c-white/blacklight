@@ -30,6 +30,7 @@ struct RayTracer
   double im_rot;
   double im_width;
   int im_res;
+  bool im_pole;
 
   // Input data - rays
   double ray_step;

@@ -71,7 +71,7 @@ void InputReader::Read()
     else if (key == "im_radius")
       im_r = std::stod(val);
     else if (key == "im_theta")
-      im_th = std::stod(val) * math::pi/180.0;
+      im_th = ReadPole(val, &im_pole) * math::pi/180.0;
     else if (key == "im_phi")
       im_ph = std::stod(val) * math::pi/180.0;
     else if (key == "im_rot")
@@ -106,6 +106,24 @@ void InputReader::Read()
 bool InputReader::RemoveableSpace(unsigned char c)
 {
   return std::isspace(c) != 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for converting a string and determining if it exactly matches angles representing poles
+// Inputs:
+//   string: string to be converted
+// Outputs:
+//   returned value: double conversion of string
+//   p_pole_flag: set to true only if input string converts to 0.0 or 180.0
+double InputReader::ReadPole(const std::string &string, bool *p_pole_flag)
+{
+  double val = std::stod(string);
+  if (val == 0.0 or val == 180.0)
+    *p_pole_flag = true;
+  else
+    *p_pole_flag = false;
+  return val;
 }
 
 //--------------------------------------------------------------------------------------------------
