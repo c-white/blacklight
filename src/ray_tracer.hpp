@@ -77,7 +77,7 @@ struct RayTracer
   Array<float> sample_rho, sample_pgas;
   Array<float> sample_uu1, sample_uu2, sample_uu3;
   Array<float> sample_bb1, sample_bb2, sample_bb3;
-  Array<float> image;
+  Array<double> image;
 
   // Functions
   void MakeImage();

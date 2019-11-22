@@ -635,8 +635,6 @@ void RayTracer::SampleAlongGeodesics()
 //   Assumes sample_num, sample_dir, sample_len, sample_rho, and sample_pgas have been set.
 //   Allocates and initializes image.
 //   Assumes x^0 and x^3 are ignorable.
-//   TODO: use physically meaningful formula
-//   TODO: scale length appropriately
 void RayTracer::IntegrateRadiation()
 {
   // Allocate image array
@@ -746,9 +744,9 @@ void RayTracer::IntegrateRadiation()
         double alpha_nu = j_nu / b_nu;
 
         // Calculate change in invariant intensity
-        double i_nu_nu2_fluid = static_cast<double>(image(m,l)) * nu_fluid_cgs;
+        double i_nu_nu2_fluid = image(m,l) * nu_fluid_cgs;
         double source = j_nu / (nu_fluid_cgs * nu_fluid_cgs) - alpha_nu * i_nu_nu2_fluid;
-        image(m,l) = static_cast<float>(static_cast<double>(image(m,l)) + source * length);
+        image(m,l) += source * length;
       }
     }
   return;

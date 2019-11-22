@@ -22,7 +22,7 @@ struct OutputWriter
   const std::string output_file;
 
   // Image data
-  Array<float> image;
+  Array<double> image;
 
   // Functions
   void Write();

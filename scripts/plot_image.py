@@ -20,7 +20,7 @@ import numpy as np
 def main(**kwargs):
 
   # Parameters
-  data_format = np.float32
+  data_format = np.float64
   dpi = 300
 
   # Read image data
