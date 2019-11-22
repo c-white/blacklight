@@ -269,10 +269,8 @@ template<typename type>
 void Array<type>::Deallocate()
 {
   if (allocated and not is_copy)
-  {
     delete[] data;
-    allocated = false;
-  }
+  allocated = false;
   return;
 }
 
