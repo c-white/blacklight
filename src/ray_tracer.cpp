@@ -2,7 +2,8 @@
 
 // C++ headers
 #include <algorithm>  // max
-#include <cmath>      // acos, atan, atan2, copysign, cos, fmax, fmod, hypot, sin, sqrt
+#include <cmath>      // acos, atan, atan2, cbrt, copysign, cos, cyl_bessel_k, exp, expm1, fmax
+                      // fmod, hypot, pow, sin, sqrt
 #include <sstream>    // stringstream
 #include <string>     // string
 
@@ -10,7 +11,7 @@
 #include "ray_tracer.hpp"
 #include "array.hpp"        // Array
 #include "exceptions.hpp"   // RayTraceWarning
-#include "ray_trace.hpp"    // math
+#include "ray_trace.hpp"    // math, physics
 #include "read_athena.hpp"  // AthenaReader
 #include "read_input.hpp"   // InputReader
 
@@ -26,6 +27,16 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   bh_m = input_reader.bh_m;
   bh_a = input_reader.bh_a;
 
+  // Copy unit input data
+  m_msun = input_reader.m_msun;
+  rho_unit = input_reader.rho_unit;
+
+  // Copy plasma input data
+  plasma_mu = input_reader.plasma_mu;
+  plasma_ne_ni = input_reader.plasma_ne_ni;
+  plasma_rat_high = input_reader.plasma_rat_high;
+  plasma_rat_low = input_reader.plasma_rat_low;
+
   // Copy image input data
   im_r = input_reader.im_r;
   im_th = input_reader.im_th;
@@ -33,12 +44,13 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   im_rot = input_reader.im_rot;
   im_width = input_reader.im_width;
   im_res = input_reader.im_res;
+  im_freq = input_reader.im_freq;
   im_pole = input_reader.im_pole;
 
   // Copy ray input data
   ray_step = input_reader.ray_step;
   ray_max_steps = input_reader.ray_max_steps;
-  flat = input_reader.flat;
+  ray_flat = input_reader.ray_flat;
 
   // Copy raw data scalars
   r_min = athena_reader.r_min;
@@ -52,10 +64,22 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   rf = athena_reader.rf;
   thf = athena_reader.thf;
   phf = athena_reader.phf;
-  rho = athena_reader.prim;
-  rho.Slice(5, athena_reader.ind_rho);
-  pgas = athena_reader.prim;
-  pgas.Slice(5, athena_reader.ind_pgas);
+  grid_rho = athena_reader.prim;
+  grid_rho.Slice(5, athena_reader.ind_rho);
+  grid_pgas = athena_reader.prim;
+  grid_pgas.Slice(5, athena_reader.ind_pgas);
+  grid_uu1 = athena_reader.prim;
+  grid_uu1.Slice(5, athena_reader.ind_uu1);
+  grid_uu2 = athena_reader.prim;
+  grid_uu2.Slice(5, athena_reader.ind_uu2);
+  grid_uu3 = athena_reader.prim;
+  grid_uu3.Slice(5, athena_reader.ind_uu3);
+  grid_bb1 = athena_reader.bb;
+  grid_bb1.Slice(5, athena_reader.ind_bb1);
+  grid_bb2 = athena_reader.bb;
+  grid_bb2.Slice(5, athena_reader.ind_bb2);
+  grid_bb3 = athena_reader.bb;
+  grid_bb3.Slice(5, athena_reader.ind_bb3);
 
   // Calculate horizon radius
   r_hor = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
@@ -400,10 +424,10 @@ void RayTracer::TransformGeodesics()
         double z = geodesic_pos(m,l,n,3);
 
         // Extract Cartesian direction
-        double ut = geodesic_dir(m,l,n,0);
-        double ux = geodesic_dir(m,l,n,1);
-        double uy = geodesic_dir(m,l,n,2);
-        double uz = geodesic_dir(m,l,n,3);
+        double p_t = geodesic_dir(m,l,n,0);
+        double p_x = geodesic_dir(m,l,n,1);
+        double p_y = geodesic_dir(m,l,n,2);
+        double p_z = geodesic_dir(m,l,n,3);
 
         // Calculate spherical position
         double a2 = bh_a * bh_a;
@@ -414,32 +438,36 @@ void RayTracer::TransformGeodesics()
         double ph = std::atan2(y, x) - std::atan(bh_a / r);
         ph += ph < 0.0 ? 2.0 * math::pi : 0.0;
         ph -= ph > 2.0 * math::pi ? 2.0 * math::pi : 0.0;
+        double sth = std::sin(th);
+        double cth = std::cos(th);
+        double sph = std::sin(ph);
+        double cph = std::cos(ph);
 
         // Calculate Jacobian of transformation
-        double dr_dx = r * x / (2.0 * r2 - rr2 + a2);
-        double dr_dy = r * y / (2.0 * r2 - rr2 + a2);
-        double dr_dz = (r * z + a2 * z / r) / (2.0 * r2 - rr2 + a2);
-        double dth_dx = z * dr_dx / (r * std::sqrt(r2 - z * z));
-        double dth_dy = z * dr_dy / (r * std::sqrt(r2 - z * z));
-        double dth_dz = (z * dr_dz - r) / (r * std::sqrt(r2 - z * z));
-        double dph_dx = bh_a * dr_dx - y / ((r2 + a2) * (1.0 - z * z / r2));
-        double dph_dy = bh_a * dr_dy + x / ((r2 + a2) * (1.0 - z * z / r2));
-        double dph_dz = bh_a * dr_dz;
+        double dx_dr = sth * cph;
+        double dy_dr = sth * sph;
+        double dz_dr = cth;
+        double dx_dth = cth * (r * cph - bh_a * sph);
+        double dy_dth = cth * (r * sph + bh_a * cph);
+        double dz_dth = -r * sth;
+        double dx_dph = sth * (-r * sph - bh_a * cph);
+        double dy_dph = sth * (r * cph - bh_a * sph);
+        double dz_dph = 0.0;
 
         // Calculate spherical direction
-        double ur = dr_dx * ux + dr_dy * uy + dr_dz * uz;
-        double uth = dth_dx * ux + dth_dy * uy + dth_dz * uz;
-        double uph = dph_dx * ux + dph_dy * uy + dph_dz * uz;
+        double p_r = dx_dr * p_x + dy_dr * p_y + dz_dr * p_z;
+        double p_th = dx_dth * p_x + dy_dth * p_y + dz_dth * p_z;
+        double p_ph = dx_dph * p_x + dy_dph * p_y + dz_dph * p_z;
 
         // Set new arrays in reverse order
         sample_pos(m,l,num_steps-1-n,0) = t;
         sample_pos(m,l,num_steps-1-n,1) = r;
         sample_pos(m,l,num_steps-1-n,2) = th;
         sample_pos(m,l,num_steps-1-n,3) = ph;
-        sample_dir(m,l,num_steps-1-n,0) = ut;
-        sample_dir(m,l,num_steps-1-n,1) = ur;
-        sample_dir(m,l,num_steps-1-n,2) = uth;
-        sample_dir(m,l,num_steps-1-n,3) = uph;
+        sample_dir(m,l,num_steps-1-n,0) = p_t;
+        sample_dir(m,l,num_steps-1-n,1) = p_r;
+        sample_dir(m,l,num_steps-1-n,2) = p_th;
+        sample_dir(m,l,num_steps-1-n,3) = p_ph;
         sample_len(m,l,num_steps-1-n) = len;
       }
     }
@@ -458,12 +486,19 @@ void RayTracer::TransformGeodesics()
 // Output: (none)
 // Notes:
 //   Assumes im_steps, sample_flags, sample_num, sample_pos, and sample_len have been set.
-//   Allocates and initializes sample_rho and sample_pgas.
+//   Allocates and initializes sample_rho, sample_pgas, sample_uu1, sample_uu2, sample_uu3,
+//     sample_bb1, sample_bb2, and sample_bb3.
 void RayTracer::SampleAlongGeodesics()
 {
   // Allocate resampling arrays
   sample_rho.Allocate(im_res, im_res, im_steps);
   sample_pgas.Allocate(im_res, im_res, im_steps);
+  sample_uu1.Allocate(im_res, im_res, im_steps);
+  sample_uu2.Allocate(im_res, im_res, im_steps);
+  sample_uu3.Allocate(im_res, im_res, im_steps);
+  sample_bb1.Allocate(im_res, im_res, im_steps);
+  sample_bb2.Allocate(im_res, im_res, im_steps);
+  sample_bb3.Allocate(im_res, im_res, im_steps);
 
   // Prepare bookkeeping
   int n_b = rf.n2;
@@ -495,6 +530,12 @@ void RayTracer::SampleAlongGeodesics()
         {
           sample_rho(m,l,n) = rho_fallback;
           sample_pgas(m,l,n) = pgas_fallback;
+          sample_uu1(m,l,n) = uu1_fallback;
+          sample_uu2(m,l,n) = uu2_fallback;
+          sample_uu3(m,l,n) = uu3_fallback;
+          sample_bb1(m,l,n) = bb1_fallback;
+          sample_bb2(m,l,n) = bb2_fallback;
+          sample_bb3(m,l,n) = bb3_fallback;
         }
         continue;
       }
@@ -541,6 +582,12 @@ void RayTracer::SampleAlongGeodesics()
           {
             sample_rho(m,l,n) = rho_fallback;
             sample_pgas(m,l,n) = pgas_fallback;
+            sample_uu1(m,l,n) = uu1_fallback;
+            sample_uu2(m,l,n) = uu2_fallback;
+            sample_uu3(m,l,n) = uu3_fallback;
+            sample_bb1(m,l,n) = bb1_fallback;
+            sample_bb2(m,l,n) = bb2_fallback;
+            sample_bb3(m,l,n) = bb3_fallback;
             continue;
           }
 
@@ -566,8 +613,14 @@ void RayTracer::SampleAlongGeodesics()
             break;
 
         // Resample values
-        sample_rho(m,l,n) = rho(b,k,j,i);
-        sample_pgas(m,l,n) = pgas(b,k,j,i);
+        sample_rho(m,l,n) = grid_rho(b,k,j,i);
+        sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
+        sample_uu1(m,l,n) = grid_uu1(b,k,j,i);
+        sample_uu2(m,l,n) = grid_uu2(b,k,j,i);
+        sample_uu3(m,l,n) = grid_uu3(b,k,j,i);
+        sample_bb1(m,l,n) = grid_bb1(b,k,j,i);
+        sample_bb2(m,l,n) = grid_bb2(b,k,j,i);
+        sample_bb3(m,l,n) = grid_bb3(b,k,j,i);
       }
     }
   return;
@@ -581,27 +634,121 @@ void RayTracer::SampleAlongGeodesics()
 // Notes:
 //   Assumes sample_num, sample_dir, sample_len, sample_rho, and sample_pgas have been set.
 //   Allocates and initializes image.
+//   Assumes x^0 and x^3 are ignorable.
 //   TODO: use physically meaningful formula
+//   TODO: scale length appropriately
 void RayTracer::IntegrateRadiation()
 {
-  // Allocate array
+  // Allocate image array
   image.Allocate(im_res, im_res);
   image.Zero();
 
-  // Integrate radiative transfer equation
+  // Allocate scratch arrays
+  Array<double> gcov(4, 4);
+  Array<double> gcon(4, 4);
+
+  // Calculate units
+  double e_unit = rho_unit * physics::c * physics::c;
+
+  // Go through pixels
   for (int m = 0; m < im_res; m++)
     for (int l = 0; l < im_res; l++)
     {
+      // Go through samples
       int num_steps = sample_num(m,l);
       for (int n = 0; n < num_steps; n++)
       {
+        // Check that this sample contributes
         double length = sample_len(m,l,n);
-        if (length > 0.0)
-        {
-          float tt = sample_pgas(m,l,n) / sample_rho(m,l,n);
-          float tt4 = tt * tt * tt * tt;
-          image(m,l) += sample_rho(m,l,n) * tt4 * static_cast<float>(length);
-        }
+        if (length == 0.0)
+          continue;
+
+        // Extract geodesic position and momentum
+        double r = sample_pos(m,l,n,1);
+        double th = sample_pos(m,l,n,2);
+        double p_0 = sample_dir(m,l,n,0);
+        double p_1 = sample_dir(m,l,n,1);
+        double p_2 = sample_dir(m,l,n,2);
+        double p_3 = sample_dir(m,l,n,3);
+
+        // Extract cell variables
+        double rho = sample_rho(m,l,n);
+        double pgas = sample_pgas(m,l,n);
+        double uu1 = sample_uu1(m,l,n);
+        double uu2 = sample_uu2(m,l,n);
+        double uu3 = sample_uu3(m,l,n);
+        double bb1 = sample_bb1(m,l,n);
+        double bb2 = sample_bb2(m,l,n);
+        double bb3 = sample_bb3(m,l,n);
+
+        // Calculate metric
+        CovariantCoordinateMetric(r, th, gcov);
+        ContravariantCoordinateMetric(r, th, gcon);
+
+        // Calculate 4-velocity
+        double temp = gcov(1,1) * uu1 * uu1 + 2.0 * gcov(1,2) * uu1 * uu2
+            + 2.0 * gcov(1,3) * uu1 * uu3 + gcov(2,2) * uu2 * uu2 + 2.0 * gcov(2,3) * uu2 * uu3
+            + gcov(3,3) * uu3 * uu3;
+        double gamma = std::sqrt(1.0 + temp);
+        double alpha = std::sqrt(-gcon(0,0));
+        double beta1 = -gcon(0,1) / gcon(0,0);
+        double beta2 = -gcon(0,2) / gcon(0,0);
+        double beta3 = -gcon(0,3) / gcon(0,0);
+        double u0 = gamma / alpha;
+        double u1 = uu1 - beta1 * gamma / alpha;
+        double u2 = uu2 - beta2 * gamma / alpha;
+        double u3 = uu3 - beta3 * gamma / alpha;
+        double u_1 = gcov(1,0) * u0 + gcov(1,1) * u1 + gcov(1,2) * u2 + gcov(1,3) * u3;
+        double u_2 = gcov(2,0) * u0 + gcov(2,1) * u1 + gcov(2,2) * u2 + gcov(2,3) * u3;
+        double u_3 = gcov(3,0) * u0 + gcov(3,1) * u1 + gcov(3,2) * u2 + gcov(3,3) * u3;
+
+        // Calculate magnetic field strength
+        double b0 = u_1 * bb1 + u_2 * bb2 + u_3 * bb3;
+        double b1 = (bb1 + b0 * u1) / u0;
+        double b2 = (bb2 + b0 * u2) / u0;
+        double b3 = (bb3 + b0 * u3) / u0;
+        double b_0 = gcov(0,0) * b0 + gcov(0,1) * b1 + gcov(0,2) * b2 + gcov(0,3) * b3;
+        double b_1 = gcov(1,0) * b0 + gcov(1,1) * b1 + gcov(1,2) * b2 + gcov(1,3) * b3;
+        double b_2 = gcov(2,0) * b0 + gcov(2,1) * b1 + gcov(2,2) * b2 + gcov(2,3) * b3;
+        double b_3 = gcov(3,0) * b0 + gcov(3,1) * b1 + gcov(3,2) * b2 + gcov(3,3) * b3;
+        double b_sq = b_0 * b0 + b_1 * b1 + b_2 * b2 + b_3 * b3;
+
+        // Calculate fluid-frame quantities in CGS units
+        double nu_fluid_cgs = (u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) / p_0 * im_freq;
+        double n_cgs = rho * rho_unit / (plasma_mu * physics::m_p);
+        double bb_cgs = std::sqrt(4.0 * math::pi * b_sq * e_unit);
+
+        // Calculate emission coefficient
+        double omega_b = physics::e * bb_cgs / (physics::m_e * physics::c);
+        double chi = 2.0 * math::pi * nu_fluid_cgs / omega_b;
+        double kb_tt_tot = plasma_mu * physics::m_p * physics::c * physics::c * pgas / rho;
+        double beta_inv = b_sq / (2.0 * pgas);
+        double tt_rat =
+            (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv) / (1.0 + beta_inv * beta_inv);
+        double kb_tt_e = (plasma_ne_ni + 1.0) / (plasma_ne_ni + tt_rat) * kb_tt_tot;
+        double theta_e = kb_tt_e / (physics::m_e * physics::c * physics::c);
+        double x_m = 2.0 * chi / (3.0 * theta_e * theta_e);
+        double n_e = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
+        double cc =
+            physics::e * physics::e * n_e * omega_b / (std::sqrt(3.0) * math::pi * physics::c);
+        double k2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
+        double ii = 4.0505 / std::sqrt(std::cbrt(x_m))
+            * (1.0 + 0.4 / std::sqrt(std::sqrt(x_m)) + 0.5316 / std::sqrt(x_m))
+            * std::exp(-1.8899 * std::cbrt(x_m));
+        double j_nu = 2.0 * math::pi * cc * chi / k2 * ii;
+
+        // Calculate absorption coefficient
+        double b_nu_num = 2.0 * physics::h * nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs
+            / (physics::c * physics::c);
+        double b_nu_exp = physics::h * nu_fluid_cgs / kb_tt_e;
+        double b_nu_den = b_nu_exp < 1.0 ? std::expm1(b_nu_exp) : std::exp(b_nu_exp) - 1.0;
+        double b_nu = b_nu_num / b_nu_den;
+        double alpha_nu = j_nu / b_nu;
+
+        // Calculate change in invariant intensity
+        double i_nu_nu2_fluid = static_cast<double>(image(m,l)) * nu_fluid_cgs;
+        double source = j_nu / (nu_fluid_cgs * nu_fluid_cgs) - alpha_nu * i_nu_nu2_fluid;
+        image(m,l) = static_cast<float>(static_cast<double>(image(m,l)) + source * length);
       }
     }
   return;
@@ -634,11 +781,11 @@ double RayTracer::RadialGeodesicCoordinate(double x, double y, double z)
 //   gcov: components set
 // Notes:
 //   Assumes gcov is allocated to be 4*4.
-//   Assumes Cartesian Kerr-Schild coordinates (assumes Minkowski coordinates if flat == true).
+//   Assumes Cartesian Kerr-Schild coordinates (assumes Minkowski coordinates if ray_flat == true).
 void RayTracer::CovariantGeodesicMetric(double x, double y, double z, Array<double> &gcov)
 {
   // Handle flat case
-  if (flat)
+  if (ray_flat)
   {
     gcov.Zero();
     gcov(0,0) = -1.0;
@@ -690,11 +837,11 @@ void RayTracer::CovariantGeodesicMetric(double x, double y, double z, Array<doub
 //   gcon: components set
 // Notes:
 //   Assumes gcon is allocated to be 4*4.
-//   Assumes Cartesian Kerr-Schild coordinates (assumes Minkowski coordinates if flat == true).
+//   Assumes Cartesian Kerr-Schild coordinates (assumes Minkowski coordinates if ray_flat == true).
 void RayTracer::ContravariantGeodesicMetric(double x, double y, double z, Array<double> &gcon)
 {
   // Handle flat case
-  if (flat)
+  if (ray_flat)
   {
     gcon.Zero();
     gcon(0,0) = -1.0;
@@ -746,12 +893,12 @@ void RayTracer::ContravariantGeodesicMetric(double x, double y, double z, Array<
 //   dgcon: components set
 // Notes:
 //   Assumes dgcon is allocated to be 3*4*4.
-//   Assumes Cartesian Kerr-Schild coordinates (assumes Minkowski coordinates if flat == true).
+//   Assumes Cartesian Kerr-Schild coordinates (assumes Minkowski coordinates if ray_flat == true).
 void RayTracer::ContravariantGeodesicMetricDerivative(double x, double y, double z,
     Array<double> &dgcon)
 {
   // Handle flat case
-  if (flat)
+  if (ray_flat)
   {
     dgcon.Zero();
     return;
@@ -846,5 +993,80 @@ void RayTracer::ContravariantGeodesicMetricDerivative(double x, double y, double
   dgcon(2,3,1) = -(df_dz * l3 * l1 + f * dl3_dz * l1 + f * l3 * dl1_dz);
   dgcon(2,3,2) = -(df_dz * l3 * l2 + f * dl3_dz * l2 + f * l3 * dl2_dz);
   dgcon(2,3,3) = -(df_dz * l3 * l3 + f * dl3_dz * l3 + f * l3 * dl3_dz);
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for calculating covariant metric components in simulation coordinates
+// Inputs:
+//   r, th: coordinates
+// Output:
+//   gcov: components set
+// Notes:
+//   Assumes gcov is allocated to be 4*4.
+//   Assumes spherical Kerr-Schild coordinates.
+void RayTracer::CovariantCoordinateMetric(double r, double th, Array<double> &gcov)
+{
+  // Calculate useful quantities
+  double sth = std::sin(th);
+  double cth = std::cos(th);
+  double sigma = r * r + bh_a * bh_a * cth * cth;
+
+  // Calculate metric components
+  gcov(0,0) = -(1.0 - 2.0 * bh_m * r / sigma);
+  gcov(0,1) = 2.0 * bh_m * r / sigma;
+  gcov(0,2) = 0.0;
+  gcov(0,3) = -2.0 * bh_m * bh_a * r * sth * sth / sigma;
+  gcov(1,0) = 2.0 * bh_m * r / sigma;
+  gcov(1,1) = 1.0 + 2.0 * bh_m * r / sigma;
+  gcov(1,2) = 0.0;
+  gcov(1,3) = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth * sth;
+  gcov(2,0) = 0.0;
+  gcov(2,1) = 0.0;
+  gcov(2,2) = sigma;
+  gcov(2,3) = 0.0;
+  gcov(3,0) = -2.0 * bh_m * bh_a * r * sth * sth / sigma;
+  gcov(3,1) = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth * sth;
+  gcov(3,2) = 0.0;
+  gcov(3,3) = (r * r + bh_a * bh_a + 2.0 * bh_m * bh_a * bh_a * r * sth * sth / sigma) * sth * sth;
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for calculating contravariant metric components in simulation coordinates
+// Inputs:
+//   r, th: coordinates
+// Output:
+//   gcon: components set
+// Notes:
+//   Assumes gcon is allocated to be 4*4.
+//   Assumes spherical Kerr-Schild coordinates.
+void RayTracer::ContravariantCoordinateMetric(double r, double th, Array<double> &gcon)
+{
+  // Calculate useful quantities
+  double sth = std::sin(th);
+  double cth = std::cos(th);
+  double delta = r * r - 2.0 * bh_m * r + bh_a * bh_a;
+  double sigma = r * r + bh_a * bh_a * cth * cth;
+
+  // Calculate metric components
+  gcon(0,0) = -(1.0 + 2.0 * bh_m * r / sigma);
+  gcon(0,1) = 2.0 * bh_m * r / sigma;
+  gcon(0,2) = 0.0;
+  gcon(0,3) = 0.0;
+  gcon(1,0) = 2.0 * bh_m * r / sigma;
+  gcon(1,1) = delta / sigma;
+  gcon(1,2) = 0.0;
+  gcon(1,3) = bh_a / sigma;
+  gcon(2,0) = 0.0;
+  gcon(2,1) = 0.0;
+  gcon(2,2) = 1.0 / sigma;
+  gcon(2,3) = 0.0;
+  gcon(3,0) = 0.0;
+  gcon(3,1) = bh_a / sigma;
+  gcon(3,2) = 0.0;
+  gcon(3,3) = 1.0 / (sigma * sth * sth);
   return;
 }

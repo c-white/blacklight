@@ -62,10 +62,26 @@ void InputReader::Read()
       output_file = val;
 
     // Store coordinate data
-    else if (key == "m")
+    else if (key == "bh_m")
       bh_m = std::stod(val);
-    else if (key == "a")
+    else if (key == "bh_a")
       bh_a = std::stod(val);
+
+    // Store unit data
+    else if (key == "m_msun")
+      m_msun = std::stod(val);
+    else if (key == "rho_unit")
+      rho_unit = std::stod(val);
+
+    // Store plasma data
+    else if (key == "plasma_mu")
+      plasma_mu = std::stod(val);
+    else if (key == "plasma_ne_ni")
+      plasma_ne_ni = std::stod(val);
+    else if (key == "plasma_rat_high")
+      plasma_rat_high = std::stod(val);
+    else if (key == "plasma_rat_low")
+      plasma_rat_low = std::stod(val);
 
     // Store image data
     else if (key == "im_radius")
@@ -80,14 +96,16 @@ void InputReader::Read()
       im_width = std::stod(val);
     else if (key == "im_res")
       im_res = std::stoi(val);
+    else if (key == "im_freq")
+      im_freq = std::stod(val);
 
     // Store ray data
     else if (key == "ray_step")
       ray_step = std::stod(val);
     else if (key == "ray_max_steps")
       ray_max_steps = std::stoi(val);
-    else if (key == "flat")
-      flat = ReadBool(val);
+    else if (key == "ray_flat")
+      ray_flat = ReadBool(val);
 
     // Handle unknown entry
     else

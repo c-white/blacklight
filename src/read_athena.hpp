@@ -35,9 +35,15 @@ struct AthenaReader
   unsigned long int *children_addresses;
   int num_children = 0;
   const int ind_prim = 0;
-  const int ind_bb = 1;
   const int ind_rho = 0;
   const int ind_pgas = 1;
+  const int ind_uu1 = 2;
+  const int ind_uu2 = 3;
+  const int ind_uu3 = 4;
+  const int ind_bb = 1;
+  const int ind_bb1 = 0;
+  const int ind_bb2 = 1;
+  const int ind_bb3 = 2;
 
   // Data
   float r_min, r_max, th_min, th_max, ph_min, ph_max;

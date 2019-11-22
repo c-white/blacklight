@@ -377,6 +377,18 @@ void AthenaReader::VerifyVariables()
     throw RayTraceException("Density not found.");
   if (not variable_names[ind_pgas].compare("press"))
     throw RayTraceException("Gas pressure not found.");
+  if (not variable_names[ind_uu1].compare("vel1"))
+    throw RayTraceException("x1-velocity not found.");
+  if (not variable_names[ind_uu2].compare("vel2"))
+    throw RayTraceException("x2-velocity not found.");
+  if (not variable_names[ind_uu3].compare("vel3"))
+    throw RayTraceException("x3-velocity not found.");
+  if (not variable_names[5+ind_bb1].compare("Bcc1"))
+    throw RayTraceException("x1-field not found.");
+  if (not variable_names[5+ind_bb2].compare("Bcc2"))
+    throw RayTraceException("x2-field not found.");
+  if (not variable_names[5+ind_bb3].compare("Bcc3"))
+    throw RayTraceException("x3-field not found.");
   return;
 }
 

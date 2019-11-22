@@ -25,6 +25,16 @@ struct InputReader
   double bh_m;
   double bh_a;
 
+  // Data - units
+  double m_msun;
+  double rho_unit;
+
+  // Data - plasma
+  double plasma_mu;
+  double plasma_ne_ni;
+  double plasma_rat_high;
+  double plasma_rat_low;
+
   // Data - image
   double im_r;
   double im_th;
@@ -32,12 +42,13 @@ struct InputReader
   double im_rot;
   double im_width;
   int im_res;
+  double im_freq;
   bool im_pole;
 
   // Data - rays
   double ray_step;
   int ray_max_steps;
-  bool flat;
+  bool ray_flat;
 
   // Functions
   void Read();

@@ -3,18 +3,29 @@ data_file   = data/test_data.athdf    # file containing Athena++ data dump
 output_file = output/test_output.dat  # file to be (over)written with image data
 
 # Coordinates
-m = 1.0   # black hole mass scale for data (usually 1)
-a = 0.98  # black hole spin in units of mass (magnitude less than m)
+bh_m = 1.0   # black hole mass scale for data (usually 1)
+bh_a = 0.98  # black hole spin in units of mass (magnitude less than m)
+
+# Units
+m_msun   = 4.152e6  # black hole mass in solar masses
+rho_unit = 1.7e-16  # unit code density in g/cm^3
+
+# Plasma
+plasma_mu       = 0.5   # molecular weight of fluid in proton masses
+plasma_ne_ni    = 1.0   # electrons per ion
+plasma_rat_high = 10.0  # ion-electron temperature ratio at infinite plasma beta
+plasma_rat_low  = 1.0   # ion-electron temperature ratio at zero plasma beta
 
 # Image
-im_radius    = 100.0  # radial coordinate of camera center in gravitational units
-im_theta     = 90.0   # polar coordinate of camera center in degrees (0/180 for north/south)
-im_phi       = 0.0    # azimuthal coordinate of camera in degrees
-im_rot       = 0.0    # rotation of camera in degrees (0/90 for north up/left)
-im_width     = 25.0   # full width of image in gravitational units
-im_res       = 50     # number of pixels per side
+im_radius = 100.0   # radial coordinate of camera center in gravitational units
+im_theta  = 90.0    # polar coordinate of camera center in degrees (0/180 for north/south)
+im_phi    = 0.0     # azimuthal coordinate of camera in degrees
+im_rot    = 0.0     # rotation of camera in degrees (0/90 for north up/left)
+im_width  = 25.0    # full width of image in gravitational units
+im_res    = 50      # number of pixels per side
+im_freq   = 2.3e11  # frequency of observation in GHz
 
 # Rays
 ray_step      = 0.01   # affine step size along each geodesic in units of current radius
 ray_max_steps = 1500   # maximum number of steps allowed for each geodesic
-flat          = false  # flag indicating ray tracing should assume flat spacetime
+ray_flat      = false  # flag indicating ray tracing should assume flat spacetime
