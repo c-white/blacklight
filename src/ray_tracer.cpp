@@ -635,6 +635,7 @@ void RayTracer::SampleAlongGeodesics()
 //   Assumes sample_num, sample_dir, sample_len, sample_rho, and sample_pgas have been set.
 //   Allocates and initializes image.
 //   Assumes x^0 and x^3 are ignorable.
+// TODO: stop zeroing absorption
 void RayTracer::IntegrateRadiation()
 {
   // Allocate image array
@@ -646,6 +647,8 @@ void RayTracer::IntegrateRadiation()
   Array<double> gcon(4, 4);
 
   // Calculate units
+  double x_unit = physics::gg_msun * m_msun / (physics::c * physics::c);
+  double t_unit = x_unit / physics::c;
   double e_unit = rho_unit * physics::c * physics::c;
 
   // Go through pixels
@@ -657,8 +660,8 @@ void RayTracer::IntegrateRadiation()
       for (int n = 0; n < num_steps; n++)
       {
         // Check that this sample contributes
-        double length = sample_len(m,l,n);
-        if (length == 0.0)
+        double delta_lambda = sample_len(m,l,n);
+        if (delta_lambda == 0.0)
           continue;
 
         // Extract geodesic position and momentum
@@ -733,7 +736,7 @@ void RayTracer::IntegrateRadiation()
         double ii = 4.0505 / std::sqrt(std::cbrt(x_m))
             * (1.0 + 0.4 / std::sqrt(std::sqrt(x_m)) + 0.5316 / std::sqrt(x_m))
             * std::exp(-1.8899 * std::cbrt(x_m));
-        double j_nu = 2.0 * math::pi * cc * chi / k2 * ii;
+        double j_nu_fluid_cgs = 2.0 * math::pi * cc * chi / k2 * ii;
 
         // Calculate absorption coefficient
         double b_nu_num = 2.0 * physics::h * nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs
@@ -741,14 +744,25 @@ void RayTracer::IntegrateRadiation()
         double b_nu_exp = physics::h * nu_fluid_cgs / kb_tt_e;
         double b_nu_den = b_nu_exp < 1.0 ? std::expm1(b_nu_exp) : std::exp(b_nu_exp) - 1.0;
         double b_nu = b_nu_num / b_nu_den;
-        double alpha_nu = j_nu / b_nu;
+        double alpha_nu_fluid_cgs = j_nu_fluid_cgs / b_nu;
+        alpha_nu_fluid_cgs = 0.0;
 
         // Calculate change in invariant intensity
-        double i_nu_nu2_fluid = image(m,l) * nu_fluid_cgs;
-        double source = j_nu / (nu_fluid_cgs * nu_fluid_cgs) - alpha_nu * i_nu_nu2_fluid;
-        image(m,l) += source * length;
+        double i_nu_fluid_cgs = nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs * image(m,l);
+        double delta_lambda_cgs = delta_lambda * x_unit * t_unit;
+        double delta_s_fluid_cgs = nu_fluid_cgs * delta_lambda_cgs;
+        i_nu_fluid_cgs +=
+            (j_nu_fluid_cgs - alpha_nu_fluid_cgs * i_nu_fluid_cgs) * delta_s_fluid_cgs;
+        image(m,l) = i_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs);
+        if (m == 25 and l == 25 and n == 0)
+          std::cout << "break\n";
       }
     }
+
+  // Transform I_nu/nu^3 to I_nu
+  for (int m = 0; m < im_res; m++)
+    for (int l = 0; l < im_res; l++)
+      image(m,l) *= im_freq * im_freq * im_freq;
   return;
 }
 
