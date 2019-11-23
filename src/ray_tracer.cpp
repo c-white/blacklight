@@ -83,6 +83,7 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
 
   // Calculate horizon radius
   r_hor = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
+  r_hor_eff = r_hor * r_hor_eff_factor;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -315,7 +316,7 @@ void RayTracer::IntegrateGeodesics()
           geodesic_pos(m,l,n,mu) = x[mu] + step/2.0 * dx1[mu];
         double delta_r = RadialGeodesicCoordinate(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
             geodesic_pos(m,l,n,3)) - r;
-        if ((r > im_r and delta_r > 0.0) or r < r_hor)
+        if ((r > im_r and delta_r > 0.0) or r < r_hor_eff)
           break;
 
         // Calculate momentum at half step
@@ -328,9 +329,24 @@ void RayTracer::IntegrateGeodesics()
         for (int mu = 0; mu < 4; mu++)
           geodesic_dir(m,l,n,mu) = p[mu] + step/2.0 * dp1[mu];
 
-        // Calculate position at full step
+        // Renormalize momentum
         ContravariantGeodesicMetric(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
             geodesic_pos(m,l,n,3), gcon);
+        double temp_a = 0.0;
+        for (int a = 1; a < 4; a++)
+          for (int b = 1; b < 4; b++)
+            temp_a += gcon(a,b) * geodesic_dir(m,l,n,a) * geodesic_dir(m,l,n,b);
+        double temp_b = 0.0;
+        for (int a = 1; a < 4; a++)
+          temp_b += 2.0 * gcon(0,a) * geodesic_dir(m,l,n,0) * geodesic_dir(m,l,n,a);
+        double temp_c = gcon(0,0) * geodesic_dir(m,l,n,0) * geodesic_dir(m,l,n,0);
+        double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
+        double factor =
+            temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
+        for (int a = 1; a < 4; a++)
+          geodesic_dir(m,l,n,a) *= factor;
+
+        // Calculate position at full step
         double dx2[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
@@ -349,13 +365,29 @@ void RayTracer::IntegrateGeodesics()
         for (int mu = 0; mu < 4; mu++)
           p[mu] += step * dp2[mu];
 
+        // Renormalize momentum
+        ContravariantGeodesicMetric(x[1], x[2], x[3], gcon);
+        temp_a = 0.0;
+        for (int a = 1; a < 4; a++)
+          for (int b = 1; b < 4; b++)
+            temp_a += gcon(a,b) * p[a] * p[b];
+        temp_b = 0.0;
+        for (int a = 1; a < 4; a++)
+          temp_b += 2.0 * gcon(0,a) * p[0] * p[a];
+        temp_c = gcon(0,0) * p[0] * p[0];
+        temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
+        factor =
+            temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
+        for (int a = 1; a < 4; a++)
+          p[a] *= factor;
+
         // Store length of step
         geodesic_len(m,l,n) = -step;
 
         // Check for too many steps taken
         double r_new = RadialGeodesicCoordinate(x[1], x[2], x[3]);
         delta_r = r_new - r;
-        if (n == ray_max_steps - 1 and not ((r > im_r and delta_r > 0.0) or r < r_hor))
+        if (n == ray_max_steps - 1 and not ((r > im_r and delta_r > 0.0) or r < r_hor_eff))
           sample_flags(m,l) = true;
         sample_num(m,l)++;
       }
@@ -691,7 +723,7 @@ void RayTracer::IntegrateRadiation()
             + 2.0 * gcov(1,3) * uu1 * uu3 + gcov(2,2) * uu2 * uu2 + 2.0 * gcov(2,3) * uu2 * uu3
             + gcov(3,3) * uu3 * uu3;
         double gamma = std::sqrt(1.0 + temp);
-        double alpha = std::sqrt(-gcon(0,0));
+        double alpha = 1.0 / std::sqrt(-gcon(0,0));
         double beta1 = -gcon(0,1) / gcon(0,0);
         double beta2 = -gcon(0,2) / gcon(0,0);
         double beta3 = -gcon(0,3) / gcon(0,0);
@@ -750,19 +782,17 @@ void RayTracer::IntegrateRadiation()
         // Calculate change in invariant intensity
         double i_nu_fluid_cgs = nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs * image(m,l);
         double delta_lambda_cgs = delta_lambda * x_unit * t_unit;
-        double delta_s_fluid_cgs = nu_fluid_cgs * delta_lambda_cgs;
+        double delta_s_fluid_cgs = -delta_lambda_cgs * nu_fluid_cgs * p_0 / im_freq;
         i_nu_fluid_cgs +=
             (j_nu_fluid_cgs - alpha_nu_fluid_cgs * i_nu_fluid_cgs) * delta_s_fluid_cgs;
         image(m,l) = i_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs);
-        if (m == 25 and l == 25 and n == 0)
-          std::cout << "break\n";
       }
     }
 
-  // Transform I_nu/nu^3 to I_nu
+  // Transform I_nu/nu^3 to brightness temperature
   for (int m = 0; m < im_res; m++)
     for (int l = 0; l < im_res; l++)
-      image(m,l) *= im_freq * im_freq * im_freq;
+      image(m,l) *= im_freq * physics::c * physics::c / (2.0 * physics::k_b);
   return;
 }
 

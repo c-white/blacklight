@@ -68,6 +68,8 @@ struct RayTracer
 
   // Sample and image data
   double r_hor;
+  const double r_hor_eff_factor = 1.05;
+  double r_hor_eff;
   int im_steps;
   Array<double> im_pos, im_dir;
   Array<double> geodesic_pos, geodesic_dir, geodesic_len;
