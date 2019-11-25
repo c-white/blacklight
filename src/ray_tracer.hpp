@@ -67,9 +67,7 @@ struct RayTracer
   const float bb3_fallback = 0.0f;
 
   // Sample and image data
-  double r_hor;
-  const double r_hor_eff_factor = 1.05;
-  double r_hor_eff;
+  double r_photon;
   int im_steps;
   Array<double> im_pos, im_dir;
   Array<double> geodesic_pos, geodesic_dir, geodesic_len;

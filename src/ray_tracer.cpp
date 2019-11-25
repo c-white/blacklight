@@ -2,8 +2,8 @@
 
 // C++ headers
 #include <algorithm>  // max
-#include <cmath>      // acos, atan, atan2, cbrt, copysign, cos, cyl_bessel_k, exp, expm1, fmax
-                      // fmod, hypot, pow, sin, sqrt
+#include <cmath>      // abs, acos, atan, atan2, cbrt, copysign, cos, cyl_bessel_k, exp, expm1,
+                      // fmax, fmod, hypot, pow, sin, sqrt
 #include <sstream>    // stringstream
 #include <string>     // string
 
@@ -81,9 +81,8 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   grid_bb3 = athena_reader.bb;
   grid_bb3.Slice(5, athena_reader.ind_bb3);
 
-  // Calculate horizon radius
-  r_hor = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
-  r_hor_eff = r_hor * r_hor_eff_factor;
+  // Calculate inner photon orbit radius
+  r_photon = 2.0 * bh_m * (1.0 + std::cos(2.0 / 3.0 * std::acos(-std::abs(bh_a) / bh_m)));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -316,7 +315,7 @@ void RayTracer::IntegrateGeodesics()
           geodesic_pos(m,l,n,mu) = x[mu] + step/2.0 * dx1[mu];
         double delta_r = RadialGeodesicCoordinate(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
             geodesic_pos(m,l,n,3)) - r;
-        if ((r > im_r and delta_r > 0.0) or r < r_hor_eff)
+        if ((r > im_r and delta_r > 0.0) or r < r_photon)
           break;
 
         // Calculate momentum at half step
@@ -387,7 +386,7 @@ void RayTracer::IntegrateGeodesics()
         // Check for too many steps taken
         double r_new = RadialGeodesicCoordinate(x[1], x[2], x[3]);
         delta_r = r_new - r;
-        if (n == ray_max_steps - 1 and not ((r > im_r and delta_r > 0.0) or r < r_hor_eff))
+        if (n == ray_max_steps - 1 and not ((r > im_r and delta_r > 0.0) or r < r_photon))
           sample_flags(m,l) = true;
         sample_num(m,l)++;
       }
