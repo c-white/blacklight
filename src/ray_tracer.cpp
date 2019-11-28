@@ -155,6 +155,10 @@ void RayTracer::InitializeCamera()
   double vx = up_x - up_n * im_nx;
   double vy = up_y - up_n * im_ny;
   double vz = up_z - up_n * im_nz;
+  double v_norm = std::sqrt(vx * vx + vy * vy + vz * vz);
+  vx /= v_norm;
+  vy /= v_norm;
+  vz /= v_norm;
 
   // Calculate camera horizontal orientation without rotation
   double ux = vy * im_nz - vz * im_ny;
@@ -750,37 +754,36 @@ void RayTracer::IntegrateRadiation()
         double n_cgs = rho * rho_unit / (plasma_mu * physics::m_p);
         double bb_cgs = std::sqrt(4.0 * math::pi * b_sq * e_unit);
 
-        // Calculate emission coefficient
-        double omega_b = physics::e * bb_cgs / (physics::m_e * physics::c);
-        double chi = 2.0 * math::pi * nu_fluid_cgs / omega_b;
-        double kb_tt_tot = plasma_mu * physics::m_p * physics::c * physics::c * pgas / rho;
+        // Calculate emission coefficient in CGS units
+        double omega_b_cgs = physics::e * bb_cgs / (physics::m_e * physics::c);
+        double chi = 2.0 * math::pi * nu_fluid_cgs / omega_b_cgs;
+        double kb_tt_tot_cgs = plasma_mu * physics::m_p * physics::c * physics::c * pgas / rho;
         double beta_inv = b_sq / (2.0 * pgas);
         double tt_rat =
             (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv) / (1.0 + beta_inv * beta_inv);
-        double kb_tt_e = (plasma_ne_ni + 1.0) / (plasma_ne_ni + tt_rat) * kb_tt_tot;
-        double theta_e = kb_tt_e / (physics::m_e * physics::c * physics::c);
+        double kb_tt_e_cgs = (plasma_ne_ni + 1.0) / (plasma_ne_ni + tt_rat) * kb_tt_tot_cgs;
+        double theta_e = kb_tt_e_cgs / (physics::m_e * physics::c * physics::c);
         double x_m = 2.0 * chi / (3.0 * theta_e * theta_e);
-        double n_e = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
-        double cc =
-            physics::e * physics::e * n_e * omega_b / (std::sqrt(3.0) * math::pi * physics::c);
+        double n_e_cgs = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
+        double cc_cgs = physics::e * physics::e * n_e_cgs * omega_b_cgs
+            / (std::sqrt(3.0) * math::pi * physics::c);
         double k2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
         double ii = 4.0505 / std::sqrt(std::cbrt(x_m))
             * (1.0 + 0.4 / std::sqrt(std::sqrt(x_m)) + 0.5316 / std::sqrt(x_m))
             * std::exp(-1.8899 * std::cbrt(x_m));
-        double j_nu_fluid_cgs = 2.0 * math::pi * cc * chi / k2 * ii;
+        double j_nu_fluid_cgs = 2.0 * math::pi * cc_cgs * chi / k2 * ii;
 
-        // Calculate absorption coefficient
+        // Calculate absorption coefficient in CGS units
         double b_nu_num = 2.0 * physics::h * nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs
             / (physics::c * physics::c);
-        double b_nu_exp = physics::h * nu_fluid_cgs / kb_tt_e;
+        double b_nu_exp = physics::h * nu_fluid_cgs / kb_tt_e_cgs;
         double b_nu_den = b_nu_exp < 1.0 ? std::expm1(b_nu_exp) : std::exp(b_nu_exp) - 1.0;
-        double b_nu = b_nu_num / b_nu_den;
-        double alpha_nu_fluid_cgs = j_nu_fluid_cgs / b_nu;
-        alpha_nu_fluid_cgs = 0.0;
+        double b_nu_cgs = b_nu_num / b_nu_den;
+        double alpha_nu_fluid_cgs = j_nu_fluid_cgs / b_nu_cgs;
 
         // Calculate change in invariant intensity
         double i_nu_fluid_cgs = nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs * image(m,l);
-        double delta_lambda_cgs = delta_lambda * x_unit * t_unit;
+        double delta_lambda_cgs = delta_lambda * x_unit / t_unit;
         double delta_s_fluid_cgs = -delta_lambda_cgs * nu_fluid_cgs * p_0 / im_freq;
         i_nu_fluid_cgs +=
             (j_nu_fluid_cgs - alpha_nu_fluid_cgs * i_nu_fluid_cgs) * delta_s_fluid_cgs;

@@ -17,12 +17,12 @@ plasma_rat_high = 10.0  # ion-electron temperature ratio at infinite plasma beta
 plasma_rat_low  = 1.0   # ion-electron temperature ratio at zero plasma beta
 
 # Image
-im_radius = 100.0   # radial coordinate of camera center in gravitational units
+im_radius = 50.0    # radial coordinate of camera center in gravitational units
 im_theta  = 90.0    # polar coordinate of camera center in degrees (0/180 for north/south)
 im_phi    = 0.0     # azimuthal coordinate of camera in degrees
 im_rot    = 0.0     # rotation of camera in degrees (0/90 for north up/left)
 im_width  = 25.0    # full width of image in gravitational units
-im_res    = 50      # number of pixels per side
+im_res    = 64      # number of pixels per side
 im_freq   = 2.3e11  # frequency of observation in GHz
 
 # Rays
