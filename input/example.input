@@ -11,10 +11,11 @@ m_msun   = 4.152e6  # black hole mass in solar masses
 rho_unit = 1.7e-16  # unit code density in g/cm^3
 
 # Plasma
-plasma_mu       = 0.5   # molecular weight of fluid in proton masses
-plasma_ne_ni    = 1.0   # electrons per ion
-plasma_rat_high = 10.0  # ion-electron temperature ratio at infinite plasma beta
-plasma_rat_low  = 1.0   # ion-electron temperature ratio at zero plasma beta
+plasma_mu        = 0.5   # molecular weight of fluid in proton masses
+plasma_ne_ni     = 1.0   # electrons per ion
+plasma_rat_high  = 10.0  # ion-electron temperature ratio at infinite plasma beta
+plasma_rat_low   = 1.0   # ion-electron temperature ratio at zero plasma beta
+plasma_sigma_max = 1.0   # if nonnegative, cutoff in sigma above which plasma is considered vacuum
 
 # Image
 im_radius = 50.0    # radial coordinate of camera center in gravitational units

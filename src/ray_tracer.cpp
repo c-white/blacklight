@@ -36,6 +36,7 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   plasma_ne_ni = input_reader.plasma_ne_ni;
   plasma_rat_high = input_reader.plasma_rat_high;
   plasma_rat_low = input_reader.plasma_rat_low;
+  plasma_sigma_max = input_reader.plasma_sigma_max;
 
   // Copy image input data
   im_r = input_reader.im_r;
@@ -748,6 +749,10 @@ void RayTracer::IntegrateRadiation()
         double b_2 = gcov(2,0) * b0 + gcov(2,1) * b1 + gcov(2,2) * b2 + gcov(2,3) * b3;
         double b_3 = gcov(3,0) * b0 + gcov(3,1) * b1 + gcov(3,2) * b2 + gcov(3,3) * b3;
         double b_sq = b_0 * b0 + b_1 * b1 + b_2 * b2 + b_3 * b3;
+
+        // Skip contribution if considered to be vacuum
+        if (plasma_sigma_max >= 0.0 and b_sq / rho > plasma_sigma_max)
+          continue;
 
         // Calculate fluid-frame quantities in CGS units
         double nu_fluid_cgs = (u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) / p_0 * im_freq;

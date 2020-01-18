@@ -34,6 +34,7 @@ struct InputReader
   double plasma_ne_ni;
   double plasma_rat_high;
   double plasma_rat_low;
+  double plasma_sigma_max;
 
   // Data - image
   double im_r;

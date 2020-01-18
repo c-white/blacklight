@@ -82,6 +82,8 @@ void InputReader::Read()
       plasma_rat_high = std::stod(val);
     else if (key == "plasma_rat_low")
       plasma_rat_low = std::stod(val);
+    else if (key == "plasma_sigma_max")
+      plasma_sigma_max = std::stod(val);
 
     // Store image data
     else if (key == "im_radius")

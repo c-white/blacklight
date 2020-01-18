@@ -33,6 +33,7 @@ struct RayTracer
   double plasma_ne_ni;
   double plasma_rat_high;
   double plasma_rat_low;
+  double plasma_sigma_max;
 
   // Input data - image
   double im_r;
