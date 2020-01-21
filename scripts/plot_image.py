@@ -38,8 +38,9 @@ def main(**kwargs):
   image = np.reshape(image, (pix_res, pix_res))
 
   # Plot figure
-  plt.imshow(image, origin='lower', cmap='inferno')
+  plt.imshow(image, origin='lower', cmap='inferno', vmin=0.0)
   plt.colorbar()
+  plt.tight_layout()
   plt.savefig(kwargs['image_plot_file'], dpi=dpi)
 
 # Execute main function
