@@ -21,4 +21,7 @@ namespace physics
   constexpr double m_e = 9.1093837015e-28;
 }
 
+// Enumerations
+enum Coordinates {sph_ks, cart_ks};
+
 #endif

@@ -6,6 +6,9 @@
 // C++ headers
 #include <string>  // string
 
+// Ray Trace headers
+#include "ray_trace.hpp"  // Coordinates
+
 //--------------------------------------------------------------------------------------------------
 
 // Input reader
@@ -24,6 +27,7 @@ struct InputReader
   // Data - coordinates
   double bh_m;
   double bh_a;
+  Coordinates coord;
 
   // Data - units
   double m_msun;
@@ -59,6 +63,7 @@ struct InputReader
   static bool RemoveableSpace(unsigned char c);
   double ReadPole(const std::string &string, bool *p_pole_flag);
   bool ReadBool(const std::string &string);
+  Coordinates ReadCoordinates(const std::string &string);
 };
 
 #endif

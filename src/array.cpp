@@ -501,6 +501,7 @@ void Array<type>::Slice(int dimension, int index)
   {
     // 1D
     case 1:
+    {
       if (index < 0 or index >= n1)
         throw RayTraceException("Attempting to slice outside array bounds.");
       data += index;
@@ -509,9 +510,11 @@ void Array<type>::Slice(int dimension, int index)
       n4 = 1;
       n5 = 1;
       break;
+    }
 
     // 2D
     case 2:
+    {
       if (index < 0 or index >= n2)
         throw RayTraceException("Attempting to slice outside array bounds.");
       data += index * n1;
@@ -519,37 +522,46 @@ void Array<type>::Slice(int dimension, int index)
       n4 = 1;
       n5 = 1;
       break;
+    }
 
     // 3D
     case 3:
+    {
       if (index < 0 or index >= n3)
         throw RayTraceException("Attempting to slice outside array bounds.");
       data += index * n2 * n1;
       n4 = 1;
       n5 = 1;
       break;
+    }
 
     // 4D
     case 4:
+    {
       if (index < 0 or index >= n4)
         throw RayTraceException("Attempting to slice outside array bounds.");
       data += index * n3 * n2 * n1;
       n4 = 1;
       n5 = 1;
       break;
+    }
 
     // 5D
     case 5:
+    {
       if (index < 0 or index >= n5)
         throw RayTraceException("Attempting to slice outside array bounds.");
       data += index * n4 * n3 * n2 * n1;
       n5 = 1;
       break;
+    }
 
     // Invalid dimension
     default:
+    {
       if (dimension < 1 or dimension > max_dims)
         throw RayTraceException("Attempting to slice at invalid dimension.");
+    }
   }
 
   // Recalculate number of elements

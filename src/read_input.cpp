@@ -9,7 +9,7 @@
 // Ray Trace headers
 #include "read_input.hpp"
 #include "exceptions.hpp"  // RayTraceException
-#include "ray_trace.hpp"   // math
+#include "ray_trace.hpp"   // math, Coordinates
 
 //--------------------------------------------------------------------------------------------------
 
@@ -66,6 +66,8 @@ void InputReader::Read()
       bh_m = std::stod(val);
     else if (key == "bh_a")
       bh_a = std::stod(val);
+    else if (key == "coord")
+      coord = ReadCoordinates(val);
 
     // Store unit data
     else if (key == "m_msun")
@@ -167,4 +169,25 @@ bool InputReader::ReadBool(const std::string &string)
     return false;
   else
     throw RayTraceException("Unknown string used for boolean value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as Coordinates enumerations
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid Coordinates
+// Notes:
+//   Valid options:
+//     "sph_ks": spherical Kerr-Schild
+//     "cart_ks": Cartesian Kerr-Schild
+Coordinates InputReader::ReadCoordinates(const std::string &string)
+{
+  if (string == "sph_ks")
+    return sph_ks;
+  else if (string == "cart_ks")
+    return cart_ks;
+  else
+    throw RayTraceException("Unknown string used for Coordinates value.");
 }

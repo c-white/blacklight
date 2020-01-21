@@ -5,6 +5,7 @@
 
 // Ray Trace headers
 #include "array.hpp"        // Array
+#include "ray_trace.hpp"    // Coordinates
 #include "read_athena.hpp"  // AthenaReader
 #include "read_input.hpp"   // InputReader
 
@@ -23,6 +24,7 @@ struct RayTracer
   // Input data - coordinates
   double bh_m;
   double bh_a;
+  Coordinates coord;
 
   // Input data - units
   double m_msun;
@@ -51,8 +53,8 @@ struct RayTracer
   bool ray_flat;
 
   // Grid data
-  double r_min, r_max, th_min, th_max, ph_min, ph_max;
-  Array<float> rf, thf, phf;
+  double x1_min, x1_max, x2_min, x2_max, x3_min, x3_max;
+  Array<float> x1f, x2f, x3f;
   Array<float> grid_rho, grid_pgas;
   Array<float> grid_uu1, grid_uu2, grid_uu3;
   Array<float> grid_bb1, grid_bb2, grid_bb3;
@@ -92,8 +94,8 @@ struct RayTracer
   void CovariantGeodesicMetric(double x, double y, double z, Array<double> &gcov);
   void ContravariantGeodesicMetric(double x, double y, double z, Array<double> &gcon);
   void ContravariantGeodesicMetricDerivative(double x, double y, double z, Array<double> &dgcon);
-  void CovariantCoordinateMetric(double r, double th, Array<double> &gcov);
-  void ContravariantCoordinateMetric(double r, double th, Array<double> &gcon);
+  void CovariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcov);
+  void ContravariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcon);
 };
 
 #endif

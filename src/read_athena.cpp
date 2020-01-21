@@ -63,12 +63,12 @@ void AthenaReader::Read()
   ReadHDF5IntArray("LogicalLocations", locations);
 
   // Read coordinates
-  ReadHDF5FloatArray("x1f", rf);
-  ReadHDF5FloatArray("x2f", thf);
-  ReadHDF5FloatArray("x3f", phf);
-  ReadHDF5FloatArray("x1v", r);
-  ReadHDF5FloatArray("x2v", th);
-  ReadHDF5FloatArray("x3v", ph);
+  ReadHDF5FloatArray("x1f", x1f);
+  ReadHDF5FloatArray("x2f", x2f);
+  ReadHDF5FloatArray("x3f", x3f);
+  ReadHDF5FloatArray("x1v", x1);
+  ReadHDF5FloatArray("x2v", x2);
+  ReadHDF5FloatArray("x3v", x3);
 
   // Read cell data
   ReadHDF5FloatArray("prim", prim);
@@ -300,20 +300,20 @@ void AthenaReader::ReadHDF5RootObjectHeader()
         root_grid_x1_found = true;
         Array<float> root_grid_x1;
         SetHDF5FloatArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_x1);
-        r_min = root_grid_x1(0);
-        r_max = root_grid_x1(1);
+        x1_min = root_grid_x1(0);
+        x1_max = root_grid_x1(1);
       } else if (name == "RootGridX2") {
         root_grid_x2_found = true;
         Array<float> root_grid_x2;
         SetHDF5FloatArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_x2);
-        th_min = root_grid_x2(0);
-        th_max = root_grid_x2(1);
+        x2_min = root_grid_x2(0);
+        x2_max = root_grid_x2(1);
       } else if (name == "RootGridX3") {
         root_grid_x3_found = true;
         Array<float> root_grid_x3;
         SetHDF5FloatArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_x3);
-        ph_min = root_grid_x3(0);
-        ph_max = root_grid_x3(1);
+        x3_min = root_grid_x3(0);
+        x3_max = root_grid_x3(1);
       } else if (name == "DatasetNames") {
         dataset_names_found = true;
         SetHDF5StringArray(datatype_raw, dataspace_raw, message_data + offset, &dataset_names,

@@ -3,8 +3,9 @@ data_file   = data/test_data.athdf    # file containing Athena++ data dump
 output_file = output/test_output.dat  # file to be (over)written with image data
 
 # Coordinates
-bh_m = 1.0  # black hole mass scale for data (usually 1)
-bh_a = 0.9  # black hole spin in units of mass (magnitude less than m)
+bh_m  = 1.0     # black hole mass scale for data (usually 1)
+bh_a  = 0.9     # black hole spin in units of mass (magnitude less than m)
+coord = sph_ks  # simulation coordinates (sph_ks or cart_ks)
 
 # Units
 m_msun   = 4.152e6  # black hole mass in solar masses

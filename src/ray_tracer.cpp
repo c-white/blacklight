@@ -14,7 +14,7 @@
 #include "ray_tracer.hpp"
 #include "array.hpp"        // Array
 #include "exceptions.hpp"   // RayTraceWarning
-#include "ray_trace.hpp"    // math, physics
+#include "ray_trace.hpp"    // math, physics, Coordinates
 #include "read_athena.hpp"  // AthenaReader
 #include "read_input.hpp"   // InputReader
 
@@ -29,6 +29,7 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   // Copy coordinate input data
   bh_m = input_reader.bh_m;
   bh_a = input_reader.bh_a;
+  coord = input_reader.coord;
 
   // Copy unit input data
   m_msun = input_reader.m_msun;
@@ -57,17 +58,17 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   ray_flat = input_reader.ray_flat;
 
   // Copy raw data scalars
-  r_min = athena_reader.r_min;
-  r_max = athena_reader.r_max;
-  th_min = athena_reader.th_min;
-  th_max = athena_reader.th_max;
-  ph_min = athena_reader.ph_min;
-  ph_max = athena_reader.ph_max;
+  x1_min = athena_reader.x1_min;
+  x1_max = athena_reader.x1_max;
+  x2_min = athena_reader.x2_min;
+  x2_max = athena_reader.x2_max;
+  x3_min = athena_reader.x3_min;
+  x3_max = athena_reader.x3_max;
 
   // Make shallow copies of raw data arrays
-  rf = athena_reader.rf;
-  thf = athena_reader.thf;
-  phf = athena_reader.phf;
+  x1f = athena_reader.x1f;
+  x2f = athena_reader.x2f;
+  x3f = athena_reader.x3f;
   grid_rho = athena_reader.prim;
   grid_rho.Slice(5, athena_reader.ind_rho);
   grid_pgas = athena_reader.prim;
@@ -449,9 +450,9 @@ void RayTracer::IntegrateGeodesics()
 //       integrating metric to simulation metric and reversed in the sampling dimension.
 //   Deallocates geodesic_pos, geodesic_dir, and geodesic_len.
 //   Assumes integrating metric is Cartesian Kerr-Schild.
-//   Assumes simulation metric is spherical Kerr-Schild.
 //   Transformation of time components is trivial.
-//   Transformation of geodesic_len is trivial.
+//   Transformation of geodesic length is trivial.
+//   All transformations trivial if simulation metric is Cartesian Kerr-Schild.
 void RayTracer::TransformGeodesics()
 {
   // Allocate new arrays
@@ -485,45 +486,77 @@ void RayTracer::TransformGeodesics()
         double p_y = geodesic_dir(m,l,n,2);
         double p_z = geodesic_dir(m,l,n,3);
 
-        // Calculate spherical position
-        double a2 = bh_a * bh_a;
-        double rr2 = x * x + y * y + z * z;
-        double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
-        double r = std::sqrt(r2);
-        double th = std::acos(z / r);
-        double ph = std::atan2(y, x) - std::atan(bh_a / r);
-        ph += ph < 0.0 ? 2.0 * math::pi : 0.0;
-        ph -= ph > 2.0 * math::pi ? 2.0 * math::pi : 0.0;
-        double sth = std::sin(th);
-        double cth = std::cos(th);
-        double sph = std::sin(ph);
-        double cph = std::cos(ph);
+        // Account for simulation metric
+        double x1, x2, x3;
+        double p_1, p_2, p_3;
+        switch (coord)
+        {
+          // Spherical Kerr-Schild
+          case sph_ks:
+          {
+            // Calculate spherical position
+            double a2 = bh_a * bh_a;
+            double rr2 = x * x + y * y + z * z;
+            double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
+            double r = std::sqrt(r2);
+            double th = std::acos(z / r);
+            double ph = std::atan2(y, x) - std::atan(bh_a / r);
+            ph += ph < 0.0 ? 2.0 * math::pi : 0.0;
+            ph -= ph > 2.0 * math::pi ? 2.0 * math::pi : 0.0;
+            double sth = std::sin(th);
+            double cth = std::cos(th);
+            double sph = std::sin(ph);
+            double cph = std::cos(ph);
 
-        // Calculate Jacobian of transformation
-        double dx_dr = sth * cph;
-        double dy_dr = sth * sph;
-        double dz_dr = cth;
-        double dx_dth = cth * (r * cph - bh_a * sph);
-        double dy_dth = cth * (r * sph + bh_a * cph);
-        double dz_dth = -r * sth;
-        double dx_dph = sth * (-r * sph - bh_a * cph);
-        double dy_dph = sth * (r * cph - bh_a * sph);
-        double dz_dph = 0.0;
+            // Calculate Jacobian of transformation
+            double dx_dr = sth * cph;
+            double dy_dr = sth * sph;
+            double dz_dr = cth;
+            double dx_dth = cth * (r * cph - bh_a * sph);
+            double dy_dth = cth * (r * sph + bh_a * cph);
+            double dz_dth = -r * sth;
+            double dx_dph = sth * (-r * sph - bh_a * cph);
+            double dy_dph = sth * (r * cph - bh_a * sph);
+            double dz_dph = 0.0;
 
-        // Calculate spherical direction
-        double p_r = dx_dr * p_x + dy_dr * p_y + dz_dr * p_z;
-        double p_th = dx_dth * p_x + dy_dth * p_y + dz_dth * p_z;
-        double p_ph = dx_dph * p_x + dy_dph * p_y + dz_dph * p_z;
+            // Calculate spherical direction
+            double p_r = dx_dr * p_x + dy_dr * p_y + dz_dr * p_z;
+            double p_th = dx_dth * p_x + dy_dth * p_y + dz_dth * p_z;
+            double p_ph = dx_dph * p_x + dy_dph * p_y + dz_dph * p_z;
+
+            // Assign position and direction
+            x1 = r;
+            x2 = th;
+            x3 = ph;
+            p_1 = p_r;
+            p_2 = p_th;
+            p_3 = p_ph;
+            break;
+          }
+
+          // Cartesian Kerr-Schild
+          case cart_ks:
+          default:
+          {
+            x1 = x;
+            x2 = y;
+            x3 = z;
+            p_1 = p_x;
+            p_2 = p_y;
+            p_3 = p_z;
+            break;
+          }
+        }
 
         // Set new arrays in reverse order
         sample_pos(m,l,num_steps-1-n,0) = t;
-        sample_pos(m,l,num_steps-1-n,1) = r;
-        sample_pos(m,l,num_steps-1-n,2) = th;
-        sample_pos(m,l,num_steps-1-n,3) = ph;
+        sample_pos(m,l,num_steps-1-n,1) = x1;
+        sample_pos(m,l,num_steps-1-n,2) = x2;
+        sample_pos(m,l,num_steps-1-n,3) = x3;
         sample_dir(m,l,num_steps-1-n,0) = p_t;
-        sample_dir(m,l,num_steps-1-n,1) = p_r;
-        sample_dir(m,l,num_steps-1-n,2) = p_th;
-        sample_dir(m,l,num_steps-1-n,3) = p_ph;
+        sample_dir(m,l,num_steps-1-n,1) = p_1;
+        sample_dir(m,l,num_steps-1-n,2) = p_2;
+        sample_dir(m,l,num_steps-1-n,3) = p_3;
         sample_len(m,l,num_steps-1-n) = len;
       }
     }
@@ -561,20 +594,20 @@ void RayTracer::SampleAlongGeodesics()
   {
 
     // Prepare bookkeeping
-    int n_b = rf.n2;
-    int n_i = rf.n1 - 1;
-    int n_j = thf.n1 - 1;
-    int n_k = phf.n1 - 1;
+    int n_b = x1f.n2;
+    int n_i = x1f.n1 - 1;
+    int n_j = x2f.n1 - 1;
+    int n_k = x3f.n1 - 1;
     int b = 0;
     int i = 0;
     int j = 0;
     int k = 0;
-    double r_min_block = rf(b,0);
-    double r_max_block = rf(b,n_i);
-    double th_min_block = thf(b,0);
-    double th_max_block = thf(b,n_j);
-    double ph_min_block = phf(b,0);
-    double ph_max_block = phf(b,n_k);
+    double x1_min_block = x1f(b,0);
+    double x1_max_block = x1f(b,n_i);
+    double x2_min_block = x2f(b,0);
+    double x2_max_block = x2f(b,n_j);
+    double x3_min_block = x3f(b,0);
+    double x3_max_block = x3f(b,n_k);
 
     // Resample cell data onto geodesics
     #pragma omp for schedule(static)
@@ -609,32 +642,32 @@ void RayTracer::SampleAlongGeodesics()
             continue;
 
           // Extract coordinates
-          double r = sample_pos(m,l,n,1);
-          double th = sample_pos(m,l,n,2);
-          double ph = sample_pos(m,l,n,3);
+          double x1 = sample_pos(m,l,n,1);
+          double x2 = sample_pos(m,l,n,2);
+          double x3 = sample_pos(m,l,n,3);
 
           // Determine block
-          if (r < r_min_block or r > r_max_block or th < th_min_block or th > th_max_block
-              or ph < ph_min_block or ph > ph_max_block)
+          if (x1 < x1_min_block or x1 > x1_max_block or x2 < x2_min_block or x2 > x2_max_block
+              or x3 < x3_min_block or x3 > x3_max_block)
           {
             // Check if block contains position
             int b_new;
-            double r_min_temp = r_min_block;
-            double r_max_temp = r_max_block;
-            double th_min_temp = th_min_block;
-            double th_max_temp = th_max_block;
-            double ph_min_temp = ph_min_block;
-            double ph_max_temp = ph_max_block;
+            double x1_min_temp = x1_min_block;
+            double x1_max_temp = x1_max_block;
+            double x2_min_temp = x2_min_block;
+            double x2_max_temp = x2_max_block;
+            double x3_min_temp = x3_min_block;
+            double x3_max_temp = x3_max_block;
             for (b_new = 0; b_new < n_b; b_new++)
             {
-              r_min_temp = rf(b_new,0);
-              r_max_temp = rf(b_new,n_i);
-              th_min_temp = thf(b_new,0);
-              th_max_temp = thf(b_new,n_j);
-              ph_min_temp = phf(b_new,0);
-              ph_max_temp = phf(b_new,n_k);
-              if (r >= r_min_temp and r <= r_max_temp and th >= th_min_temp and th <= th_max_temp
-                  and ph >= ph_min_temp and ph <= ph_max_temp)
+              x1_min_temp = x1f(b_new,0);
+              x1_max_temp = x1f(b_new,n_i);
+              x2_min_temp = x2f(b_new,0);
+              x2_max_temp = x2f(b_new,n_j);
+              x3_min_temp = x3f(b_new,0);
+              x3_max_temp = x3f(b_new,n_k);
+              if (x1 >= x1_min_temp and x1 <= x1_max_temp and x2 >= x2_min_temp and x2 <= x2_max_temp
+                  and x3 >= x3_min_temp and x3 <= x3_max_temp)
                 break;
             }
 
@@ -654,23 +687,23 @@ void RayTracer::SampleAlongGeodesics()
 
             // Set newly found block as one to search
             b = b_new;
-            r_min_block = r_min_temp;
-            r_max_block = r_max_temp;
-            th_min_block = th_min_temp;
-            th_max_block = th_max_temp;
-            ph_min_block = ph_min_temp;
-            ph_max_block = ph_max_temp;
+            x1_min_block = x1_min_temp;
+            x1_max_block = x1_max_temp;
+            x2_min_block = x2_min_temp;
+            x2_max_block = x2_max_temp;
+            x3_min_block = x3_min_temp;
+            x3_max_block = x3_max_temp;
           }
 
           // Determine cell
           for (i = 0; i < n_i; i++)
-            if (static_cast<double>(rf(b,i+1)) >= r)
+            if (static_cast<double>(x1f(b,i+1)) >= x1)
               break;
           for (j = 0; j < n_j; j++)
-            if (static_cast<double>(thf(b,j+1)) >= th)
+            if (static_cast<double>(x2f(b,j+1)) >= x2)
               break;
           for (k = 0; k < n_k; k++)
-            if (static_cast<double>(phf(b,k+1)) >= ph)
+            if (static_cast<double>(x3f(b,k+1)) >= x3)
               break;
 
           // Resample values
@@ -696,8 +729,7 @@ void RayTracer::SampleAlongGeodesics()
 // Notes:
 //   Assumes sample_num, sample_dir, sample_len, sample_rho, and sample_pgas have been set.
 //   Allocates and initializes image.
-//   Assumes x^0 and x^3 are ignorable.
-// TODO: stop zeroing absorption
+//   Assumes x^0 is ignorable.
 void RayTracer::IntegrateRadiation()
 {
   // Allocate image array
@@ -731,8 +763,9 @@ void RayTracer::IntegrateRadiation()
             continue;
 
           // Extract geodesic position and momentum
-          double r = sample_pos(m,l,n,1);
-          double th = sample_pos(m,l,n,2);
+          double x1 = sample_pos(m,l,n,1);
+          double x2 = sample_pos(m,l,n,2);
+          double x3 = sample_pos(m,l,n,3);
           double p_0 = sample_dir(m,l,n,0);
           double p_1 = sample_dir(m,l,n,1);
           double p_2 = sample_dir(m,l,n,2);
@@ -749,8 +782,8 @@ void RayTracer::IntegrateRadiation()
           double bb3 = sample_bb3(m,l,n);
 
           // Calculate metric
-          CovariantCoordinateMetric(r, th, gcov);
-          ContravariantCoordinateMetric(r, th, gcon);
+          CovariantCoordinateMetric(x1, x2, x3, gcov);
+          ContravariantCoordinateMetric(x1, x2, x3, gcon);
 
           // Calculate 4-velocity
           double temp = gcov(1,1) * uu1 * uu1 + 2.0 * gcov(1,2) * uu1 * uu2
@@ -1081,36 +1114,85 @@ void RayTracer::ContravariantGeodesicMetricDerivative(double x, double y, double
 
 // Function for calculating covariant metric components in simulation coordinates
 // Inputs:
-//   r, th: coordinates
+//   x1, x2, x3: coordinates
 // Output:
 //   gcov: components set
 // Notes:
 //   Assumes gcov is allocated to be 4*4.
-//   Assumes spherical Kerr-Schild coordinates.
-void RayTracer::CovariantCoordinateMetric(double r, double th, Array<double> &gcov)
+void RayTracer::CovariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcov)
 {
-  // Calculate useful quantities
-  double sth = std::sin(th);
-  double cth = std::cos(th);
-  double sigma = r * r + bh_a * bh_a * cth * cth;
+  // Account for simulation metric
+  switch (coord)
+  {
+    // Spherical Kerr-Schild
+    case sph_ks:
+    {
+      // Calculate useful quantities
+      double r = x1;
+      double th = x2;
+      double sth = std::sin(th);
+      double cth = std::cos(th);
+      double sigma = r * r + bh_a * bh_a * cth * cth;
 
-  // Calculate metric components
-  gcov(0,0) = -(1.0 - 2.0 * bh_m * r / sigma);
-  gcov(0,1) = 2.0 * bh_m * r / sigma;
-  gcov(0,2) = 0.0;
-  gcov(0,3) = -2.0 * bh_m * bh_a * r * sth * sth / sigma;
-  gcov(1,0) = 2.0 * bh_m * r / sigma;
-  gcov(1,1) = 1.0 + 2.0 * bh_m * r / sigma;
-  gcov(1,2) = 0.0;
-  gcov(1,3) = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth * sth;
-  gcov(2,0) = 0.0;
-  gcov(2,1) = 0.0;
-  gcov(2,2) = sigma;
-  gcov(2,3) = 0.0;
-  gcov(3,0) = -2.0 * bh_m * bh_a * r * sth * sth / sigma;
-  gcov(3,1) = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth * sth;
-  gcov(3,2) = 0.0;
-  gcov(3,3) = (r * r + bh_a * bh_a + 2.0 * bh_m * bh_a * bh_a * r * sth * sth / sigma) * sth * sth;
+      // Calculate metric components
+      gcov(0,0) = -(1.0 - 2.0 * bh_m * r / sigma);
+      gcov(0,1) = 2.0 * bh_m * r / sigma;
+      gcov(0,2) = 0.0;
+      gcov(0,3) = -2.0 * bh_m * bh_a * r * sth * sth / sigma;
+      gcov(1,0) = 2.0 * bh_m * r / sigma;
+      gcov(1,1) = 1.0 + 2.0 * bh_m * r / sigma;
+      gcov(1,2) = 0.0;
+      gcov(1,3) = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth * sth;
+      gcov(2,0) = 0.0;
+      gcov(2,1) = 0.0;
+      gcov(2,2) = sigma;
+      gcov(2,3) = 0.0;
+      gcov(3,0) = -2.0 * bh_m * bh_a * r * sth * sth / sigma;
+      gcov(3,1) = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth * sth;
+      gcov(3,2) = 0.0;
+      gcov(3,3) = (r * r + bh_a * bh_a + 2.0 * bh_m * bh_a * bh_a * r * sth * sth / sigma) * sth * sth;
+      break;
+    }
+
+    // Cartesian Kerr-Schild
+    case cart_ks:
+    {
+      // Calculate useful quantities
+      double x = x1;
+      double y = x2;
+      double z = x3;
+      double a2 = bh_a * bh_a;
+      double rr2 = x * x + y * y + z * z;
+      double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
+      double r = std::sqrt(r2);
+      double f = 2.0 * bh_m * r * r * r / (r2 * r2 + a2 * z * z);
+
+      // Calculate null vector
+      double l_0 = 1.0;
+      double l_1 = (r * x + bh_a * y) / (r2 + a2);
+      double l_2 = (r * y - bh_a * x) / (r2 + a2);
+      double l_3 = z / r;
+
+      // Calculate metric components
+      gcov(0,0) = f * l_0 * l_0 - 1.0;
+      gcov(0,1) = f * l_0 * l_1;
+      gcov(0,2) = f * l_0 * l_2;
+      gcov(0,3) = f * l_0 * l_3;
+      gcov(1,0) = f * l_1 * l_0;
+      gcov(1,1) = f * l_1 * l_1 + 1.0;
+      gcov(1,2) = f * l_1 * l_2;
+      gcov(1,3) = f * l_1 * l_3;
+      gcov(2,0) = f * l_2 * l_0;
+      gcov(2,1) = f * l_2 * l_1;
+      gcov(2,2) = f * l_2 * l_2 + 1.0;
+      gcov(2,3) = f * l_2 * l_3;
+      gcov(3,0) = f * l_3 * l_0;
+      gcov(3,1) = f * l_3 * l_1;
+      gcov(3,2) = f * l_3 * l_2;
+      gcov(3,3) = f * l_3 * l_3 + 1.0;
+      break;
+    }
+  }
   return;
 }
 
@@ -1118,36 +1200,86 @@ void RayTracer::CovariantCoordinateMetric(double r, double th, Array<double> &gc
 
 // Function for calculating contravariant metric components in simulation coordinates
 // Inputs:
-//   r, th: coordinates
+//   x1, x2, x3: coordinates
 // Output:
 //   gcon: components set
 // Notes:
 //   Assumes gcon is allocated to be 4*4.
 //   Assumes spherical Kerr-Schild coordinates.
-void RayTracer::ContravariantCoordinateMetric(double r, double th, Array<double> &gcon)
+void RayTracer::ContravariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcon)
 {
-  // Calculate useful quantities
-  double sth = std::sin(th);
-  double cth = std::cos(th);
-  double delta = r * r - 2.0 * bh_m * r + bh_a * bh_a;
-  double sigma = r * r + bh_a * bh_a * cth * cth;
+  // Account for simulation metric
+  switch (coord)
+  {
+    // Spherical Kerr-Schild
+    case sph_ks:
+    {
+      // Calculate useful quantities
+      double r = x1;
+      double th = x2;
+      double sth = std::sin(th);
+      double cth = std::cos(th);
+      double delta = r * r - 2.0 * bh_m * r + bh_a * bh_a;
+      double sigma = r * r + bh_a * bh_a * cth * cth;
 
-  // Calculate metric components
-  gcon(0,0) = -(1.0 + 2.0 * bh_m * r / sigma);
-  gcon(0,1) = 2.0 * bh_m * r / sigma;
-  gcon(0,2) = 0.0;
-  gcon(0,3) = 0.0;
-  gcon(1,0) = 2.0 * bh_m * r / sigma;
-  gcon(1,1) = delta / sigma;
-  gcon(1,2) = 0.0;
-  gcon(1,3) = bh_a / sigma;
-  gcon(2,0) = 0.0;
-  gcon(2,1) = 0.0;
-  gcon(2,2) = 1.0 / sigma;
-  gcon(2,3) = 0.0;
-  gcon(3,0) = 0.0;
-  gcon(3,1) = bh_a / sigma;
-  gcon(3,2) = 0.0;
-  gcon(3,3) = 1.0 / (sigma * sth * sth);
+      // Calculate metric components
+      gcon(0,0) = -(1.0 + 2.0 * bh_m * r / sigma);
+      gcon(0,1) = 2.0 * bh_m * r / sigma;
+      gcon(0,2) = 0.0;
+      gcon(0,3) = 0.0;
+      gcon(1,0) = 2.0 * bh_m * r / sigma;
+      gcon(1,1) = delta / sigma;
+      gcon(1,2) = 0.0;
+      gcon(1,3) = bh_a / sigma;
+      gcon(2,0) = 0.0;
+      gcon(2,1) = 0.0;
+      gcon(2,2) = 1.0 / sigma;
+      gcon(2,3) = 0.0;
+      gcon(3,0) = 0.0;
+      gcon(3,1) = bh_a / sigma;
+      gcon(3,2) = 0.0;
+      gcon(3,3) = 1.0 / (sigma * sth * sth);
+      break;
+    }
+
+    // Cartesian Kerr-Schild
+    case cart_ks:
+    {
+      // Calculate useful quantities
+      double x = x1;
+      double y = x2;
+      double z = x3;
+      double a2 = bh_a * bh_a;
+      double rr2 = x * x + y * y + z * z;
+      double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
+      double r = std::sqrt(r2);
+      double f = 2.0 * bh_m * r * r * r / (r2 * r2 + a2 * z * z);
+
+      // Calculate null vector
+      double l0 = -1.0;
+      double l1 = (r * x + bh_a * y) / (r2 + a2);
+      double l2 = (r * y - bh_a * x) / (r2 + a2);
+      double l3 = z / r;
+
+      // Calculate metric components
+      gcon(0,0) = -f * l0 * l0 - 1.0;
+      gcon(0,1) = -f * l0 * l1;
+      gcon(0,2) = -f * l0 * l2;
+      gcon(0,3) = -f * l0 * l3;
+      gcon(1,0) = -f * l1 * l0;
+      gcon(1,1) = -f * l1 * l1 + 1.0;
+      gcon(1,2) = -f * l1 * l2;
+      gcon(1,3) = -f * l1 * l3;
+      gcon(2,0) = -f * l2 * l0;
+      gcon(2,1) = -f * l2 * l1;
+      gcon(2,2) = -f * l2 * l2 + 1.0;
+      gcon(2,3) = -f * l2 * l3;
+      gcon(3,0) = -f * l3 * l0;
+      gcon(3,1) = -f * l3 * l1;
+      gcon(3,2) = -f * l3 * l2;
+      gcon(3,3) = -f * l3 * l3 + 1.0;
+      break;
+    }
+  }
   return;
 }
