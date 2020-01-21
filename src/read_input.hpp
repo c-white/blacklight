@@ -51,6 +51,9 @@ struct InputReader
   int ray_max_steps;
   bool ray_flat;
 
+  // Data - performance
+  int num_threads;
+
   // Functions
   void Read();
   static bool RemoveableSpace(unsigned char c);

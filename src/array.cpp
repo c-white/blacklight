@@ -3,6 +3,9 @@
 // C++ headers
 #include <cstddef>  // size_t
 
+// Library headers
+#include <omp.h>  // pragmas
+
 // Ray Trace headers
 #include "array.hpp"
 #include "exceptions.hpp"  // RayTraceException
@@ -565,6 +568,7 @@ template<typename type>
 void Array<type>::Zero()
 {
   if (allocated)
+    #pragma omp parallel for schedule(static)
     for (int n = 0; n < n_tot; n++)
       data[n] = static_cast<type>(0);
   return;

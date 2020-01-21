@@ -109,6 +109,10 @@ void InputReader::Read()
     else if (key == "ray_flat")
       ray_flat = ReadBool(val);
 
+    // Store performance data
+    else if (key == "num_threads")
+      num_threads = std::stoi(val);
+
     // Handle unknown entry
     else
       throw RayTraceException("Unknown key in input file.");

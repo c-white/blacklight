@@ -4,6 +4,9 @@
 #include <iostream>  // cout
 #include <string>    // string
 
+// Library headers
+#include <omp.h>  // omp_set_num_threads
+
 // Ray Trace headers
 #include "ray_trace.hpp"
 #include "exceptions.hpp"    // RayTraceException
@@ -44,6 +47,9 @@ int main(int argc, char *argv[])
     std::cout << "Error: Could not read input file.\n";
     return 1;
   }
+
+  // Set number of threads to use
+  omp_set_num_threads(input_reader.num_threads);
 
   // Read data file
   AthenaReader athena_reader(input_reader.data_file);

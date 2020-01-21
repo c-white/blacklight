@@ -6,6 +6,9 @@
 #include <ios>      // ios_base, streamoff
 #include <string>   // getline, string
 
+// Library headers
+#include <omp.h>  // pragmas
+
 // Ray Trace headers
 #include "read_athena.hpp"
 #include "array.hpp"        // Array
@@ -809,25 +812,32 @@ void AthenaReader::SetHDF5IntArray(const unsigned char *datatype_raw,
     int_array.Allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]));
   else
     throw RayTraceException("Unexpected HDF5 fixed-point array size.");
-
-  // Initialize array
-  char *buffer = new char[size];
-  for (unsigned int n = 0; n < num_elements; n++)
-  {
-    if (rev_endian)
-      for (unsigned int m = 0; m < size; m++)
-        std::memcpy(buffer + size - 1 - m, data_raw + n * size + m, 1);
-    else
-      std::memcpy(buffer, data_raw + n * size, 4);
-    if (signed_val)
-      int_array(n) = *reinterpret_cast<int *>(buffer);
-    else
-      int_array(n) = static_cast<int>(*reinterpret_cast<unsigned int *>(buffer));
-  }
-  delete[] buffer;
-
-  // Free dimensions
   delete[] dims;
+
+  // Work in parallel
+  #pragma omp parallel
+  {
+    // Allocate buffer
+    char *buffer = new char[size];
+
+    // Initialize array
+    #pragma omp for schedule(static)
+    for (unsigned int n = 0; n < num_elements; n++)
+    {
+      if (rev_endian)
+        for (unsigned int m = 0; m < size; m++)
+          std::memcpy(buffer + size - 1 - m, data_raw + n * size + m, 1);
+      else
+        std::memcpy(buffer, data_raw + n * size, 4);
+      if (signed_val)
+        int_array(n) = *reinterpret_cast<int *>(buffer);
+      else
+        int_array(n) = static_cast<int>(*reinterpret_cast<unsigned int *>(buffer));
+    }
+
+    // Free buffer
+    delete[] buffer;
+  }
   return;
 }
 
@@ -912,22 +922,29 @@ void AthenaReader::SetHDF5FloatArray(const unsigned char *datatype_raw,
         static_cast<int>(dims[2]), static_cast<int>(dims[3]), static_cast<int>(dims[4]));
   else
     throw RayTraceException("Unexpected HDF5 floating-point array size.");
-
-  // Initialize array
-  char *buffer = new char[size];
-  for (unsigned int n = 0; n < num_elements; n++)
-  {
-    if (rev_endian)
-      for (unsigned int m = 0; m < size; m++)
-        std::memcpy(buffer + size - 1 - m, data_raw + n * size + m, 1);
-    else
-      std::memcpy(buffer, data_raw + n * size, size);
-    float_array(n) = *reinterpret_cast<float *>(buffer);
-  }
-  delete[] buffer;
-
-  // Free dimensions
   delete[] dims;
+
+  // Work in parallel
+  #pragma omp parallel
+  {
+    // Allocate buffer
+    char *buffer = new char[size];
+
+    // Initialize array
+    #pragma omp for schedule(static)
+    for (unsigned int n = 0; n < num_elements; n++)
+    {
+      if (rev_endian)
+        for (unsigned int m = 0; m < size; m++)
+          std::memcpy(buffer + size - 1 - m, data_raw + n * size + m, 1);
+      else
+        std::memcpy(buffer, data_raw + n * size, size);
+      float_array(n) = *reinterpret_cast<float *>(buffer);
+    }
+
+    // Free buffer
+    delete[] buffer;
+  }
   return;
 }
 

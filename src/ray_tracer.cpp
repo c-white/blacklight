@@ -7,6 +7,9 @@
 #include <sstream>    // stringstream
 #include <string>     // string
 
+// Library headers
+#include <omp.h>  // pragmas
+
 // Ray Trace headers
 #include "ray_tracer.hpp"
 #include "array.hpp"        // Array
@@ -179,6 +182,7 @@ void RayTracer::InitializeCamera()
   im_dir.Allocate(im_res, im_res, 4);
 
   // Initialize arrays
+  #pragma omp parallel for schedule(static)
   for (int m = 0; m < im_res; m++)
     for (int l = 0; l < im_res; l++)
     {
@@ -211,48 +215,53 @@ void RayTracer::InitializeCamera()
 //   Lowers all components of im_dir.
 void RayTracer::InitializeGeodesics()
 {
-  // Allocate scratch array
-  Array<double> gcov(4, 4);
+  // Work in parallel
+  #pragma omp parallel
+  {
+    // Allocate scratch array
+    Array<double> gcov(4, 4);
 
-  // Go through image pixels
-  for (int m = 0; m < im_res; m++)
-    for (int l = 0; l < im_res; l++)
-    {
-      // Extract position
-      double x[4];
-      x[0] = im_pos(m,l,0);
-      x[1] = im_pos(m,l,1);
-      x[2] = im_pos(m,l,2);
-      x[3] = im_pos(m,l,3);
-
-      // Extract spatial components of momentum
-      double p[4];
-      p[1] = im_dir(m,l,1);
-      p[2] = im_dir(m,l,2);
-      p[3] = im_dir(m,l,3);
-
-      // Calculate time component of momentum
-      CovariantGeodesicMetric(x[1], x[2], x[3], gcov);
-      double temp_a = gcov(0,0);
-      double temp_b = 0.0;
-      for (int a = 1; a < 4; a++)
-        temp_b += 2.0 * gcov(0,a) * p[a];
-      double temp_c = 0.0;
-      for (int a = 1; a < 4; a++)
-        for (int b = 1; b < 4; b++)
-          temp_c += gcov(a,b) * p[a] * p[b];
-      double temp_q = -0.5 * (temp_b
-          + std::copysign(1.0, temp_b) * std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c));
-      p[0] = std::fmax(temp_q / temp_a, temp_c / temp_q);
-
-      // Lower momentum components
-      for (int mu = 0; mu < 4; mu++)
+    // Go through image pixels
+    #pragma omp for schedule(static)
+    for (int m = 0; m < im_res; m++)
+      for (int l = 0; l < im_res; l++)
       {
-        im_dir(m,l,mu) = 0.0;
-        for (int nu = 0; nu < 4; nu++)
-          im_dir(m,l,mu) += gcov(mu,nu) * p[nu];
+        // Extract position
+        double x[4];
+        x[0] = im_pos(m,l,0);
+        x[1] = im_pos(m,l,1);
+        x[2] = im_pos(m,l,2);
+        x[3] = im_pos(m,l,3);
+
+        // Extract spatial components of momentum
+        double p[4];
+        p[1] = im_dir(m,l,1);
+        p[2] = im_dir(m,l,2);
+        p[3] = im_dir(m,l,3);
+
+        // Calculate time component of momentum
+        CovariantGeodesicMetric(x[1], x[2], x[3], gcov);
+        double temp_a = gcov(0,0);
+        double temp_b = 0.0;
+        for (int a = 1; a < 4; a++)
+          temp_b += 2.0 * gcov(0,a) * p[a];
+        double temp_c = 0.0;
+        for (int a = 1; a < 4; a++)
+          for (int b = 1; b < 4; b++)
+            temp_c += gcov(a,b) * p[a] * p[b];
+        double temp_q = -0.5 * (temp_b
+            + std::copysign(1.0, temp_b) * std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c));
+        p[0] = std::fmax(temp_q / temp_a, temp_c / temp_q);
+
+        // Lower momentum components
+        for (int mu = 0; mu < 4; mu++)
+        {
+          im_dir(m,l,mu) = 0.0;
+          for (int nu = 0; nu < 4; nu++)
+            im_dir(m,l,mu) += gcov(mu,nu) * p[nu];
+        }
       }
-    }
+  }
   return;
 }
 
@@ -281,134 +290,144 @@ void RayTracer::IntegrateGeodesics()
   sample_num.Allocate(im_res, im_res);
   sample_num.Zero();
 
-  // Allocate scratch arrays
-  Array<double> gcon(4, 4);
-  Array<double> dgcon(3, 4, 4);
-
-  // Go through image pixels
-  for (int m = 0; m < im_res; m++)
-    for (int l = 0; l < im_res; l++)
-    {
-      // Extract initial position
-      double x[4];
-      x[0] = im_pos(m,l,0);
-      x[1] = im_pos(m,l,1);
-      x[2] = im_pos(m,l,2);
-      x[3] = im_pos(m,l,3);
-
-      // Extract initial momentum
-      double p[4];
-      p[0] = im_dir(m,l,0);
-      p[1] = im_dir(m,l,1);
-      p[2] = im_dir(m,l,2);
-      p[3] = im_dir(m,l,3);
-
-      // Take steps
-      for (int n = 0; n < ray_max_steps; n++)
-      {
-        // Calculate step size for going back to source
-        double r = RadialGeodesicCoordinate(x[1], x[2], x[3]);
-        double step = -ray_step * r;
-
-        // Calculate position at half step, checking that step is worth taking
-        ContravariantGeodesicMetric(x[1], x[2], x[3], gcon);
-        double dx1[4] = {};
-        for (int mu = 0; mu < 4; mu++)
-          for (int nu = 0; nu < 4; nu++)
-            dx1[mu] += gcon(mu,nu) * p[nu];
-        for (int mu = 0; mu < 4; mu++)
-          geodesic_pos(m,l,n,mu) = x[mu] + step/2.0 * dx1[mu];
-        double delta_r = RadialGeodesicCoordinate(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
-            geodesic_pos(m,l,n,3)) - r;
-        if ((r > im_r and delta_r > 0.0) or r < r_photon)
-          break;
-
-        // Calculate momentum at half step
-        ContravariantGeodesicMetricDerivative(x[1], x[2], x[3], dgcon);
-        double dp1[4] = {};
-        for (int a = 1; a <= 3; a++)
-          for (int mu = 0; mu < 4; mu++)
-            for (int nu = 0; nu < 4; nu++)
-              dp1[a] -= 0.5 * dgcon(a-1,mu,nu) * p[mu] * p[nu];
-        for (int mu = 0; mu < 4; mu++)
-          geodesic_dir(m,l,n,mu) = p[mu] + step/2.0 * dp1[mu];
-
-        // Renormalize momentum
-        ContravariantGeodesicMetric(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
-            geodesic_pos(m,l,n,3), gcon);
-        double temp_a = 0.0;
-        for (int a = 1; a < 4; a++)
-          for (int b = 1; b < 4; b++)
-            temp_a += gcon(a,b) * geodesic_dir(m,l,n,a) * geodesic_dir(m,l,n,b);
-        double temp_b = 0.0;
-        for (int a = 1; a < 4; a++)
-          temp_b += 2.0 * gcon(0,a) * geodesic_dir(m,l,n,0) * geodesic_dir(m,l,n,a);
-        double temp_c = gcon(0,0) * geodesic_dir(m,l,n,0) * geodesic_dir(m,l,n,0);
-        double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
-        double factor =
-            temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
-        for (int a = 1; a < 4; a++)
-          geodesic_dir(m,l,n,a) *= factor;
-
-        // Calculate position at full step
-        double dx2[4] = {};
-        for (int mu = 0; mu < 4; mu++)
-          for (int nu = 0; nu < 4; nu++)
-            dx2[mu] += gcon(mu,nu) * geodesic_dir(m,l,n,nu);
-        for (int mu = 0; mu < 4; mu++)
-          x[mu] += step * dx2[mu];
-
-        // Calculate momentum at full step
-        ContravariantGeodesicMetricDerivative(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
-            geodesic_pos(m,l,n,3), dgcon);
-        double dp2[4] = {};
-        for (int a = 1; a <= 3; a++)
-          for (int mu = 0; mu < 4; mu++)
-            for (int nu = 0; nu < 4; nu++)
-              dp2[a] -= 0.5 * dgcon(a-1,mu,nu) * geodesic_dir(m,l,n,mu) * geodesic_dir(m,l,n,nu);
-        for (int mu = 0; mu < 4; mu++)
-          p[mu] += step * dp2[mu];
-
-        // Renormalize momentum
-        ContravariantGeodesicMetric(x[1], x[2], x[3], gcon);
-        temp_a = 0.0;
-        for (int a = 1; a < 4; a++)
-          for (int b = 1; b < 4; b++)
-            temp_a += gcon(a,b) * p[a] * p[b];
-        temp_b = 0.0;
-        for (int a = 1; a < 4; a++)
-          temp_b += 2.0 * gcon(0,a) * p[0] * p[a];
-        temp_c = gcon(0,0) * p[0] * p[0];
-        temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
-        factor =
-            temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
-        for (int a = 1; a < 4; a++)
-          p[a] *= factor;
-
-        // Store length of step
-        geodesic_len(m,l,n) = -step;
-
-        // Check for too many steps taken
-        double r_new = RadialGeodesicCoordinate(x[1], x[2], x[3]);
-        delta_r = r_new - r;
-        if (n == ray_max_steps - 1 and not ((r > im_r and delta_r > 0.0) or r < r_photon))
-          sample_flags(m,l) = true;
-        sample_num(m,l)++;
-      }
-    }
-
-  // Calculate maximum number of steps actually taken
+  // Work in parallel
   im_steps = 0;
-  for (int m = 0; m < im_res; m++)
-    for (int l = 0; l < im_res; l++)
-      im_steps = std::max(im_steps, sample_num(m,l));
-
-  // Note how many geodesics do not terminate properly
   int num_bad_geodesics = 0;
-  for (int m = 0; m < im_res; m++)
-    for (int l = 0; l < im_res; l++)
-      if (sample_flags(m,l))
-        num_bad_geodesics++;
+  #pragma omp parallel
+  {
+
+    // Allocate scratch arrays
+    Array<double> gcon(4, 4);
+    Array<double> dgcon(3, 4, 4);
+
+    // Go through image pixels
+    #pragma omp for schedule(static)
+    for (int m = 0; m < im_res; m++)
+      for (int l = 0; l < im_res; l++)
+      {
+        // Extract initial position
+        double x[4];
+        x[0] = im_pos(m,l,0);
+        x[1] = im_pos(m,l,1);
+        x[2] = im_pos(m,l,2);
+        x[3] = im_pos(m,l,3);
+
+        // Extract initial momentum
+        double p[4];
+        p[0] = im_dir(m,l,0);
+        p[1] = im_dir(m,l,1);
+        p[2] = im_dir(m,l,2);
+        p[3] = im_dir(m,l,3);
+
+        // Take steps
+        for (int n = 0; n < ray_max_steps; n++)
+        {
+          // Calculate step size for going back to source
+          double r = RadialGeodesicCoordinate(x[1], x[2], x[3]);
+          double step = -ray_step * r;
+
+          // Calculate position at half step, checking that step is worth taking
+          ContravariantGeodesicMetric(x[1], x[2], x[3], gcon);
+          double dx1[4] = {};
+          for (int mu = 0; mu < 4; mu++)
+            for (int nu = 0; nu < 4; nu++)
+              dx1[mu] += gcon(mu,nu) * p[nu];
+          for (int mu = 0; mu < 4; mu++)
+            geodesic_pos(m,l,n,mu) = x[mu] + step/2.0 * dx1[mu];
+          double delta_r = RadialGeodesicCoordinate(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
+              geodesic_pos(m,l,n,3)) - r;
+          if ((r > im_r and delta_r > 0.0) or r < r_photon)
+            break;
+
+          // Calculate momentum at half step
+          ContravariantGeodesicMetricDerivative(x[1], x[2], x[3], dgcon);
+          double dp1[4] = {};
+          for (int a = 1; a <= 3; a++)
+            for (int mu = 0; mu < 4; mu++)
+              for (int nu = 0; nu < 4; nu++)
+                dp1[a] -= 0.5 * dgcon(a-1,mu,nu) * p[mu] * p[nu];
+          for (int mu = 0; mu < 4; mu++)
+            geodesic_dir(m,l,n,mu) = p[mu] + step/2.0 * dp1[mu];
+
+          // Renormalize momentum
+          ContravariantGeodesicMetric(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
+              geodesic_pos(m,l,n,3), gcon);
+          double temp_a = 0.0;
+          for (int a = 1; a < 4; a++)
+            for (int b = 1; b < 4; b++)
+              temp_a += gcon(a,b) * geodesic_dir(m,l,n,a) * geodesic_dir(m,l,n,b);
+          double temp_b = 0.0;
+          for (int a = 1; a < 4; a++)
+            temp_b += 2.0 * gcon(0,a) * geodesic_dir(m,l,n,0) * geodesic_dir(m,l,n,a);
+          double temp_c = gcon(0,0) * geodesic_dir(m,l,n,0) * geodesic_dir(m,l,n,0);
+          double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
+          double factor =
+              temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
+          for (int a = 1; a < 4; a++)
+            geodesic_dir(m,l,n,a) *= factor;
+
+          // Calculate position at full step
+          double dx2[4] = {};
+          for (int mu = 0; mu < 4; mu++)
+            for (int nu = 0; nu < 4; nu++)
+              dx2[mu] += gcon(mu,nu) * geodesic_dir(m,l,n,nu);
+          for (int mu = 0; mu < 4; mu++)
+            x[mu] += step * dx2[mu];
+
+          // Calculate momentum at full step
+          ContravariantGeodesicMetricDerivative(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
+              geodesic_pos(m,l,n,3), dgcon);
+          double dp2[4] = {};
+          for (int a = 1; a <= 3; a++)
+            for (int mu = 0; mu < 4; mu++)
+              for (int nu = 0; nu < 4; nu++)
+                dp2[a] -= 0.5 * dgcon(a-1,mu,nu) * geodesic_dir(m,l,n,mu) * geodesic_dir(m,l,n,nu);
+          for (int mu = 0; mu < 4; mu++)
+            p[mu] += step * dp2[mu];
+
+          // Renormalize momentum
+          ContravariantGeodesicMetric(x[1], x[2], x[3], gcon);
+          temp_a = 0.0;
+          for (int a = 1; a < 4; a++)
+            for (int b = 1; b < 4; b++)
+              temp_a += gcon(a,b) * p[a] * p[b];
+          temp_b = 0.0;
+          for (int a = 1; a < 4; a++)
+            temp_b += 2.0 * gcon(0,a) * p[0] * p[a];
+          temp_c = gcon(0,0) * p[0] * p[0];
+          temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
+          factor =
+              temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
+          for (int a = 1; a < 4; a++)
+            p[a] *= factor;
+
+          // Store length of step
+          geodesic_len(m,l,n) = -step;
+
+          // Check for too many steps taken
+          double r_new = RadialGeodesicCoordinate(x[1], x[2], x[3]);
+          delta_r = r_new - r;
+          if (n == ray_max_steps - 1 and not ((r > im_r and delta_r > 0.0) or r < r_photon))
+            sample_flags(m,l) = true;
+          sample_num(m,l)++;
+        }
+      }
+
+    // Calculate maximum number of steps actually taken
+    #pragma omp for schedule(static) reduction(max:im_steps)
+    for (int m = 0; m < im_res; m++)
+      for (int l = 0; l < im_res; l++)
+        im_steps = std::max(im_steps, sample_num(m,l));
+
+    // Calculate number of geodesics that do not terminate properly
+    #pragma omp for schedule(static) reduction(+:num_bad_geodesics)
+    for (int m = 0; m < im_res; m++)
+      for (int l = 0; l < im_res; l++)
+        if (sample_flags(m,l))
+          num_bad_geodesics++;
+  }
+
+  // Report improperly terminated geodesics
   if (num_bad_geodesics > 0)
   {
     std::stringstream message;
@@ -442,6 +461,7 @@ void RayTracer::TransformGeodesics()
   sample_len.Zero();
 
   // Go through samples
+  #pragma omp parallel for schedule(static)
   for (int m = 0; m < im_res; m++)
     for (int l = 0; l < im_res; l++)
     {
@@ -536,85 +556,38 @@ void RayTracer::SampleAlongGeodesics()
   sample_bb2.Allocate(im_res, im_res, im_steps);
   sample_bb3.Allocate(im_res, im_res, im_steps);
 
-  // Prepare bookkeeping
-  int n_b = rf.n2;
-  int n_i = rf.n1 - 1;
-  int n_j = thf.n1 - 1;
-  int n_k = phf.n1 - 1;
-  int b = 0;
-  int i = 0;
-  int j = 0;
-  int k = 0;
-  double r_min_block = rf(b,0);
-  double r_max_block = rf(b,n_i);
-  double th_min_block = thf(b,0);
-  double th_max_block = thf(b,n_j);
-  double ph_min_block = phf(b,0);
-  double ph_max_block = phf(b,n_k);
+  // Work in parallel
+  #pragma omp parallel
+  {
 
-  // Resample cell data onto geodesics
-  for (int m = 0; m < im_res; m++)
-    for (int l = 0; l < im_res; l++)
-    {
-      // Extract number of steps along this geodesic
-      int num_steps = sample_num(m,l);
+    // Prepare bookkeeping
+    int n_b = rf.n2;
+    int n_i = rf.n1 - 1;
+    int n_j = thf.n1 - 1;
+    int n_k = phf.n1 - 1;
+    int b = 0;
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    double r_min_block = rf(b,0);
+    double r_max_block = rf(b,n_i);
+    double th_min_block = thf(b,0);
+    double th_max_block = thf(b,n_j);
+    double ph_min_block = phf(b,0);
+    double ph_max_block = phf(b,n_k);
 
-      // Set fallback values if geodesic poorly terminated
-      if (sample_flags(m,l))
+    // Resample cell data onto geodesics
+    #pragma omp for schedule(static)
+    for (int m = 0; m < im_res; m++)
+      for (int l = 0; l < im_res; l++)
       {
-        for (int n = 0; n < num_steps; n++)
+        // Extract number of steps along this geodesic
+        int num_steps = sample_num(m,l);
+
+        // Set fallback values if geodesic poorly terminated
+        if (sample_flags(m,l))
         {
-          sample_rho(m,l,n) = rho_fallback;
-          sample_pgas(m,l,n) = pgas_fallback;
-          sample_uu1(m,l,n) = uu1_fallback;
-          sample_uu2(m,l,n) = uu2_fallback;
-          sample_uu3(m,l,n) = uu3_fallback;
-          sample_bb1(m,l,n) = bb1_fallback;
-          sample_bb2(m,l,n) = bb2_fallback;
-          sample_bb3(m,l,n) = bb3_fallback;
-        }
-        continue;
-      }
-
-      // Go along geodesic
-      for (int n = 0; n < num_steps; n++)
-      {
-        // End if geodesic terminated
-        if (sample_len(m,l,n) == 0.0)
-          continue;
-
-        // Extract coordinates
-        double r = sample_pos(m,l,n,1);
-        double th = sample_pos(m,l,n,2);
-        double ph = sample_pos(m,l,n,3);
-
-        // Determine block
-        if (r < r_min_block or r > r_max_block or th < th_min_block or th > th_max_block
-            or ph < ph_min_block or ph > ph_max_block)
-        {
-          // Check if block contains position
-          int b_new;
-          double r_min_temp = r_min_block;
-          double r_max_temp = r_max_block;
-          double th_min_temp = th_min_block;
-          double th_max_temp = th_max_block;
-          double ph_min_temp = ph_min_block;
-          double ph_max_temp = ph_max_block;
-          for (b_new = 0; b_new < n_b; b_new++)
-          {
-            r_min_temp = rf(b_new,0);
-            r_max_temp = rf(b_new,n_i);
-            th_min_temp = thf(b_new,0);
-            th_max_temp = thf(b_new,n_j);
-            ph_min_temp = phf(b_new,0);
-            ph_max_temp = phf(b_new,n_k);
-            if (r >= r_min_temp and r <= r_max_temp and th >= th_min_temp and th <= th_max_temp
-                and ph >= ph_min_temp and ph <= ph_max_temp)
-              break;
-          }
-
-          // Set fallback values if off grid
-          if (b_new == n_b)
+          for (int n = 0; n < num_steps; n++)
           {
             sample_rho(m,l,n) = rho_fallback;
             sample_pgas(m,l,n) = pgas_fallback;
@@ -624,41 +597,94 @@ void RayTracer::SampleAlongGeodesics()
             sample_bb1(m,l,n) = bb1_fallback;
             sample_bb2(m,l,n) = bb2_fallback;
             sample_bb3(m,l,n) = bb3_fallback;
-            continue;
           }
-
-          // Set newly found block as one to search
-          b = b_new;
-          r_min_block = r_min_temp;
-          r_max_block = r_max_temp;
-          th_min_block = th_min_temp;
-          th_max_block = th_max_temp;
-          ph_min_block = ph_min_temp;
-          ph_max_block = ph_max_temp;
+          continue;
         }
 
-        // Determine cell
-        for (i = 0; i < n_i; i++)
-          if (static_cast<double>(rf(b,i+1)) >= r)
-            break;
-        for (j = 0; j < n_j; j++)
-          if (static_cast<double>(thf(b,j+1)) >= th)
-            break;
-        for (k = 0; k < n_k; k++)
-          if (static_cast<double>(phf(b,k+1)) >= ph)
-            break;
+        // Go along geodesic
+        for (int n = 0; n < num_steps; n++)
+        {
+          // End if geodesic terminated
+          if (sample_len(m,l,n) == 0.0)
+            continue;
 
-        // Resample values
-        sample_rho(m,l,n) = grid_rho(b,k,j,i);
-        sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
-        sample_uu1(m,l,n) = grid_uu1(b,k,j,i);
-        sample_uu2(m,l,n) = grid_uu2(b,k,j,i);
-        sample_uu3(m,l,n) = grid_uu3(b,k,j,i);
-        sample_bb1(m,l,n) = grid_bb1(b,k,j,i);
-        sample_bb2(m,l,n) = grid_bb2(b,k,j,i);
-        sample_bb3(m,l,n) = grid_bb3(b,k,j,i);
+          // Extract coordinates
+          double r = sample_pos(m,l,n,1);
+          double th = sample_pos(m,l,n,2);
+          double ph = sample_pos(m,l,n,3);
+
+          // Determine block
+          if (r < r_min_block or r > r_max_block or th < th_min_block or th > th_max_block
+              or ph < ph_min_block or ph > ph_max_block)
+          {
+            // Check if block contains position
+            int b_new;
+            double r_min_temp = r_min_block;
+            double r_max_temp = r_max_block;
+            double th_min_temp = th_min_block;
+            double th_max_temp = th_max_block;
+            double ph_min_temp = ph_min_block;
+            double ph_max_temp = ph_max_block;
+            for (b_new = 0; b_new < n_b; b_new++)
+            {
+              r_min_temp = rf(b_new,0);
+              r_max_temp = rf(b_new,n_i);
+              th_min_temp = thf(b_new,0);
+              th_max_temp = thf(b_new,n_j);
+              ph_min_temp = phf(b_new,0);
+              ph_max_temp = phf(b_new,n_k);
+              if (r >= r_min_temp and r <= r_max_temp and th >= th_min_temp and th <= th_max_temp
+                  and ph >= ph_min_temp and ph <= ph_max_temp)
+                break;
+            }
+
+            // Set fallback values if off grid
+            if (b_new == n_b)
+            {
+              sample_rho(m,l,n) = rho_fallback;
+              sample_pgas(m,l,n) = pgas_fallback;
+              sample_uu1(m,l,n) = uu1_fallback;
+              sample_uu2(m,l,n) = uu2_fallback;
+              sample_uu3(m,l,n) = uu3_fallback;
+              sample_bb1(m,l,n) = bb1_fallback;
+              sample_bb2(m,l,n) = bb2_fallback;
+              sample_bb3(m,l,n) = bb3_fallback;
+              continue;
+            }
+
+            // Set newly found block as one to search
+            b = b_new;
+            r_min_block = r_min_temp;
+            r_max_block = r_max_temp;
+            th_min_block = th_min_temp;
+            th_max_block = th_max_temp;
+            ph_min_block = ph_min_temp;
+            ph_max_block = ph_max_temp;
+          }
+
+          // Determine cell
+          for (i = 0; i < n_i; i++)
+            if (static_cast<double>(rf(b,i+1)) >= r)
+              break;
+          for (j = 0; j < n_j; j++)
+            if (static_cast<double>(thf(b,j+1)) >= th)
+              break;
+          for (k = 0; k < n_k; k++)
+            if (static_cast<double>(phf(b,k+1)) >= ph)
+              break;
+
+          // Resample values
+          sample_rho(m,l,n) = grid_rho(b,k,j,i);
+          sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
+          sample_uu1(m,l,n) = grid_uu1(b,k,j,i);
+          sample_uu2(m,l,n) = grid_uu2(b,k,j,i);
+          sample_uu3(m,l,n) = grid_uu3(b,k,j,i);
+          sample_bb1(m,l,n) = grid_bb1(b,k,j,i);
+          sample_bb2(m,l,n) = grid_bb2(b,k,j,i);
+          sample_bb3(m,l,n) = grid_bb3(b,k,j,i);
+        }
       }
-    }
+  }
   return;
 }
 
@@ -678,128 +704,134 @@ void RayTracer::IntegrateRadiation()
   image.Allocate(im_res, im_res);
   image.Zero();
 
-  // Allocate scratch arrays
-  Array<double> gcov(4, 4);
-  Array<double> gcon(4, 4);
-
   // Calculate units
   double x_unit = physics::gg_msun * m_msun / (physics::c * physics::c);
   double t_unit = x_unit / physics::c;
   double e_unit = rho_unit * physics::c * physics::c;
 
-  // Go through pixels
-  for (int m = 0; m < im_res; m++)
-    for (int l = 0; l < im_res; l++)
-    {
-      // Go through samples
-      int num_steps = sample_num(m,l);
-      for (int n = 0; n < num_steps; n++)
+  // Work in parallel
+  #pragma omp parallel
+  {
+    // Allocate scratch arrays
+    Array<double> gcov(4, 4);
+    Array<double> gcon(4, 4);
+
+    // Go through pixels
+    #pragma omp for schedule(static)
+    for (int m = 0; m < im_res; m++)
+      for (int l = 0; l < im_res; l++)
       {
-        // Check that this sample contributes
-        double delta_lambda = sample_len(m,l,n);
-        if (delta_lambda == 0.0)
-          continue;
+        // Go through samples
+        int num_steps = sample_num(m,l);
+        for (int n = 0; n < num_steps; n++)
+        {
+          // Check that this sample contributes
+          double delta_lambda = sample_len(m,l,n);
+          if (delta_lambda == 0.0)
+            continue;
 
-        // Extract geodesic position and momentum
-        double r = sample_pos(m,l,n,1);
-        double th = sample_pos(m,l,n,2);
-        double p_0 = sample_dir(m,l,n,0);
-        double p_1 = sample_dir(m,l,n,1);
-        double p_2 = sample_dir(m,l,n,2);
-        double p_3 = sample_dir(m,l,n,3);
+          // Extract geodesic position and momentum
+          double r = sample_pos(m,l,n,1);
+          double th = sample_pos(m,l,n,2);
+          double p_0 = sample_dir(m,l,n,0);
+          double p_1 = sample_dir(m,l,n,1);
+          double p_2 = sample_dir(m,l,n,2);
+          double p_3 = sample_dir(m,l,n,3);
 
-        // Extract cell variables
-        double rho = sample_rho(m,l,n);
-        double pgas = sample_pgas(m,l,n);
-        double uu1 = sample_uu1(m,l,n);
-        double uu2 = sample_uu2(m,l,n);
-        double uu3 = sample_uu3(m,l,n);
-        double bb1 = sample_bb1(m,l,n);
-        double bb2 = sample_bb2(m,l,n);
-        double bb3 = sample_bb3(m,l,n);
+          // Extract cell variables
+          double rho = sample_rho(m,l,n);
+          double pgas = sample_pgas(m,l,n);
+          double uu1 = sample_uu1(m,l,n);
+          double uu2 = sample_uu2(m,l,n);
+          double uu3 = sample_uu3(m,l,n);
+          double bb1 = sample_bb1(m,l,n);
+          double bb2 = sample_bb2(m,l,n);
+          double bb3 = sample_bb3(m,l,n);
 
-        // Calculate metric
-        CovariantCoordinateMetric(r, th, gcov);
-        ContravariantCoordinateMetric(r, th, gcon);
+          // Calculate metric
+          CovariantCoordinateMetric(r, th, gcov);
+          ContravariantCoordinateMetric(r, th, gcon);
 
-        // Calculate 4-velocity
-        double temp = gcov(1,1) * uu1 * uu1 + 2.0 * gcov(1,2) * uu1 * uu2
-            + 2.0 * gcov(1,3) * uu1 * uu3 + gcov(2,2) * uu2 * uu2 + 2.0 * gcov(2,3) * uu2 * uu3
-            + gcov(3,3) * uu3 * uu3;
-        double gamma = std::sqrt(1.0 + temp);
-        double alpha = 1.0 / std::sqrt(-gcon(0,0));
-        double beta1 = -gcon(0,1) / gcon(0,0);
-        double beta2 = -gcon(0,2) / gcon(0,0);
-        double beta3 = -gcon(0,3) / gcon(0,0);
-        double u0 = gamma / alpha;
-        double u1 = uu1 - beta1 * gamma / alpha;
-        double u2 = uu2 - beta2 * gamma / alpha;
-        double u3 = uu3 - beta3 * gamma / alpha;
-        double u_1 = gcov(1,0) * u0 + gcov(1,1) * u1 + gcov(1,2) * u2 + gcov(1,3) * u3;
-        double u_2 = gcov(2,0) * u0 + gcov(2,1) * u1 + gcov(2,2) * u2 + gcov(2,3) * u3;
-        double u_3 = gcov(3,0) * u0 + gcov(3,1) * u1 + gcov(3,2) * u2 + gcov(3,3) * u3;
+          // Calculate 4-velocity
+          double temp = gcov(1,1) * uu1 * uu1 + 2.0 * gcov(1,2) * uu1 * uu2
+              + 2.0 * gcov(1,3) * uu1 * uu3 + gcov(2,2) * uu2 * uu2 + 2.0 * gcov(2,3) * uu2 * uu3
+              + gcov(3,3) * uu3 * uu3;
+          double gamma = std::sqrt(1.0 + temp);
+          double alpha = 1.0 / std::sqrt(-gcon(0,0));
+          double beta1 = -gcon(0,1) / gcon(0,0);
+          double beta2 = -gcon(0,2) / gcon(0,0);
+          double beta3 = -gcon(0,3) / gcon(0,0);
+          double u0 = gamma / alpha;
+          double u1 = uu1 - beta1 * gamma / alpha;
+          double u2 = uu2 - beta2 * gamma / alpha;
+          double u3 = uu3 - beta3 * gamma / alpha;
+          double u_1 = gcov(1,0) * u0 + gcov(1,1) * u1 + gcov(1,2) * u2 + gcov(1,3) * u3;
+          double u_2 = gcov(2,0) * u0 + gcov(2,1) * u1 + gcov(2,2) * u2 + gcov(2,3) * u3;
+          double u_3 = gcov(3,0) * u0 + gcov(3,1) * u1 + gcov(3,2) * u2 + gcov(3,3) * u3;
 
-        // Calculate magnetic field strength
-        double b0 = u_1 * bb1 + u_2 * bb2 + u_3 * bb3;
-        double b1 = (bb1 + b0 * u1) / u0;
-        double b2 = (bb2 + b0 * u2) / u0;
-        double b3 = (bb3 + b0 * u3) / u0;
-        double b_0 = gcov(0,0) * b0 + gcov(0,1) * b1 + gcov(0,2) * b2 + gcov(0,3) * b3;
-        double b_1 = gcov(1,0) * b0 + gcov(1,1) * b1 + gcov(1,2) * b2 + gcov(1,3) * b3;
-        double b_2 = gcov(2,0) * b0 + gcov(2,1) * b1 + gcov(2,2) * b2 + gcov(2,3) * b3;
-        double b_3 = gcov(3,0) * b0 + gcov(3,1) * b1 + gcov(3,2) * b2 + gcov(3,3) * b3;
-        double b_sq = b_0 * b0 + b_1 * b1 + b_2 * b2 + b_3 * b3;
+          // Calculate magnetic field strength
+          double b0 = u_1 * bb1 + u_2 * bb2 + u_3 * bb3;
+          double b1 = (bb1 + b0 * u1) / u0;
+          double b2 = (bb2 + b0 * u2) / u0;
+          double b3 = (bb3 + b0 * u3) / u0;
+          double b_0 = gcov(0,0) * b0 + gcov(0,1) * b1 + gcov(0,2) * b2 + gcov(0,3) * b3;
+          double b_1 = gcov(1,0) * b0 + gcov(1,1) * b1 + gcov(1,2) * b2 + gcov(1,3) * b3;
+          double b_2 = gcov(2,0) * b0 + gcov(2,1) * b1 + gcov(2,2) * b2 + gcov(2,3) * b3;
+          double b_3 = gcov(3,0) * b0 + gcov(3,1) * b1 + gcov(3,2) * b2 + gcov(3,3) * b3;
+          double b_sq = b_0 * b0 + b_1 * b1 + b_2 * b2 + b_3 * b3;
 
-        // Skip contribution if considered to be vacuum
-        if (plasma_sigma_max >= 0.0 and b_sq / rho > plasma_sigma_max)
-          continue;
+          // Skip contribution if considered to be vacuum
+          if (plasma_sigma_max >= 0.0 and b_sq / rho > plasma_sigma_max)
+            continue;
 
-        // Calculate fluid-frame quantities in CGS units
-        double nu_fluid_cgs = (u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) / p_0 * im_freq;
-        double n_cgs = rho * rho_unit / (plasma_mu * physics::m_p);
-        double bb_cgs = std::sqrt(4.0 * math::pi * b_sq * e_unit);
+          // Calculate fluid-frame quantities in CGS units
+          double nu_fluid_cgs = (u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) / p_0 * im_freq;
+          double n_cgs = rho * rho_unit / (plasma_mu * physics::m_p);
+          double bb_cgs = std::sqrt(4.0 * math::pi * b_sq * e_unit);
 
-        // Calculate emission coefficient in CGS units
-        double omega_b_cgs = physics::e * bb_cgs / (physics::m_e * physics::c);
-        double chi = 2.0 * math::pi * nu_fluid_cgs / omega_b_cgs;
-        double kb_tt_tot_cgs = plasma_mu * physics::m_p * physics::c * physics::c * pgas / rho;
-        double beta_inv = b_sq / (2.0 * pgas);
-        double tt_rat =
-            (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv) / (1.0 + beta_inv * beta_inv);
-        double kb_tt_e_cgs = (plasma_ne_ni + 1.0) / (plasma_ne_ni + tt_rat) * kb_tt_tot_cgs;
-        double theta_e = kb_tt_e_cgs / (physics::m_e * physics::c * physics::c);
-        double x_m = 2.0 * chi / (3.0 * theta_e * theta_e);
-        double n_e_cgs = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
-        double cc_cgs = physics::e * physics::e * n_e_cgs * omega_b_cgs
-            / (std::sqrt(3.0) * math::pi * physics::c);
-        double k2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
-        double ii = 4.0505 / std::sqrt(std::cbrt(x_m))
-            * (1.0 + 0.4 / std::sqrt(std::sqrt(x_m)) + 0.5316 / std::sqrt(x_m))
-            * std::exp(-1.8899 * std::cbrt(x_m));
-        double j_nu_fluid_cgs = 2.0 * math::pi * cc_cgs * chi / k2 * ii;
+          // Calculate emission coefficient in CGS units
+          double omega_b_cgs = physics::e * bb_cgs / (physics::m_e * physics::c);
+          double chi = 2.0 * math::pi * nu_fluid_cgs / omega_b_cgs;
+          double kb_tt_tot_cgs = plasma_mu * physics::m_p * physics::c * physics::c * pgas / rho;
+          double beta_inv = b_sq / (2.0 * pgas);
+          double tt_rat =
+              (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv) / (1.0 + beta_inv * beta_inv);
+          double kb_tt_e_cgs = (plasma_ne_ni + 1.0) / (plasma_ne_ni + tt_rat) * kb_tt_tot_cgs;
+          double theta_e = kb_tt_e_cgs / (physics::m_e * physics::c * physics::c);
+          double x_m = 2.0 * chi / (3.0 * theta_e * theta_e);
+          double n_e_cgs = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
+          double cc_cgs = physics::e * physics::e * n_e_cgs * omega_b_cgs
+              / (std::sqrt(3.0) * math::pi * physics::c);
+          double k2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
+          double ii = 4.0505 / std::sqrt(std::cbrt(x_m))
+              * (1.0 + 0.4 / std::sqrt(std::sqrt(x_m)) + 0.5316 / std::sqrt(x_m))
+              * std::exp(-1.8899 * std::cbrt(x_m));
+          double j_nu_fluid_cgs = 2.0 * math::pi * cc_cgs * chi / k2 * ii;
 
-        // Calculate absorption coefficient in CGS units
-        double b_nu_num = 2.0 * physics::h * nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs
-            / (physics::c * physics::c);
-        double b_nu_exp = physics::h * nu_fluid_cgs / kb_tt_e_cgs;
-        double b_nu_den = b_nu_exp < 1.0 ? std::expm1(b_nu_exp) : std::exp(b_nu_exp) - 1.0;
-        double b_nu_cgs = b_nu_num / b_nu_den;
-        double alpha_nu_fluid_cgs = j_nu_fluid_cgs / b_nu_cgs;
+          // Calculate absorption coefficient in CGS units
+          double b_nu_num = 2.0 * physics::h * nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs
+              / (physics::c * physics::c);
+          double b_nu_exp = physics::h * nu_fluid_cgs / kb_tt_e_cgs;
+          double b_nu_den = b_nu_exp < 1.0 ? std::expm1(b_nu_exp) : std::exp(b_nu_exp) - 1.0;
+          double b_nu_cgs = b_nu_num / b_nu_den;
+          double alpha_nu_fluid_cgs = j_nu_fluid_cgs / b_nu_cgs;
 
-        // Calculate change in invariant intensity
-        double i_nu_fluid_cgs = nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs * image(m,l);
-        double delta_lambda_cgs = delta_lambda * x_unit / t_unit;
-        double delta_s_fluid_cgs = -delta_lambda_cgs * nu_fluid_cgs * p_0 / im_freq;
-        i_nu_fluid_cgs +=
-            (j_nu_fluid_cgs - alpha_nu_fluid_cgs * i_nu_fluid_cgs) * delta_s_fluid_cgs;
-        image(m,l) = i_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs);
+          // Calculate change in invariant intensity
+          double i_nu_fluid_cgs = nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs * image(m,l);
+          double delta_lambda_cgs = delta_lambda * x_unit / t_unit;
+          double delta_s_fluid_cgs = -delta_lambda_cgs * nu_fluid_cgs * p_0 / im_freq;
+          i_nu_fluid_cgs +=
+              (j_nu_fluid_cgs - alpha_nu_fluid_cgs * i_nu_fluid_cgs) * delta_s_fluid_cgs;
+          image(m,l) = i_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs);
+        }
       }
-    }
 
-  // Transform I_nu/nu^3 to brightness temperature
-  for (int m = 0; m < im_res; m++)
-    for (int l = 0; l < im_res; l++)
-      image(m,l) *= im_freq * physics::c * physics::c / (2.0 * physics::k_b);
+    // Transform I_nu/nu^3 to brightness temperature
+    #pragma omp for schedule(static)
+    for (int m = 0; m < im_res; m++)
+      for (int l = 0; l < im_res; l++)
+        image(m,l) *= im_freq * physics::c * physics::c / (2.0 * physics::k_b);
+  }
   return;
 }
 
