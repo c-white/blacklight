@@ -666,8 +666,8 @@ void RayTracer::SampleAlongGeodesics()
               x2_max_temp = x2f(b_new,n_j);
               x3_min_temp = x3f(b_new,0);
               x3_max_temp = x3f(b_new,n_k);
-              if (x1 >= x1_min_temp and x1 <= x1_max_temp and x2 >= x2_min_temp and x2 <= x2_max_temp
-                  and x3 >= x3_min_temp and x3 <= x3_max_temp)
+              if (x1 >= x1_min_temp and x1 <= x1_max_temp and x2 >= x2_min_temp
+                  and x2 <= x2_max_temp and x3 >= x3_min_temp and x3 <= x3_max_temp)
                 break;
             }
 
@@ -730,6 +730,7 @@ void RayTracer::SampleAlongGeodesics()
 //   Assumes sample_num, sample_dir, sample_len, sample_rho, and sample_pgas have been set.
 //   Allocates and initializes image.
 //   Assumes x^0 is ignorable.
+// TODO: treat absorption with exponential instead of flooring
 void RayTracer::IntegrateRadiation()
 {
   // Allocate image array
@@ -827,8 +828,8 @@ void RayTracer::IntegrateRadiation()
           double chi = 2.0 * math::pi * nu_fluid_cgs / omega_b_cgs;
           double kb_tt_tot_cgs = plasma_mu * physics::m_p * physics::c * physics::c * pgas / rho;
           double beta_inv = b_sq / (2.0 * pgas);
-          double tt_rat =
-              (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv) / (1.0 + beta_inv * beta_inv);
+          double tt_rat = (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv)
+              / (1.0 + beta_inv * beta_inv);
           double kb_tt_e_cgs = (plasma_ne_ni + 1.0) / (plasma_ne_ni + tt_rat) * kb_tt_tot_cgs;
           double theta_e = kb_tt_e_cgs / (physics::m_e * physics::c * physics::c);
           double x_m = 2.0 * chi / (3.0 * theta_e * theta_e);
@@ -855,6 +856,7 @@ void RayTracer::IntegrateRadiation()
           double delta_s_fluid_cgs = -delta_lambda_cgs * nu_fluid_cgs * p_0 / im_freq;
           i_nu_fluid_cgs +=
               (j_nu_fluid_cgs - alpha_nu_fluid_cgs * i_nu_fluid_cgs) * delta_s_fluid_cgs;
+          i_nu_fluid_cgs = std::max(i_nu_fluid_cgs, 0.0);
           image(m,l) = i_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs);
         }
       }
@@ -1150,7 +1152,8 @@ void RayTracer::CovariantCoordinateMetric(double x1, double x2, double x3, Array
       gcov(3,0) = -2.0 * bh_m * bh_a * r * sth * sth / sigma;
       gcov(3,1) = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth * sth;
       gcov(3,2) = 0.0;
-      gcov(3,3) = (r * r + bh_a * bh_a + 2.0 * bh_m * bh_a * bh_a * r * sth * sth / sigma) * sth * sth;
+      gcov(3,3) =
+          (r * r + bh_a * bh_a + 2.0 * bh_m * bh_a * bh_a * r * sth * sth / sigma) * sth * sth;
       break;
     }
 
