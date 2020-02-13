@@ -1,4 +1,4 @@
-// Ray Trace Athena++ reader header
+// Blacklight Athena++ reader header
 
 #ifndef READ_ATHENA_H_
 #define READ_ATHENA_H_
@@ -7,7 +7,7 @@
 #include <fstream>  // ifstream
 #include <string>   // string
 
-// Ray Trace headers
+// Blacklight headers
 #include "array.hpp"  // Array
 
 //--------------------------------------------------------------------------------------------------

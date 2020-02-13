@@ -1,4 +1,4 @@
-// Ray Trace multidimensional array
+// Blacklight multidimensional array
 
 // C++ headers
 #include <cstddef>  // size_t
@@ -6,9 +6,9 @@
 // Library headers
 #include <omp.h>  // pragmas
 
-// Ray Trace headers
+// Blacklight headers
 #include "array.hpp"
-#include "exceptions.hpp"  // RayTraceException
+#include "exceptions.hpp"  // BlacklightException
 
 // Instantiations
 template struct Array<bool>;
@@ -163,11 +163,11 @@ template<typename type>
 void Array<type>::Allocate()
 {
   if (allocated)
-    throw RayTraceException("Attempting to reallocate array.");
+    throw BlacklightException("Attempting to reallocate array.");
   allocated = true;
   n_tot = n1 * n2 * n3 * n4 * n5;
   if (n_tot <= 0)
-    throw RayTraceException("Attempting to allocate empty array.");
+    throw BlacklightException("Attempting to allocate empty array.");
   data = new type[n_tot];
 }
 
@@ -494,7 +494,7 @@ void Array<type>::Slice(int dimension, int index)
 {
   // Check that this is a shallow copy
   if (not is_copy)
-    throw RayTraceException("Attempting to slice array that is not shallow copy.");
+    throw BlacklightException("Attempting to slice array that is not shallow copy.");
 
   // Slice array
   switch (dimension)
@@ -503,7 +503,7 @@ void Array<type>::Slice(int dimension, int index)
     case 1:
     {
       if (index < 0 or index >= n1)
-        throw RayTraceException("Attempting to slice outside array bounds.");
+        throw BlacklightException("Attempting to slice outside array bounds.");
       data += index;
       n2 = 1;
       n3 = 1;
@@ -516,7 +516,7 @@ void Array<type>::Slice(int dimension, int index)
     case 2:
     {
       if (index < 0 or index >= n2)
-        throw RayTraceException("Attempting to slice outside array bounds.");
+        throw BlacklightException("Attempting to slice outside array bounds.");
       data += index * n1;
       n3 = 1;
       n4 = 1;
@@ -528,7 +528,7 @@ void Array<type>::Slice(int dimension, int index)
     case 3:
     {
       if (index < 0 or index >= n3)
-        throw RayTraceException("Attempting to slice outside array bounds.");
+        throw BlacklightException("Attempting to slice outside array bounds.");
       data += index * n2 * n1;
       n4 = 1;
       n5 = 1;
@@ -539,7 +539,7 @@ void Array<type>::Slice(int dimension, int index)
     case 4:
     {
       if (index < 0 or index >= n4)
-        throw RayTraceException("Attempting to slice outside array bounds.");
+        throw BlacklightException("Attempting to slice outside array bounds.");
       data += index * n3 * n2 * n1;
       n4 = 1;
       n5 = 1;
@@ -550,7 +550,7 @@ void Array<type>::Slice(int dimension, int index)
     case 5:
     {
       if (index < 0 or index >= n5)
-        throw RayTraceException("Attempting to slice outside array bounds.");
+        throw BlacklightException("Attempting to slice outside array bounds.");
       data += index * n4 * n3 * n2 * n1;
       n5 = 1;
       break;
@@ -560,7 +560,7 @@ void Array<type>::Slice(int dimension, int index)
     default:
     {
       if (dimension < 1 or dimension > max_dims)
-        throw RayTraceException("Attempting to slice at invalid dimension.");
+        throw BlacklightException("Attempting to slice at invalid dimension.");
     }
   }
 

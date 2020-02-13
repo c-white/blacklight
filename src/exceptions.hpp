@@ -1,4 +1,4 @@
-// Ray Trace exceptions header
+// Blacklight exceptions header
 
 #ifndef EXCEPTION_H_
 #define EXCEPTION_H_
@@ -10,11 +10,11 @@
 
 //--------------------------------------------------------------------------------------------------
 
-// Ray Trace exception
-struct RayTraceException
+// Blacklight exception
+struct BlacklightException
   : std::runtime_error
 {
-  explicit RayTraceException(const char *message)
+  explicit BlacklightException(const char *message)
     : std::runtime_error::runtime_error(ComposeMessage(message)) {}
   std::string ComposeMessage(const char *message)
   {
@@ -27,10 +27,10 @@ struct RayTraceException
 
 //--------------------------------------------------------------------------------------------------
 
-// Ray Trace warning
-struct RayTraceWarning
+// Blacklight warning
+struct BlacklightWarning
 {
-  explicit RayTraceWarning(const char *message)
+  explicit BlacklightWarning(const char *message)
   {
     std::string message_str(message);
     message_str.insert(0, "Warning: ");

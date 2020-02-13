@@ -1,4 +1,4 @@
-// Ray Trace input reader header
+// Blacklight input reader header
 
 #ifndef READ_INPUT_H_
 #define READ_INPUT_H_
@@ -6,8 +6,8 @@
 // C++ headers
 #include <string>  // string
 
-// Ray Trace headers
-#include "ray_trace.hpp"  // Coordinates
+// Blacklight headers
+#include "blacklight.hpp"  // Coordinates
 
 //--------------------------------------------------------------------------------------------------
 

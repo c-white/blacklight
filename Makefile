@@ -1,5 +1,5 @@
 # Executable and directory names
-EXE_NAME = ray_trace
+EXE_NAME = blacklight
 SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = bin

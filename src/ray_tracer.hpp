@@ -1,11 +1,11 @@
-// Ray Trace ray tracer header
+// Blacklight ray tracer header
 
 #ifndef RAY_TRACER_H_
 #define RAY_TRACER_H_
 
-// Ray Trace headers
+// Blacklight headers
 #include "array.hpp"        // Array
-#include "ray_trace.hpp"    // Coordinates
+#include "blacklight.hpp"   // Coordinates
 #include "read_athena.hpp"  // AthenaReader
 #include "read_input.hpp"   // InputReader
 

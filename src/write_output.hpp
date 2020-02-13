@@ -1,4 +1,4 @@
-// Ray Trace output writer header
+// Blacklight output writer header
 
 #ifndef WRITE_OUTPUT_H_
 #define WRITE_OUTPUT_H_
@@ -6,7 +6,7 @@
 // C++ headers
 #include <string>  // string
 
-// Ray Trace headers
+// Blacklight headers
 #include "array.hpp"       // Array
 #include "ray_tracer.hpp"  // RayTracer
 

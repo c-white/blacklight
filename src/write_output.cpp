@@ -1,14 +1,14 @@
-// Ray Trace output writer
+// Blacklight output writer
 
 // C++ headers
 #include <fstream>  // ofstream
 #include <ios>      // ios_base, streamsize
 #include <string>   // string
 
-// Ray Trace headers
+// Blacklight headers
 #include "write_output.hpp"
 #include "array.hpp"         // Array
-#include "exceptions.hpp"    // RayTraceException
+#include "exceptions.hpp"    // BlacklightException
 #include "ray_tracer.hpp"    // RayTracer
 
 //--------------------------------------------------------------------------------------------------
@@ -32,7 +32,7 @@ void OutputWriter::Write()
   // Open output file
   std::ofstream output_stream(output_file, std::ios_base::out | std::ios_base::binary);
   if (not output_stream.is_open())
-    throw RayTraceException("Could not open output file.");
+    throw BlacklightException("Could not open output file.");
 
   // Write image data
   const char *data_pointer = reinterpret_cast<char *>(image.data);

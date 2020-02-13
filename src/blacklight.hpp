@@ -1,7 +1,7 @@
-// Ray Trace main header
+// Blacklight main header
 
-#ifndef RAY_TRACE_H_
-#define RAY_TRACE_H_
+#ifndef BLACKLIGHT_H_
+#define BLACKLIGHT_H_
 
 // Mathematical constants
 namespace math

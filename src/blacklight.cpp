@@ -1,4 +1,4 @@
-// Ray Trace main file
+// Blacklight main file
 
 // C++ headers
 #include <iostream>  // cout
@@ -7,9 +7,9 @@
 // Library headers
 #include <omp.h>  // omp_set_num_threads
 
-// Ray Trace headers
-#include "ray_trace.hpp"
-#include "exceptions.hpp"    // RayTraceException
+// Blacklight headers
+#include "blacklight.hpp"
+#include "exceptions.hpp"    // BlacklightException
 #include "ray_tracer.hpp"    // RayTracer
 #include "read_athena.hpp"   // AthenaReader
 #include "read_input.hpp"    // InputReader
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
   try
   {
     input_reader.Read();
-  } catch (const RayTraceException &exception) {
+  } catch (const BlacklightException &exception) {
     std::cout << exception.what();
     return 1;
   } catch (...) {
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
   try
   {
     athena_reader.Read();
-  } catch (const RayTraceException &exception) {
+  } catch (const BlacklightException &exception) {
     std::cout << exception.what();
     return 1;
   } catch (...) {
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
   try
   {
     ray_tracer.MakeImage();
-  } catch (const RayTraceException &exception) {
+  } catch (const BlacklightException &exception) {
     std::cout << exception.what();
     return 1;
   } catch (...) {
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
   try
   {
     output_writer.Write();
-  } catch (const RayTraceException &exception) {
+  } catch (const BlacklightException &exception) {
     std::cout << exception.what();
     return 1;
   } catch (...) {

@@ -1,4 +1,4 @@
-// Ray Trace multidimensional array header
+// Blacklight multidimensional array header
 
 #ifndef ARRAY_H_
 #define ARRAY_H_

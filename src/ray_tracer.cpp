@@ -1,4 +1,4 @@
-// Ray Trace ray tracer
+// Blacklight ray tracer
 
 // C++ headers
 #include <algorithm>  // max
@@ -10,11 +10,11 @@
 // Library headers
 #include <omp.h>  // pragmas
 
-// Ray Trace headers
+// Blacklight headers
 #include "ray_tracer.hpp"
 #include "array.hpp"        // Array
-#include "exceptions.hpp"   // RayTraceWarning
-#include "ray_trace.hpp"    // math, physics, Coordinates
+#include "blacklight.hpp"   // math, physics, Coordinates
+#include "exceptions.hpp"   // BlacklightWarning
 #include "read_athena.hpp"  // AthenaReader
 #include "read_input.hpp"   // InputReader
 
@@ -434,7 +434,7 @@ void RayTracer::IntegrateGeodesics()
     std::stringstream message;
     message << num_bad_geodesics << " out of " << im_res * im_res
         << " geodesics terminate unexpectedly.";
-    RayTraceWarning(message.str().c_str());
+    BlacklightWarning(message.str().c_str());
   }
   return;
 }

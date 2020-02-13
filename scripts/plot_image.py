@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 """
-Script for plotting outputs produced by ray_trace.
+Script for plotting outputs produced by blacklight.
 """
 
 # Python standard modules

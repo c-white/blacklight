@@ -1,4 +1,4 @@
-// Ray Trace input reader
+// Blacklight input reader
 
 // C++ headers
 #include <algorithm>   // remove_if
@@ -6,10 +6,10 @@
 #include <fstream>     // ifstream
 #include <string>      // getline, stod, stoi, string
 
-// Ray Trace headers
+// Blacklight headers
 #include "read_input.hpp"
-#include "exceptions.hpp"  // RayTraceException
-#include "ray_trace.hpp"   // math, Coordinates
+#include "blacklight.hpp"  // math, Coordinates
+#include "exceptions.hpp"  // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ void InputReader::Read()
   // Open input file
   std::ifstream input_stream(input_file);
   if (not input_stream.is_open())
-    throw RayTraceException("Could not open input file.");
+    throw BlacklightException("Could not open input file.");
 
   // Process file line by line
   for (std::string line; std::getline(input_stream, line); )
@@ -51,7 +51,7 @@ void InputReader::Read()
     // Split on '='
     pos = line.find('=');
     if (pos == std::string::npos)
-      throw RayTraceException("Invalid assignment in input file.");
+      throw BlacklightException("Invalid assignment in input file.");
     std::string key = line.substr(0, pos);
     std::string val = line.substr(pos + 1, line.size());
 
@@ -117,7 +117,7 @@ void InputReader::Read()
 
     // Handle unknown entry
     else
-      throw RayTraceException("Unknown key in input file.");
+      throw BlacklightException("Unknown key in input file.");
   }
   return;
 }
@@ -168,7 +168,7 @@ bool InputReader::ReadBool(const std::string &string)
   else if (string == "false")
     return false;
   else
-    throw RayTraceException("Unknown string used for boolean value.");
+    throw BlacklightException("Unknown string used for boolean value.");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -189,5 +189,5 @@ Coordinates InputReader::ReadCoordinates(const std::string &string)
   else if (string == "cart_ks")
     return cart_ks;
   else
-    throw RayTraceException("Unknown string used for Coordinates value.");
+    throw BlacklightException("Unknown string used for Coordinates value.");
 }
