@@ -138,8 +138,8 @@ void RayTracer::InitializeCamera()
   double im_crot = std::cos(im_rot);
 
   // Calculate camera position
-  double im_x = im_sth * (im_r * im_cph - bh_a * im_sph);
-  double im_y = im_sth * (im_r * im_sph + bh_a * im_cph);
+  double im_x = im_sth * (im_r * im_cph + bh_a * im_sph);
+  double im_y = im_sth * (im_r * im_sph - bh_a * im_cph);
   double im_z = im_r * im_cth;
 
   // Calculate camera direction
@@ -500,7 +500,7 @@ void RayTracer::TransformGeodesics()
             double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
             double r = std::sqrt(r2);
             double th = std::acos(z / r);
-            double ph = std::atan2(y, x) - std::atan(bh_a / r);
+            double ph = std::atan2(y, x) + std::atan(bh_a / r);
             ph += ph < 0.0 ? 2.0 * math::pi : 0.0;
             ph -= ph > 2.0 * math::pi ? 2.0 * math::pi : 0.0;
             double sth = std::sin(th);
@@ -512,11 +512,11 @@ void RayTracer::TransformGeodesics()
             double dx_dr = sth * cph;
             double dy_dr = sth * sph;
             double dz_dr = cth;
-            double dx_dth = cth * (r * cph - bh_a * sph);
-            double dy_dth = cth * (r * sph + bh_a * cph);
+            double dx_dth = cth * (r * cph + bh_a * sph);
+            double dy_dth = cth * (r * sph - bh_a * cph);
             double dz_dth = -r * sth;
-            double dx_dph = sth * (-r * sph - bh_a * cph);
-            double dy_dph = sth * (r * cph - bh_a * sph);
+            double dx_dph = sth * (-r * sph + bh_a * cph);
+            double dy_dph = sth * (r * cph + bh_a * sph);
             double dz_dph = 0.0;
 
             // Calculate spherical direction
@@ -1208,7 +1208,6 @@ void RayTracer::CovariantCoordinateMetric(double x1, double x2, double x3, Array
 //   gcon: components set
 // Notes:
 //   Assumes gcon is allocated to be 4*4.
-//   Assumes spherical Kerr-Schild coordinates.
 void RayTracer::ContravariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcon)
 {
   // Account for simulation metric
