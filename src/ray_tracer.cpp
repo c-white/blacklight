@@ -730,7 +730,6 @@ void RayTracer::SampleAlongGeodesics()
 //   Assumes sample_num, sample_dir, sample_len, sample_rho, and sample_pgas have been set.
 //   Allocates and initializes image.
 //   Assumes x^0 is ignorable.
-// TODO: treat absorption with exponential instead of flooring
 void RayTracer::IntegrateRadiation()
 {
   // Allocate image array
@@ -854,8 +853,10 @@ void RayTracer::IntegrateRadiation()
           double i_nu_fluid_cgs = nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs * image(m,l);
           double delta_lambda_cgs = delta_lambda * x_unit / t_unit;
           double delta_s_fluid_cgs = -delta_lambda_cgs * nu_fluid_cgs * p_0 / im_freq;
-          i_nu_fluid_cgs += (j_nu_fluid_cgs - k_nu_fluid_cgs * i_nu_fluid_cgs) * delta_s_fluid_cgs;
-          i_nu_fluid_cgs = std::max(i_nu_fluid_cgs, 0.0);
+          double delta_tau_nu_fluid = k_nu_fluid_cgs * delta_s_fluid_cgs;
+          double ss_nu_fluid_cgs = j_nu_fluid_cgs / k_nu_fluid_cgs;
+          i_nu_fluid_cgs = std::exp(-delta_tau_nu_fluid)
+              * (i_nu_fluid_cgs + ss_nu_fluid_cgs * std::expm1(delta_tau_nu_fluid));
           image(m,l) = i_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs);
         }
       }
