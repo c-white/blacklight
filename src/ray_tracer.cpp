@@ -848,14 +848,13 @@ void RayTracer::IntegrateRadiation()
           double b_nu_exp = physics::h * nu_fluid_cgs / kb_tt_e_cgs;
           double b_nu_den = b_nu_exp < 1.0 ? std::expm1(b_nu_exp) : std::exp(b_nu_exp) - 1.0;
           double b_nu_cgs = b_nu_num / b_nu_den;
-          double alpha_nu_fluid_cgs = j_nu_fluid_cgs / b_nu_cgs;
+          double k_nu_fluid_cgs = j_nu_fluid_cgs / b_nu_cgs;
 
           // Calculate change in invariant intensity
           double i_nu_fluid_cgs = nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs * image(m,l);
           double delta_lambda_cgs = delta_lambda * x_unit / t_unit;
           double delta_s_fluid_cgs = -delta_lambda_cgs * nu_fluid_cgs * p_0 / im_freq;
-          i_nu_fluid_cgs +=
-              (j_nu_fluid_cgs - alpha_nu_fluid_cgs * i_nu_fluid_cgs) * delta_s_fluid_cgs;
+          i_nu_fluid_cgs += (j_nu_fluid_cgs - k_nu_fluid_cgs * i_nu_fluid_cgs) * delta_s_fluid_cgs;
           i_nu_fluid_cgs = std::max(i_nu_fluid_cgs, 0.0);
           image(m,l) = i_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs);
         }
