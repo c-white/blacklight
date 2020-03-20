@@ -1,7 +1,7 @@
 // Blacklight ray tracer
 
 // C++ headers
-#include <algorithm>  // max
+#include <algorithm>  // max, min
 #include <cmath>      // abs, acos, atan, atan2, cbrt, copysign, cos, cyl_bessel_k, exp, expm1,
                       // fmax, fmod, hypot, pow, sin, sqrt
 #include <sstream>    // stringstream
@@ -730,6 +730,7 @@ void RayTracer::SampleAlongGeodesics()
 //   Assumes sample_num, sample_dir, sample_len, sample_rho, and sample_pgas have been set.
 //   Allocates and initializes image.
 //   Assumes x^0 is ignorable.
+//   References symphony paper 2016 ApJ 822 34 (S)
 void RayTracer::IntegrateRadiation()
 {
   // Allocate image array
@@ -798,6 +799,7 @@ void RayTracer::IntegrateRadiation()
           double u1 = uu1 - beta1 * gamma / alpha;
           double u2 = uu2 - beta2 * gamma / alpha;
           double u3 = uu3 - beta3 * gamma / alpha;
+          double u_0 = gcov(0,0) * u0 + gcov(0,1) * u1 + gcov(0,2) * u2 + gcov(0,3) * u3;
           double u_1 = gcov(1,0) * u0 + gcov(1,1) * u1 + gcov(1,2) * u2 + gcov(1,3) * u3;
           double u_2 = gcov(2,0) * u0 + gcov(2,1) * u1 + gcov(2,2) * u2 + gcov(2,3) * u3;
           double u_3 = gcov(3,0) * u0 + gcov(3,1) * u1 + gcov(3,2) * u2 + gcov(3,3) * u3;
@@ -817,36 +819,76 @@ void RayTracer::IntegrateRadiation()
           if (plasma_sigma_max >= 0.0 and b_sq / rho > plasma_sigma_max)
             continue;
 
+          // Calculate fluid-frame photon momentum
+          double p_1f = p_1 - u_1 / u_0 * p_0;
+          double p_2f = p_2 - u_2 / u_0 * p_0;
+          double p_3f = p_3 - u_3 / u_0 * p_0;
+          double g1f1f = gcon(1,1) + u1 * u1;
+          double g1f2f = gcon(1,2) + u1 * u2;
+          double g1f3f = gcon(1,3) + u1 * u3;
+          double g2f2f = gcon(2,2) + u2 * u2;
+          double g2f3f = gcon(2,3) + u2 * u3;
+          double g3f3f = gcon(3,3) + u3 * u3;
+          double p1f = g1f1f * p_1f + g1f2f * p_2f + g1f3f * p_3f;
+          double p2f = g1f2f * p_1f + g2f2f * p_2f + g2f3f * p_3f;
+          double p3f = g1f3f * p_1f + g2f3f * p_2f + g3f3f * p_3f;
+
+          // Calculate fluid-frame magnetic field
+          double bb1f = b1;
+          double bb2f = b2;
+          double bb3f = b3;
+          double g_1f1f =
+              gcov(1,1) - 2.0 * u_1 / u_0 * gcov(0,1) + u_1 * u_1 / (u_0 * u_0) * gcov(0,0);
+          double g_1f2f = gcov(1,2) - u_1 / u_0 * gcov(0,2) - u_2 / u_0 * gcov(0,1)
+              + u_1 * u_2 / (u_0 * u_0) * gcov(0,0);
+          double g_1f3f = gcov(1,3) - u_1 / u_0 * gcov(0,3) - u_3 / u_0 * gcov(0,1)
+              + u_1 * u_3 / (u_0 * u_0) * gcov(0,0);
+          double g_2f2f =
+              gcov(2,2) - 2.0 * u_2 / u_0 * gcov(0,2) + u_2 * u_2 / (u_0 * u_0) * gcov(0,0);
+          double g_2f3f = gcov(2,3) - u_2 / u_0 * gcov(0,3) - u_3 / u_0 * gcov(0,2)
+              + u_2 * u_3 / (u_0 * u_0) * gcov(0,0);
+          double g_3f3f =
+              gcov(3,3) - 2.0 * u_3 / u_0 * gcov(0,3) + u_3 * u_3 / (u_0 * u_0) * gcov(0,0);
+          double bb_1f = g_1f1f * bb1f + g_1f2f * bb2f + g_1f3f * bb3f;
+          double bb_2f = g_1f2f * bb1f + g_2f2f * bb2f + g_2f3f * bb3f;
+          double bb_3f = g_1f3f * bb1f + g_2f3f * bb2f + g_3f3f * bb3f;
+
+          // Calculate fluid-frame angle between photon direction and magnetic field
+          double pf_dot_pf = p_1f * p1f + p_2f * p2f + p_3f * p3f;
+          double bbf_dot_bbf = bb_1f * bb1f + bb_2f * bb2f + bb_3f * bb3f;
+          double pf_dot_bbf = p_1f * bb1f + p_2f * bb2f + p_3f * bb3f;
+          double cos2_theta = std::min(pf_dot_bbf * pf_dot_bbf / (pf_dot_pf * bbf_dot_bbf), 1.0);
+          double sin_theta = std::sqrt(1.0 - cos2_theta);
+
           // Calculate fluid-frame quantities in CGS units
           double nu_fluid_cgs = (u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) / p_0 * im_freq;
           double n_cgs = rho * rho_unit / (plasma_mu * physics::m_p);
+          double n_e_cgs = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
           double bb_cgs = std::sqrt(4.0 * math::pi * b_sq * e_unit);
-
-          // Calculate emission coefficient in CGS units
-          double omega_b_cgs = physics::e * bb_cgs / (physics::m_e * physics::c);
-          double chi = 2.0 * math::pi * nu_fluid_cgs / omega_b_cgs;
-          double kb_tt_tot_cgs = plasma_mu * physics::m_p * physics::c * physics::c * pgas / rho;
+          double nu_c_cgs = physics::e * bb_cgs / (2.0 * math::pi * physics::m_e * physics::c);
           double beta_inv = b_sq / (2.0 * pgas);
           double tt_rat = (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv)
               / (1.0 + beta_inv * beta_inv);
+          double kb_tt_tot_cgs = plasma_mu * physics::m_p * physics::c * physics::c * pgas / rho;
           double kb_tt_e_cgs = (plasma_ne_ni + 1.0) / (plasma_ne_ni + tt_rat) * kb_tt_tot_cgs;
           double theta_e = kb_tt_e_cgs / (physics::m_e * physics::c * physics::c);
-          double x_m = 2.0 * chi / (3.0 * theta_e * theta_e);
-          double n_e_cgs = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
-          double cc_cgs = physics::e * physics::e * n_e_cgs * omega_b_cgs
-              / (std::sqrt(3.0) * math::pi * physics::c);
-          double k2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
-          double ii = 4.0505 / std::sqrt(std::cbrt(x_m))
-              * (1.0 + 0.4 / std::sqrt(std::sqrt(x_m)) + 0.5316 / std::sqrt(x_m))
-              * std::exp(-1.8899 * std::cbrt(x_m));
-          double j_nu_fluid_cgs = 2.0 * math::pi * cc_cgs * chi / k2 * ii;
+          double nu_s_cgs = 2.0 / 9.0 * nu_c_cgs * theta_e * theta_e * sin_theta;
 
-          // Calculate absorption coefficient in CGS units
-          double b_nu_num = 2.0 * physics::h * nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs
-              / (physics::c * physics::c);
-          double b_nu_exp = physics::h * nu_fluid_cgs / kb_tt_e_cgs;
-          double b_nu_den = b_nu_exp < 1.0 ? std::expm1(b_nu_exp) : std::exp(b_nu_exp) - 1.0;
-          double b_nu_cgs = b_nu_num / b_nu_den;
+          // Calculate emission coefficient in CGS units (S 24)
+          double k2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
+          double j_nu_fluid_cgs = 0.0;
+          if (nu_s_cgs > 0.0)
+          {
+            double xx = nu_fluid_cgs / nu_s_cgs;
+            double xx_factor =
+                std::sqrt(xx) + std::sqrt(std::cbrt(32.0 * math::sqrt2 * xx));
+            j_nu_fluid_cgs = math::sqrt2 * math::pi * physics::e * physics::e * n_e_cgs * nu_s_cgs
+                / (3.0 * k2 * physics::c) * xx_factor * xx_factor * std::exp(-std::cbrt(xx));
+          }
+
+          // Calculate absorption coefficient in CGS units (S 25)
+          double b_nu_cgs = 2.0 * physics::h * nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs
+              / (physics::c * physics::c) / std::expm1(physics::h * nu_fluid_cgs / kb_tt_e_cgs);
           double k_nu_fluid_cgs = j_nu_fluid_cgs / b_nu_cgs;
 
           // Calculate change in invariant intensity

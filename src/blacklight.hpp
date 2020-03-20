@@ -7,6 +7,7 @@
 namespace math
 {
   constexpr double pi = 3.141592653589793;
+  constexpr double sqrt2 = 1.4142135623730951;
 }
 
 // Physical constants
