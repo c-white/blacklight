@@ -880,8 +880,7 @@ void RayTracer::IntegrateRadiation()
           if (nu_s_cgs > 0.0)
           {
             double xx = nu_fluid_cgs / nu_s_cgs;
-            double xx_factor =
-                std::sqrt(xx) + std::sqrt(std::cbrt(32.0 * math::sqrt2 * xx));
+            double xx_factor = std::sqrt(xx) + std::sqrt(std::cbrt(32.0 * math::sqrt2 * xx));
             j_nu_fluid_cgs = math::sqrt2 * math::pi * physics::e * physics::e * n_e_cgs * nu_s_cgs
                 / (3.0 * k2 * physics::c) * xx_factor * xx_factor * std::exp(-std::cbrt(xx));
           }
