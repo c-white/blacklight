@@ -739,7 +739,6 @@ void RayTracer::IntegrateRadiation()
 
   // Calculate units
   double x_unit = physics::gg_msun * m_msun / (physics::c * physics::c);
-  double t_unit = x_unit / physics::c;
   double e_unit = rho_unit * physics::c * physics::c;
 
   // Work in parallel
@@ -785,6 +784,10 @@ void RayTracer::IntegrateRadiation()
           // Calculate metric
           CovariantCoordinateMetric(x1, x2, x3, gcov);
           ContravariantCoordinateMetric(x1, x2, x3, gcon);
+
+          // Calculate frequency in CGS units
+          double p0 = gcon(0,0) * p_0 + gcon(0,1) * p_1 + gcon(0,2) * p_2 + gcon(0,3) * p_3;
+          double nu_cgs = -p0 / p_0 * im_freq;
 
           // Calculate 4-velocity
           double temp = gcov(1,1) * uu1 * uu1 + 2.0 * gcov(1,2) * uu1 * uu2
@@ -884,21 +887,22 @@ void RayTracer::IntegrateRadiation()
             j_nu_fluid_cgs = math::sqrt2 * math::pi * physics::e * physics::e * n_e_cgs * nu_s_cgs
                 / (3.0 * k2 * physics::c) * xx_factor * xx_factor * std::exp(-std::cbrt(xx));
           }
+          double nu_nu_fluid = nu_cgs / nu_fluid_cgs;
+          double j_nu_cgs = nu_nu_fluid * nu_nu_fluid * j_nu_fluid_cgs;
 
           // Calculate absorption coefficient in CGS units (S 25)
           double b_nu_cgs = 2.0 * physics::h * nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs
               / (physics::c * physics::c) / std::expm1(physics::h * nu_fluid_cgs / kb_tt_e_cgs);
           double k_nu_fluid_cgs = j_nu_fluid_cgs / b_nu_cgs;
+          double k_nu_cgs = k_nu_fluid_cgs / nu_nu_fluid;
 
           // Calculate change in invariant intensity
-          double i_nu_fluid_cgs = nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs * image(m,l);
-          double delta_lambda_cgs = delta_lambda * x_unit / t_unit;
-          double delta_s_fluid_cgs = -delta_lambda_cgs * nu_fluid_cgs * p_0 / im_freq;
-          double delta_tau_nu_fluid = k_nu_fluid_cgs * delta_s_fluid_cgs;
-          double ss_nu_fluid_cgs = j_nu_fluid_cgs / k_nu_fluid_cgs;
-          i_nu_fluid_cgs = std::exp(-delta_tau_nu_fluid)
-              * (i_nu_fluid_cgs + ss_nu_fluid_cgs * std::expm1(delta_tau_nu_fluid));
-          image(m,l) = i_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs);
+          double i_nu_cgs = nu_cgs * nu_cgs * nu_cgs * image(m,l);
+          double delta_s_cgs = delta_lambda * x_unit;
+          double delta_tau_nu = k_nu_cgs * delta_s_cgs;
+          double ss_nu_cgs = j_nu_cgs / k_nu_cgs;
+          i_nu_cgs = std::exp(-delta_tau_nu) * (i_nu_cgs + ss_nu_cgs * std::expm1(delta_tau_nu));
+          image(m,l) = i_nu_cgs / (nu_cgs * nu_cgs * nu_cgs);
         }
       }
 
