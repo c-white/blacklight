@@ -779,6 +779,10 @@ void RayTracer::IntegrateRadiation()
           double bb2 = sample_bb2(m,l,n);
           double bb3 = sample_bb3(m,l,n);
 
+          // Skip contribution if magnetic field vanishes
+          if (bb1 == 0.0 and bb2 == 0.0 and bb3 == 0.0)
+            continue;
+
           // Calculate metric
           CovariantCoordinateMetric(x1, x2, x3, gcov);
           ContravariantCoordinateMetric(x1, x2, x3, gcon);
@@ -875,18 +879,17 @@ void RayTracer::IntegrateRadiation()
           double theta_e = kb_tt_e_cgs / (physics::m_e * physics::c * physics::c);
           double nu_s_cgs = 2.0 / 9.0 * nu_c_cgs * theta_e * theta_e * sin_theta;
 
-          // Calculate emission coefficient in CGS units (S 24)
+          // Calculate emission coefficient in CGS units (S 24), skipping contribution if necessary
+          if (nu_s_cgs == 0.0)
+            continue;
           double k2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
           if (k2 == 0.0)
             continue;
-          double j_nu_fluid_cgs = 0.0;
-          if (nu_s_cgs > 0.0)
-          {
-            double xx = nu_fluid_cgs / nu_s_cgs;
-            double xx_factor = std::sqrt(xx) + std::sqrt(std::cbrt(32.0 * math::sqrt2 * xx));
-            j_nu_fluid_cgs = math::sqrt2 * math::pi * physics::e * physics::e * n_e_cgs * nu_s_cgs
-                / (3.0 * k2 * physics::c) * xx_factor * xx_factor * std::exp(-std::cbrt(xx));
-          }
+          double xx = nu_fluid_cgs / nu_s_cgs;
+          double xx_factor = std::sqrt(xx) + std::sqrt(std::cbrt(32.0 * math::sqrt2 * xx));
+          double j_nu_fluid_cgs = math::sqrt2 * math::pi * physics::e * physics::e * n_e_cgs
+              * nu_s_cgs / (3.0 * k2 * physics::c) * xx_factor * xx_factor
+              * std::exp(-std::cbrt(xx));
           if (j_nu_fluid_cgs == 0.0)
             continue;
           double nu_nu_fluid = nu_cgs / nu_fluid_cgs;
