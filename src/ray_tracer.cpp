@@ -55,6 +55,7 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   // Copy ray input data
   ray_step = input_reader.ray_step;
   ray_max_steps = input_reader.ray_max_steps;
+  ray_sample_interp = input_reader.ray_sample_interp;
   ray_flat = input_reader.ray_flat;
 
   // Copy raw data scalars
@@ -69,6 +70,9 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   x1f = athena_reader.x1f;
   x2f = athena_reader.x2f;
   x3f = athena_reader.x3f;
+  x1v = athena_reader.x1v;
+  x2v = athena_reader.x2v;
+  x3v = athena_reader.x3v;
   grid_rho = athena_reader.prim;
   grid_rho.Slice(5, athena_reader.ind_rho);
   grid_pgas = athena_reader.prim;
@@ -576,6 +580,10 @@ void RayTracer::TransformGeodesics()
 //   Assumes im_steps, sample_flags, sample_num, sample_pos, and sample_len have been set.
 //   Allocates and initializes sample_rho, sample_pgas, sample_uu1, sample_uu2, sample_uu3,
 //     sample_bb1, sample_bb2, and sample_bb3.
+//   If ray_sample_interp == false, uses primitives from cell containing geodesic sample point.
+//   If ray_sample_interp == true, performs trilinear interpolation to geodesic sample point from
+//     cell centers, using only data within the same block of cells (i.e. sometimes using
+//     extrapolation).
 void RayTracer::SampleAlongGeodesics()
 {
   // Allocate resampling arrays
@@ -704,15 +712,160 @@ void RayTracer::SampleAlongGeodesics()
             if (static_cast<double>(x3f(b,k+1)) >= x3)
               break;
 
-          // Resample values
-          sample_rho(m,l,n) = grid_rho(b,k,j,i);
-          sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
-          sample_uu1(m,l,n) = grid_uu1(b,k,j,i);
-          sample_uu2(m,l,n) = grid_uu2(b,k,j,i);
-          sample_uu3(m,l,n) = grid_uu3(b,k,j,i);
-          sample_bb1(m,l,n) = grid_bb1(b,k,j,i);
-          sample_bb2(m,l,n) = grid_bb2(b,k,j,i);
-          sample_bb3(m,l,n) = grid_bb3(b,k,j,i);
+          // Resample values without interpolation
+          if (not ray_sample_interp) {
+            sample_rho(m,l,n) = grid_rho(b,k,j,i);
+            sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
+            sample_uu1(m,l,n) = grid_uu1(b,k,j,i);
+            sample_uu2(m,l,n) = grid_uu2(b,k,j,i);
+            sample_uu3(m,l,n) = grid_uu3(b,k,j,i);
+            sample_bb1(m,l,n) = grid_bb1(b,k,j,i);
+            sample_bb2(m,l,n) = grid_bb2(b,k,j,i);
+            sample_bb3(m,l,n) = grid_bb3(b,k,j,i);
+          }
+
+          // Resample values with interpolation
+          if (ray_sample_interp) {
+
+            // Calculate interpolation/extrapolation indices and coefficients
+            int i_m = i == 0 or (i != n_i - 1 and x1 >= static_cast<double>(x1v(b,i))) ? i : i - 1;
+            int i_p = i_m + 1;
+            int j_m = j == 0 or (j != n_j - 1 and x2 >= static_cast<double>(x2v(b,j))) ? j : j - 1;
+            int j_p = j_m + 1;
+            int k_m = k == 0 or (k != n_k - 1 and x3 >= static_cast<double>(x3v(b,k))) ? k : k - 1;
+            int k_p = k_m + 1;
+            double f_i = (x1 - static_cast<double>(x1v(b,i_m)))
+                / (static_cast<double>(x1v(b,i_p)) - static_cast<double>(x1v(b,i_m)));
+            double f_j = (x2 - static_cast<double>(x2v(b,j_m)))
+                / (static_cast<double>(x2v(b,j_p)) - static_cast<double>(x2v(b,j_m)));
+            double f_k = (x3 - static_cast<double>(x3v(b,k_m)))
+                / (static_cast<double>(x3v(b,k_p)) - static_cast<double>(x3v(b,k_m)));
+
+            // Interpolate density
+            double val_mmm = static_cast<double>(grid_rho(b,k_m,j_m,i_m));
+            double val_mmp = static_cast<double>(grid_rho(b,k_m,j_m,i_p));
+            double val_mpm = static_cast<double>(grid_rho(b,k_m,j_p,i_m));
+            double val_mpp = static_cast<double>(grid_rho(b,k_m,j_p,i_p));
+            double val_pmm = static_cast<double>(grid_rho(b,k_p,j_m,i_m));
+            double val_pmp = static_cast<double>(grid_rho(b,k_p,j_m,i_p));
+            double val_ppm = static_cast<double>(grid_rho(b,k_p,j_p,i_m));
+            double val_ppp = static_cast<double>(grid_rho(b,k_p,j_p,i_p));
+            sample_rho(m,l,n) = static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
+                + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp
+                + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm + (1.0 - f_k) * f_j * f_i * val_mpp
+                + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm + f_k * (1.0 - f_j) * f_i * val_pmp
+                + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
+            if (sample_rho(m,l,n) <= 0.0f)
+              sample_rho(m,l,n) = grid_rho(b,k,j,i);
+
+            // Interpolate gas pressure
+            val_mmm = static_cast<double>(grid_pgas(b,k_m,j_m,i_m));
+            val_mmp = static_cast<double>(grid_pgas(b,k_m,j_m,i_p));
+            val_mpm = static_cast<double>(grid_pgas(b,k_m,j_p,i_m));
+            val_mpp = static_cast<double>(grid_pgas(b,k_m,j_p,i_p));
+            val_pmm = static_cast<double>(grid_pgas(b,k_p,j_m,i_m));
+            val_pmp = static_cast<double>(grid_pgas(b,k_p,j_m,i_p));
+            val_ppm = static_cast<double>(grid_pgas(b,k_p,j_p,i_m));
+            val_ppp = static_cast<double>(grid_pgas(b,k_p,j_p,i_p));
+            sample_pgas(m,l,n) =
+                static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
+                + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp
+                + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm + (1.0 - f_k) * f_j * f_i * val_mpp
+                + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm + f_k * (1.0 - f_j) * f_i * val_pmp
+                + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
+            if (sample_pgas(m,l,n) <= 0.0f)
+              sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
+
+            // Interpolate x1-velocity
+            val_mmm = static_cast<double>(grid_uu1(b,k_m,j_m,i_m));
+            val_mmp = static_cast<double>(grid_uu1(b,k_m,j_m,i_p));
+            val_mpm = static_cast<double>(grid_uu1(b,k_m,j_p,i_m));
+            val_mpp = static_cast<double>(grid_uu1(b,k_m,j_p,i_p));
+            val_pmm = static_cast<double>(grid_uu1(b,k_p,j_m,i_m));
+            val_pmp = static_cast<double>(grid_uu1(b,k_p,j_m,i_p));
+            val_ppm = static_cast<double>(grid_uu1(b,k_p,j_p,i_m));
+            val_ppp = static_cast<double>(grid_uu1(b,k_p,j_p,i_p));
+            sample_uu1(m,l,n) = static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
+                + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp
+                + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm + (1.0 - f_k) * f_j * f_i * val_mpp
+                + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm + f_k * (1.0 - f_j) * f_i * val_pmp
+                + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
+
+            // Interpolate x2-velocity
+            val_mmm = static_cast<double>(grid_uu2(b,k_m,j_m,i_m));
+            val_mmp = static_cast<double>(grid_uu2(b,k_m,j_m,i_p));
+            val_mpm = static_cast<double>(grid_uu2(b,k_m,j_p,i_m));
+            val_mpp = static_cast<double>(grid_uu2(b,k_m,j_p,i_p));
+            val_pmm = static_cast<double>(grid_uu2(b,k_p,j_m,i_m));
+            val_pmp = static_cast<double>(grid_uu2(b,k_p,j_m,i_p));
+            val_ppm = static_cast<double>(grid_uu2(b,k_p,j_p,i_m));
+            val_ppp = static_cast<double>(grid_uu2(b,k_p,j_p,i_p));
+            sample_uu2(m,l,n) = static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
+                + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp
+                + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm + (1.0 - f_k) * f_j * f_i * val_mpp
+                + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm + f_k * (1.0 - f_j) * f_i * val_pmp
+                + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
+
+            // Interpolate x3-velocity
+            val_mmm = static_cast<double>(grid_uu3(b,k_m,j_m,i_m));
+            val_mmp = static_cast<double>(grid_uu3(b,k_m,j_m,i_p));
+            val_mpm = static_cast<double>(grid_uu3(b,k_m,j_p,i_m));
+            val_mpp = static_cast<double>(grid_uu3(b,k_m,j_p,i_p));
+            val_pmm = static_cast<double>(grid_uu3(b,k_p,j_m,i_m));
+            val_pmp = static_cast<double>(grid_uu3(b,k_p,j_m,i_p));
+            val_ppm = static_cast<double>(grid_uu3(b,k_p,j_p,i_m));
+            val_ppp = static_cast<double>(grid_uu3(b,k_p,j_p,i_p));
+            sample_uu3(m,l,n) = static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
+                + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp
+                + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm + (1.0 - f_k) * f_j * f_i * val_mpp
+                + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm + f_k * (1.0 - f_j) * f_i * val_pmp
+                + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
+
+            // Interpolate x1-field
+            val_mmm = static_cast<double>(grid_bb1(b,k_m,j_m,i_m));
+            val_mmp = static_cast<double>(grid_bb1(b,k_m,j_m,i_p));
+            val_mpm = static_cast<double>(grid_bb1(b,k_m,j_p,i_m));
+            val_mpp = static_cast<double>(grid_bb1(b,k_m,j_p,i_p));
+            val_pmm = static_cast<double>(grid_bb1(b,k_p,j_m,i_m));
+            val_pmp = static_cast<double>(grid_bb1(b,k_p,j_m,i_p));
+            val_ppm = static_cast<double>(grid_bb1(b,k_p,j_p,i_m));
+            val_ppp = static_cast<double>(grid_bb1(b,k_p,j_p,i_p));
+            sample_bb1(m,l,n) = static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
+                + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp
+                + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm + (1.0 - f_k) * f_j * f_i * val_mpp
+                + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm + f_k * (1.0 - f_j) * f_i * val_pmp
+                + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
+
+            // Interpolate x2-field
+            val_mmm = static_cast<double>(grid_bb2(b,k_m,j_m,i_m));
+            val_mmp = static_cast<double>(grid_bb2(b,k_m,j_m,i_p));
+            val_mpm = static_cast<double>(grid_bb2(b,k_m,j_p,i_m));
+            val_mpp = static_cast<double>(grid_bb2(b,k_m,j_p,i_p));
+            val_pmm = static_cast<double>(grid_bb2(b,k_p,j_m,i_m));
+            val_pmp = static_cast<double>(grid_bb2(b,k_p,j_m,i_p));
+            val_ppm = static_cast<double>(grid_bb2(b,k_p,j_p,i_m));
+            val_ppp = static_cast<double>(grid_bb2(b,k_p,j_p,i_p));
+            sample_bb2(m,l,n) = static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
+                + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp
+                + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm + (1.0 - f_k) * f_j * f_i * val_mpp
+                + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm + f_k * (1.0 - f_j) * f_i * val_pmp
+                + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
+
+            // Interpolate x3-field
+            val_mmm = static_cast<double>(grid_bb3(b,k_m,j_m,i_m));
+            val_mmp = static_cast<double>(grid_bb3(b,k_m,j_m,i_p));
+            val_mpm = static_cast<double>(grid_bb3(b,k_m,j_p,i_m));
+            val_mpp = static_cast<double>(grid_bb3(b,k_m,j_p,i_p));
+            val_pmm = static_cast<double>(grid_bb3(b,k_p,j_m,i_m));
+            val_pmp = static_cast<double>(grid_bb3(b,k_p,j_m,i_p));
+            val_ppm = static_cast<double>(grid_bb3(b,k_p,j_p,i_m));
+            val_ppp = static_cast<double>(grid_bb3(b,k_p,j_p,i_p));
+            sample_bb3(m,l,n) = static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
+                + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp
+                + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm + (1.0 - f_k) * f_j * f_i * val_mpp
+                + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm + f_k * (1.0 - f_j) * f_i * val_pmp
+                + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
+          }
         }
       }
   }

@@ -28,9 +28,10 @@ im_res    = 64      # number of pixels per side
 im_freq   = 2.3e11  # frequency of observation in GHz
 
 # Rays
-ray_step      = 0.01   # affine step size along each geodesic in units of current radius
-ray_max_steps = 1500   # maximum number of steps allowed for each geodesic
-ray_flat      = false  # flag indicating ray tracing should assume flat spacetime
+ray_step          = 0.01   # affine step size along each geodesic in units of current radius
+ray_max_steps     = 1500   # maximum number of steps allowed for each geodesic
+ray_sample_interp = false  # flag indicating resampling should use intrablock interpolation
+ray_flat          = false  # flag indicating ray tracing should assume flat spacetime
 
 # Performance
 num_threads = 4  # number of threads to use in parallel

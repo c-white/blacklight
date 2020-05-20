@@ -108,6 +108,8 @@ void InputReader::Read()
       ray_step = std::stod(val);
     else if (key == "ray_max_steps")
       ray_max_steps = std::stoi(val);
+    else if (key == "ray_sample_interp")
+      ray_sample_interp = ReadBool(val);
     else if (key == "ray_flat")
       ray_flat = ReadBool(val);
 

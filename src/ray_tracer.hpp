@@ -50,11 +50,13 @@ struct RayTracer
   // Input data - rays
   double ray_step;
   int ray_max_steps;
+  bool ray_sample_interp;
   bool ray_flat;
 
   // Grid data
   double x1_min, x1_max, x2_min, x2_max, x3_min, x3_max;
   Array<float> x1f, x2f, x3f;
+  Array<float> x1v, x2v, x3v;
   Array<float> grid_rho, grid_pgas;
   Array<float> grid_uu1, grid_uu2, grid_uu3;
   Array<float> grid_bb1, grid_bb2, grid_bb3;

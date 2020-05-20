@@ -66,6 +66,9 @@ void AthenaReader::Read()
   ReadHDF5FloatArray("x1f", x1f);
   ReadHDF5FloatArray("x2f", x2f);
   ReadHDF5FloatArray("x3f", x3f);
+  ReadHDF5FloatArray("x1v", x1v);
+  ReadHDF5FloatArray("x2v", x2v);
+  ReadHDF5FloatArray("x3v", x3v);
 
   // Read cell data
   ReadHDF5FloatArray("prim", prim);

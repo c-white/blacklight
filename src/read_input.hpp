@@ -53,6 +53,7 @@ struct InputReader
   // Data - rays
   double ray_step;
   int ray_max_steps;
+  bool ray_sample_interp;
   bool ray_flat;
 
   // Data - performance
