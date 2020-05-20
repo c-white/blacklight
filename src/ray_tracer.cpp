@@ -877,6 +877,8 @@ void RayTracer::IntegrateRadiation()
 
           // Calculate emission coefficient in CGS units (S 24)
           double k2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
+          if (k2 == 0.0)
+            continue;
           double j_nu_fluid_cgs = 0.0;
           if (nu_s_cgs > 0.0)
           {
@@ -885,6 +887,8 @@ void RayTracer::IntegrateRadiation()
             j_nu_fluid_cgs = math::sqrt2 * math::pi * physics::e * physics::e * n_e_cgs * nu_s_cgs
                 / (3.0 * k2 * physics::c) * xx_factor * xx_factor * std::exp(-std::cbrt(xx));
           }
+          if (j_nu_fluid_cgs == 0.0)
+            continue;
           double nu_nu_fluid = nu_cgs / nu_fluid_cgs;
           double j_nu_cgs = nu_nu_fluid * nu_nu_fluid * j_nu_fluid_cgs;
 
