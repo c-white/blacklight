@@ -296,7 +296,6 @@ void RayTracer::IntegrateGeodesics()
   int num_bad_geodesics = 0;
   #pragma omp parallel
   {
-
     // Allocate scratch arrays
     Array<double> gcon(4, 4);
     Array<double> dgcon(3, 4, 4);
@@ -592,7 +591,6 @@ void RayTracer::SampleAlongGeodesics()
   // Work in parallel
   #pragma omp parallel
   {
-
     // Prepare bookkeeping
     int n_b = x1f.n2;
     int n_i = x1f.n1 - 1;

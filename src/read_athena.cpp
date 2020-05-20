@@ -66,9 +66,6 @@ void AthenaReader::Read()
   ReadHDF5FloatArray("x1f", x1f);
   ReadHDF5FloatArray("x2f", x2f);
   ReadHDF5FloatArray("x3f", x3f);
-  ReadHDF5FloatArray("x1v", x1);
-  ReadHDF5FloatArray("x2v", x2);
-  ReadHDF5FloatArray("x3v", x3);
 
   // Read cell data
   ReadHDF5FloatArray("prim", prim);
@@ -361,19 +358,19 @@ void AthenaReader::ReadHDF5RootObjectHeader()
 //   Assumes metadata set.
 void AthenaReader::VerifyVariables()
 {
-  // Check that primitives and magnetic fields are present in expected order
+  // Check that primitives and magnetic field are present in expected order
   if (num_dataset_names < 2)
     throw BlacklightException("Insufficient datasets in data file.");
   if (not dataset_names[ind_prim].compare("prim"))
     throw BlacklightException("Primitives not found in data file.");
   if (not dataset_names[ind_bb].compare("B"))
-    throw BlacklightException("Magnetic fields not found in data file.");
+    throw BlacklightException("Magnetic field not found in data file.");
 
-  // Check that primitives and magnetic fields have expected sizes
+  // Check that primitives and magnetic field have expected sizes
   if (num_variables(ind_prim) != 5)
     throw BlacklightException("Primitives from data file do not have 5 variables.");
   if (num_variables(ind_bb) != 3)
-    throw BlacklightException("Magnetic fields from data file do not have 5 variables.");
+    throw BlacklightException("Magnetic field from data file do not have 3 variables.");
 
   // Check that variables are in expected locations
   if (not variable_names[ind_rho].compare("rho"))

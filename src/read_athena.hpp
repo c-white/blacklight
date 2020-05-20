@@ -50,7 +50,6 @@ struct AthenaReader
   Array<int> levels;
   Array<int> locations;
   Array<float> x1f, x2f, x3f;
-  Array<float> x1, x2, x3;
   Array<float> prim, bb;
 
   // Functions
