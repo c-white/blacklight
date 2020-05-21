@@ -71,6 +71,9 @@ struct RayTracer
   const float bb2_fallback = 0.0f;
   const float bb3_fallback = 0.0f;
 
+  // Limiter data
+  const double delta_tau_max = 100.0;
+
   // Sample and image data
   double r_photon;
   int im_steps;

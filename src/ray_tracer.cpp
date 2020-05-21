@@ -1059,7 +1059,10 @@ void RayTracer::IntegrateRadiation()
           double delta_s_cgs = delta_lambda * x_unit;
           double delta_tau_nu = k_nu_cgs * delta_s_cgs;
           double ss_nu_cgs = j_nu_cgs / k_nu_cgs;
-          i_nu_cgs = std::exp(-delta_tau_nu) * (i_nu_cgs + ss_nu_cgs * std::expm1(delta_tau_nu));
+          if (delta_tau_nu <= delta_tau_max)
+            i_nu_cgs = std::exp(-delta_tau_nu) * (i_nu_cgs + ss_nu_cgs * std::expm1(delta_tau_nu));
+          else
+            i_nu_cgs = ss_nu_cgs;
           image(m,l) = i_nu_cgs / (nu_cgs * nu_cgs * nu_cgs);
         }
       }
