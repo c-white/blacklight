@@ -7,7 +7,7 @@
 #include <string>  // string
 
 // Blacklight headers
-#include "blacklight.hpp"  // Coordinates
+#include "blacklight.hpp"  // enumerations
 
 //--------------------------------------------------------------------------------------------------
 
@@ -41,6 +41,7 @@ struct InputReader
   double plasma_sigma_max;
 
   // Data - image
+  Camera im_cam;
   double im_r;
   double im_th;
   double im_ph;
@@ -65,6 +66,7 @@ struct InputReader
   double ReadPole(const std::string &string, bool *p_pole_flag);
   bool ReadBool(const std::string &string);
   Coordinates ReadCoordinates(const std::string &string);
+  Camera ReadCamera(const std::string &string);
 };
 
 #endif

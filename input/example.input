@@ -19,6 +19,7 @@ plasma_rat_low   = 1.0   # ion-electron temperature ratio at zero plasma beta
 plasma_sigma_max = 1.0   # if nonnegative, cutoff in sigma above which plasma is considered vacuum
 
 # Image
+im_camera = plane   # type of camera (plane, pinhole)
 im_radius = 50.0    # radial coordinate of camera center in gravitational units
 im_theta  = 135.0   # polar coordinate of camera center in degrees (0/180 for north/south)
 im_phi    = 0.0     # azimuthal coordinate of camera in degrees

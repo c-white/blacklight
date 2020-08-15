@@ -8,7 +8,7 @@
 
 // Blacklight headers
 #include "read_input.hpp"
-#include "blacklight.hpp"  // math, Coordinates
+#include "blacklight.hpp"  // math, enumerations
 #include "exceptions.hpp"  // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
@@ -88,6 +88,8 @@ void InputReader::Read()
       plasma_sigma_max = std::stod(val);
 
     // Store image data
+    else if (key == "im_camera")
+      im_cam = ReadCamera(val);
     else if (key == "im_radius")
       im_r = std::stod(val);
     else if (key == "im_theta")
@@ -192,4 +194,27 @@ Coordinates InputReader::ReadCoordinates(const std::string &string)
     return cart_ks;
   else
     throw BlacklightException("Unknown string used for Coordinates value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as Camera enumerations
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid Camera
+// Notes:
+//   Valid options:
+//     "plane": rays originate from plane, parallel to central ray (which is perpendicular to
+//         plane); appropriate for images as seen from infinity
+//     "pinhole": rays originate from point, going in different directions; appropriate for camera
+//         located near source
+Camera InputReader::ReadCamera(const std::string &string)
+{
+  if (string == "plane")
+    return plane;
+  else if (string == "pinhole")
+    return pinhole;
+  else
+    throw BlacklightException("Unknown string used for Camera value.");
 }

@@ -3,7 +3,7 @@
 // C++ headers
 #include <algorithm>  // max, min
 #include <cmath>      // abs, acos, atan, atan2, cbrt, copysign, cos, cyl_bessel_k, exp, expm1,
-                      // fmax, fmod, hypot, pow, sin, sqrt
+                      // fmax, hypot, sin, sqrt
 #include <sstream>    // stringstream
 #include <string>     // string
 
@@ -13,7 +13,7 @@
 // Blacklight headers
 #include "ray_tracer.hpp"
 #include "array.hpp"        // Array
-#include "blacklight.hpp"   // math, physics, Coordinates
+#include "blacklight.hpp"   // math, physics, enumerations
 #include "exceptions.hpp"   // BlacklightWarning
 #include "read_athena.hpp"  // AthenaReader
 #include "read_input.hpp"   // InputReader
@@ -43,6 +43,7 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   plasma_sigma_max = input_reader.plasma_sigma_max;
 
   // Copy image input data
+  im_cam = input_reader.im_cam;
   im_r = input_reader.im_r;
   im_th = input_reader.im_th;
   im_ph = input_reader.im_ph;
@@ -186,26 +187,60 @@ void RayTracer::InitializeCamera()
   im_pos.Allocate(im_res, im_res, 4);
   im_dir.Allocate(im_res, im_res, 4);
 
-  // Initialize arrays
-  #pragma omp parallel for schedule(static)
-  for (int m = 0; m < im_res; m++)
-    for (int l = 0; l < im_res; l++)
+  // Initialize arrays based on camera type
+  switch (im_cam)
+  {
+    // Plane with parallel rays
+    case plane:
     {
-      // Calculate position in camera plane
-      double u = (l - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
-      double v = (m - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
+      #pragma omp parallel for schedule(static)
+      for (int m = 0; m < im_res; m++)
+        for (int l = 0; l < im_res; l++)
+        {
+          // Calculate position
+          double u = (l - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
+          double v = (m - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
+          im_pos(m,l,0) = 0.0;
+          im_pos(m,l,1) = im_x + u * im_ux + v * im_vx;
+          im_pos(m,l,2) = im_y + u * im_uy + v * im_vy;
+          im_pos(m,l,3) = im_z + u * im_uz + v * im_vz;
 
-      // Calculate position in space
-      im_pos(m,l,0) = 0.0;
-      im_pos(m,l,1) = im_x + u * im_ux + v * im_vx;
-      im_pos(m,l,2) = im_y + u * im_uy + v * im_vy;
-      im_pos(m,l,3) = im_z + u * im_uz + v * im_vz;
-
-      // Set direction
-      im_dir(m,l,1) = im_nx;
-      im_dir(m,l,2) = im_ny;
-      im_dir(m,l,3) = im_nz;
+          // Set direction
+          im_dir(m,l,1) = im_nx;
+          im_dir(m,l,2) = im_ny;
+          im_dir(m,l,3) = im_nz;
+        }
+      break;
     }
+
+    // Point with converging rays
+    case pinhole:
+    default:
+    {
+      #pragma omp parallel for schedule(static)
+      for (int m = 0; m < im_res; m++)
+        for (int l = 0; l < im_res; l++)
+        {
+          // Set position
+          im_pos(m,l,0) = 0.0;
+          im_pos(m,l,1) = im_x;
+          im_pos(m,l,2) = im_y;
+          im_pos(m,l,3) = im_z;
+
+          // Calculate direction
+          double u = (l - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
+          double v = (m - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
+          double dir_x = im_x - (u * im_ux + v * im_vx);
+          double dir_y = im_y - (u * im_uy + v * im_vy);
+          double dir_z = im_z - (u * im_uz + v * im_vz);
+          double dir_norm = std::hypot(dir_x, dir_y, dir_z);
+          im_dir(m,l,1) = dir_x / dir_norm;
+          im_dir(m,l,2) = dir_y / dir_norm;
+          im_dir(m,l,3) = dir_z / dir_norm;
+        }
+      break;
+    }
+  }
   return;
 }
 
@@ -584,6 +619,7 @@ void RayTracer::TransformGeodesics()
 //   If ray_sample_interp == true, performs trilinear interpolation to geodesic sample point from
 //     cell centers, using only data within the same block of cells (i.e. sometimes using
 //     extrapolation).
+//   TODO: interpolate across block boundaries
 void RayTracer::SampleAlongGeodesics()
 {
   // Allocate resampling arrays

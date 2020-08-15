@@ -5,7 +5,7 @@
 
 // Blacklight headers
 #include "array.hpp"        // Array
-#include "blacklight.hpp"   // Coordinates
+#include "blacklight.hpp"   // enumerations
 #include "read_athena.hpp"  // AthenaReader
 #include "read_input.hpp"   // InputReader
 
@@ -38,6 +38,7 @@ struct RayTracer
   double plasma_sigma_max;
 
   // Input data - image
+  Camera im_cam;
   double im_r;
   double im_th;
   double im_ph;

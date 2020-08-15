@@ -24,5 +24,6 @@ namespace physics
 
 // Enumerations
 enum Coordinates {sph_ks, cart_ks};
+enum Camera {plane, pinhole};
 
 #endif
