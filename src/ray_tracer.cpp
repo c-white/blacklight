@@ -3,7 +3,7 @@
 // C++ headers
 #include <algorithm>  // max, min
 #include <cmath>      // abs, acos, atan, atan2, cbrt, copysign, cos, cyl_bessel_k, exp, expm1,
-                      // fmax, hypot, sin, sqrt
+                      // fmax, hypot, pow, sin, sqrt
 #include <sstream>    // stringstream
 #include <string>     // string
 
@@ -26,21 +26,53 @@
 //   athena_reader: object containing raw data read from data file
 RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena_reader)
 {
-  // Copy coordinate input data
-  bh_m = input_reader.bh_m;
-  bh_a = input_reader.bh_a;
-  coord = input_reader.coord;
+  // Copy general input data
+  data_type = input_reader.data_type;
 
-  // Copy unit input data
-  m_msun = input_reader.m_msun;
-  rho_unit = input_reader.rho_unit;
+  // Set parameters
+  if (data_type == simulation)
+  {
+    bh_m = 1.0;
+    bh_a = input_reader.simulation_a;
+  }
+  if (data_type == formula)
+  {
+    bh_m = 1.0;
+    bh_a = input_reader.formula_spin;
+  }
+
+  // Copy simulation details data
+  if (data_type == simulation)
+  {
+    simulation_m_msun = input_reader.simulation_m_msun;
+    simulation_rho_cgs = input_reader.simulation_rho_cgs;
+    simulation_coord = input_reader.simulation_coord;
+  }
+
+  // Copy formula details data
+  if (data_type == formula)
+  {
+    formula_mass = input_reader.formula_mass;
+    formula_r0 = input_reader.formula_r0;
+    formula_h = input_reader.formula_h;
+    formula_l0 = input_reader.formula_l0;
+    formula_q = input_reader.formula_q;
+    formula_nup = input_reader.formula_nup;
+    formula_cn0 = input_reader.formula_cn0;
+    formula_alpha = input_reader.formula_alpha;
+    formula_a = input_reader.formula_a;
+    formula_beta = input_reader.formula_beta;
+  }
 
   // Copy plasma input data
-  plasma_mu = input_reader.plasma_mu;
-  plasma_ne_ni = input_reader.plasma_ne_ni;
-  plasma_rat_high = input_reader.plasma_rat_high;
-  plasma_rat_low = input_reader.plasma_rat_low;
-  plasma_sigma_max = input_reader.plasma_sigma_max;
+  if (data_type == simulation)
+  {
+    plasma_mu = input_reader.plasma_mu;
+    plasma_ne_ni = input_reader.plasma_ne_ni;
+    plasma_rat_high = input_reader.plasma_rat_high;
+    plasma_rat_low = input_reader.plasma_rat_low;
+    plasma_sigma_max = input_reader.plasma_sigma_max;
+  }
 
   // Copy image input data
   im_cam = input_reader.im_cam;
@@ -60,36 +92,42 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   ray_flat = input_reader.ray_flat;
 
   // Copy raw data scalars
-  x1_min = athena_reader.x1_min;
-  x1_max = athena_reader.x1_max;
-  x2_min = athena_reader.x2_min;
-  x2_max = athena_reader.x2_max;
-  x3_min = athena_reader.x3_min;
-  x3_max = athena_reader.x3_max;
+  if (data_type == simulation)
+  {
+    x1_min = athena_reader.x1_min;
+    x1_max = athena_reader.x1_max;
+    x2_min = athena_reader.x2_min;
+    x2_max = athena_reader.x2_max;
+    x3_min = athena_reader.x3_min;
+    x3_max = athena_reader.x3_max;
+  }
 
   // Make shallow copies of raw data arrays
-  x1f = athena_reader.x1f;
-  x2f = athena_reader.x2f;
-  x3f = athena_reader.x3f;
-  x1v = athena_reader.x1v;
-  x2v = athena_reader.x2v;
-  x3v = athena_reader.x3v;
-  grid_rho = athena_reader.prim;
-  grid_rho.Slice(5, athena_reader.ind_rho);
-  grid_pgas = athena_reader.prim;
-  grid_pgas.Slice(5, athena_reader.ind_pgas);
-  grid_uu1 = athena_reader.prim;
-  grid_uu1.Slice(5, athena_reader.ind_uu1);
-  grid_uu2 = athena_reader.prim;
-  grid_uu2.Slice(5, athena_reader.ind_uu2);
-  grid_uu3 = athena_reader.prim;
-  grid_uu3.Slice(5, athena_reader.ind_uu3);
-  grid_bb1 = athena_reader.bb;
-  grid_bb1.Slice(5, athena_reader.ind_bb1);
-  grid_bb2 = athena_reader.bb;
-  grid_bb2.Slice(5, athena_reader.ind_bb2);
-  grid_bb3 = athena_reader.bb;
-  grid_bb3.Slice(5, athena_reader.ind_bb3);
+  if (data_type == simulation)
+  {
+    x1f = athena_reader.x1f;
+    x2f = athena_reader.x2f;
+    x3f = athena_reader.x3f;
+    x1v = athena_reader.x1v;
+    x2v = athena_reader.x2v;
+    x3v = athena_reader.x3v;
+    grid_rho = athena_reader.prim;
+    grid_rho.Slice(5, athena_reader.ind_rho);
+    grid_pgas = athena_reader.prim;
+    grid_pgas.Slice(5, athena_reader.ind_pgas);
+    grid_uu1 = athena_reader.prim;
+    grid_uu1.Slice(5, athena_reader.ind_uu1);
+    grid_uu2 = athena_reader.prim;
+    grid_uu2.Slice(5, athena_reader.ind_uu2);
+    grid_uu3 = athena_reader.prim;
+    grid_uu3.Slice(5, athena_reader.ind_uu3);
+    grid_bb1 = athena_reader.bb;
+    grid_bb1.Slice(5, athena_reader.ind_bb1);
+    grid_bb2 = athena_reader.bb;
+    grid_bb2.Slice(5, athena_reader.ind_bb2);
+    grid_bb3 = athena_reader.bb;
+    grid_bb3.Slice(5, athena_reader.ind_bb3);
+  }
 
   // Calculate inner photon orbit radius
   r_photon = 2.0 * bh_m * (1.0 + std::cos(2.0 / 3.0 * std::acos(-std::abs(bh_a) / bh_m)));
@@ -113,8 +151,13 @@ void RayTracer::MakeImage()
   InitializeGeodesics();
   IntegrateGeodesics();
   TransformGeodesics();
-  SampleAlongGeodesics();
-  IntegrateRadiation();
+  if (data_type == simulation)
+  {
+    SampleSimulationAlongGeodesics();
+    IntegrateSimulationRadiation();
+  }
+  if (data_type == formula)
+    IntegrateFormulaRadiation();
   return;
 }
 
@@ -479,18 +522,18 @@ void RayTracer::IntegrateGeodesics()
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for transforming geodesics from integrating metric to simulation metric
+// Function for transforming geodesics from integrating metric to simulation/formula metric
 // Inputs: (none)
 // Output: (none)
 // Notes:
 //   Assumes im_steps, geodesic_pos, geodesic_dir, geodesic_len, and sample_num have been set.
 //   Allocates and initializes sample_pos, sample_dir, and sample_len, except transformed from
-//       integrating metric to simulation metric and reversed in the sampling dimension.
+//       integrating metric to simulation/formula metric and reversed in the sampling dimension.
 //   Deallocates geodesic_pos, geodesic_dir, and geodesic_len.
-//   Assumes integrating metric is Cartesian Kerr-Schild.
+//   Assumes integrating and formula metrics are Cartesian Kerr-Schild.
 //   Transformation of time components is trivial.
 //   Transformation of geodesic length is trivial.
-//   All transformations trivial if simulation metric is Cartesian Kerr-Schild.
+//   All transformations trivial if both metrics are Cartesian Kerr-Schild.
 void RayTracer::TransformGeodesics()
 {
   // Allocate new arrays
@@ -524,56 +567,81 @@ void RayTracer::TransformGeodesics()
         double p_y = geodesic_dir(m,l,n,2);
         double p_z = geodesic_dir(m,l,n,3);
 
-        // Account for simulation metric
+        // Prepare to find positions and momenta
         double x1, x2, x3;
         double p_1, p_2, p_3;
-        switch (coord)
+
+        // Account for model
+        switch (data_type)
         {
-          // Spherical Kerr-Schild
-          case sph_ks:
+          // Simulation output
+          case simulation:
           {
-            // Calculate spherical position
-            double a2 = bh_a * bh_a;
-            double rr2 = x * x + y * y + z * z;
-            double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
-            double r = std::sqrt(r2);
-            double th = std::acos(z / r);
-            double ph = std::atan2(y, x) + std::atan(bh_a / r);
-            ph += ph < 0.0 ? 2.0 * math::pi : 0.0;
-            ph -= ph > 2.0 * math::pi ? 2.0 * math::pi : 0.0;
-            double sth = std::sin(th);
-            double cth = std::cos(th);
-            double sph = std::sin(ph);
-            double cph = std::cos(ph);
+            // Account for simulation metric
+            switch (simulation_coord)
+            {
+              // Spherical Kerr-Schild
+              case sph_ks:
+              {
+                // Calculate spherical position
+                double a2 = bh_a * bh_a;
+                double rr2 = x * x + y * y + z * z;
+                double r2 =
+                    0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
+                double r = std::sqrt(r2);
+                double th = std::acos(z / r);
+                double ph = std::atan2(y, x) + std::atan(bh_a / r);
+                ph += ph < 0.0 ? 2.0 * math::pi : 0.0;
+                ph -= ph > 2.0 * math::pi ? 2.0 * math::pi : 0.0;
+                double sth = std::sin(th);
+                double cth = std::cos(th);
+                double sph = std::sin(ph);
+                double cph = std::cos(ph);
 
-            // Calculate Jacobian of transformation
-            double dx_dr = sth * cph;
-            double dy_dr = sth * sph;
-            double dz_dr = cth;
-            double dx_dth = cth * (r * cph + bh_a * sph);
-            double dy_dth = cth * (r * sph - bh_a * cph);
-            double dz_dth = -r * sth;
-            double dx_dph = sth * (-r * sph + bh_a * cph);
-            double dy_dph = sth * (r * cph + bh_a * sph);
-            double dz_dph = 0.0;
+                // Calculate Jacobian of transformation
+                double dx_dr = sth * cph;
+                double dy_dr = sth * sph;
+                double dz_dr = cth;
+                double dx_dth = cth * (r * cph + bh_a * sph);
+                double dy_dth = cth * (r * sph - bh_a * cph);
+                double dz_dth = -r * sth;
+                double dx_dph = sth * (-r * sph + bh_a * cph);
+                double dy_dph = sth * (r * cph + bh_a * sph);
+                double dz_dph = 0.0;
 
-            // Calculate spherical direction
-            double p_r = dx_dr * p_x + dy_dr * p_y + dz_dr * p_z;
-            double p_th = dx_dth * p_x + dy_dth * p_y + dz_dth * p_z;
-            double p_ph = dx_dph * p_x + dy_dph * p_y + dz_dph * p_z;
+                // Calculate spherical direction
+                double p_r = dx_dr * p_x + dy_dr * p_y + dz_dr * p_z;
+                double p_th = dx_dth * p_x + dy_dth * p_y + dz_dth * p_z;
+                double p_ph = dx_dph * p_x + dy_dph * p_y + dz_dph * p_z;
 
-            // Assign position and direction
-            x1 = r;
-            x2 = th;
-            x3 = ph;
-            p_1 = p_r;
-            p_2 = p_th;
-            p_3 = p_ph;
+                // Assign position and direction
+                x1 = r;
+                x2 = th;
+                x3 = ph;
+                p_1 = p_r;
+                p_2 = p_th;
+                p_3 = p_ph;
+                break;
+              }
+
+              // Cartesian Kerr-Schild
+              case cart_ks:
+              default:
+              {
+                x1 = x;
+                x2 = y;
+                x3 = z;
+                p_1 = p_x;
+                p_2 = p_y;
+                p_3 = p_z;
+                break;
+              }
+            }
             break;
           }
 
-          // Cartesian Kerr-Schild
-          case cart_ks:
+          // Formula
+          case formula:
           default:
           {
             x1 = x;
@@ -608,19 +676,19 @@ void RayTracer::TransformGeodesics()
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for resampling cell data onto rays.
+// Function for resampling simulation cell data onto rays.
 // Inputs: (none)
 // Output: (none)
 // Notes:
 //   Assumes im_steps, sample_flags, sample_num, sample_pos, and sample_len have been set.
 //   Allocates and initializes sample_rho, sample_pgas, sample_uu1, sample_uu2, sample_uu3,
-//     sample_bb1, sample_bb2, and sample_bb3.
+//       sample_bb1, sample_bb2, and sample_bb3.
 //   If ray_sample_interp == false, uses primitives from cell containing geodesic sample point.
 //   If ray_sample_interp == true, performs trilinear interpolation to geodesic sample point from
-//     cell centers, using only data within the same block of cells (i.e. sometimes using
-//     extrapolation).
+//       cell centers, using only data within the same block of cells (i.e. sometimes using
+//       extrapolation).
 //   TODO: interpolate across block boundaries
-void RayTracer::SampleAlongGeodesics()
+void RayTracer::SampleSimulationAlongGeodesics()
 {
   // Allocate resampling arrays
   sample_rho.Allocate(im_res, im_res, im_steps);
@@ -749,7 +817,8 @@ void RayTracer::SampleAlongGeodesics()
               break;
 
           // Resample values without interpolation
-          if (not ray_sample_interp) {
+          if (not ray_sample_interp)
+          {
             sample_rho(m,l,n) = grid_rho(b,k,j,i);
             sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
             sample_uu1(m,l,n) = grid_uu1(b,k,j,i);
@@ -761,7 +830,8 @@ void RayTracer::SampleAlongGeodesics()
           }
 
           // Resample values with interpolation
-          if (ray_sample_interp) {
+          if (ray_sample_interp)
+          {
 
             // Calculate interpolation/extrapolation indices and coefficients
             int i_m = i == 0 or (i != n_i - 1 and x1 >= static_cast<double>(x1v(b,i))) ? i : i - 1;
@@ -910,23 +980,24 @@ void RayTracer::SampleAlongGeodesics()
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for integrating radiative transfer equation
+// Function for integrating radiative transfer equation based on simulation data
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes sample_num, sample_dir, sample_len, sample_rho, and sample_pgas have been set.
+//   Assumes sample_num, sample_dir, sample_len, sample_rho, sample_pgas, sample_uu1, sample_uu2,
+//       sample_uu3, sample_bb1, sample_bb2, and sample_bb3 have been set.
 //   Allocates and initializes image.
 //   Assumes x^0 is ignorable.
-//   References symphony paper 2016 ApJ 822 34 (S)
-void RayTracer::IntegrateRadiation()
+//   References symphony paper 2016 ApJ 822 34 (S).
+void RayTracer::IntegrateSimulationRadiation()
 {
   // Allocate image array
   image.Allocate(im_res, im_res);
   image.Zero();
 
   // Calculate units
-  double x_unit = physics::gg_msun * m_msun / (physics::c * physics::c);
-  double e_unit = rho_unit * physics::c * physics::c;
+  double x_unit = physics::gg_msun * simulation_m_msun / (physics::c * physics::c);
+  double e_unit = simulation_rho_cgs * physics::c * physics::c;
 
   // Work in parallel
   #pragma omp parallel
@@ -958,7 +1029,7 @@ void RayTracer::IntegrateRadiation()
           double p_2 = sample_dir(m,l,n,2);
           double p_3 = sample_dir(m,l,n,3);
 
-          // Extract cell variables
+          // Extract model variables
           double rho = sample_rho(m,l,n);
           double pgas = sample_pgas(m,l,n);
           double uu1 = sample_uu1(m,l,n);
@@ -1056,7 +1127,7 @@ void RayTracer::IntegrateRadiation()
 
           // Calculate fluid-frame quantities in CGS units
           double nu_fluid_cgs = (u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) / p_0 * im_freq;
-          double n_cgs = rho * rho_unit / (plasma_mu * physics::m_p);
+          double n_cgs = rho * simulation_rho_cgs / (plasma_mu * physics::m_p);
           double n_e_cgs = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
           double bb_cgs = std::sqrt(4.0 * math::pi * b_sq * e_unit);
           double nu_c_cgs = physics::e * bb_cgs / (2.0 * math::pi * physics::m_e * physics::c);
@@ -1099,6 +1170,142 @@ void RayTracer::IntegrateRadiation()
             i_nu_cgs = std::exp(-delta_tau_nu) * (i_nu_cgs + ss_nu_cgs * std::expm1(delta_tau_nu));
           else
             i_nu_cgs = ss_nu_cgs;
+          image(m,l) = i_nu_cgs / (nu_cgs * nu_cgs * nu_cgs);
+        }
+      }
+
+    // Transform I_nu/nu^3 to brightness temperature
+    #pragma omp for schedule(static)
+    for (int m = 0; m < im_res; m++)
+      for (int l = 0; l < im_res; l++)
+        image(m,l) *= im_freq * physics::c * physics::c / (2.0 * physics::k_b);
+  }
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for integrating radiative transfer equation based on formula
+// Inputs: (none)
+// Output: (none)
+// Notes:
+//   Assumes sample_num, sample_dir, and sample_len have been set.
+//   Allocates and initializes image.
+//   Assumes x^0 is ignorable.
+//   References code comparison paper 2020 ApJ 897 148 (C).
+void RayTracer::IntegrateFormulaRadiation()
+{
+  // Allocate image array
+  image.Allocate(im_res, im_res);
+  image.Zero();
+
+  // Work in parallel
+  #pragma omp parallel
+  {
+    // Allocate scratch arrays
+    Array<double> gcon(4, 4);
+
+    // Go through pixels
+    #pragma omp for schedule(static)
+    for (int m = 0; m < im_res; m++)
+      for (int l = 0; l < im_res; l++)
+      {
+        // Go through samples
+        int num_steps = sample_num(m,l);
+        for (int n = 0; n < num_steps; n++)
+        {
+          // Check that this sample contributes
+          double delta_lambda = sample_len(m,l,n);
+          if (delta_lambda == 0.0)
+            continue;
+
+          // Extract geodesic position and momentum
+          double x = sample_pos(m,l,n,1);
+          double y = sample_pos(m,l,n,2);
+          double z = sample_pos(m,l,n,3);
+          double p_0 = sample_dir(m,l,n,0);
+          double p_1 = sample_dir(m,l,n,1);
+          double p_2 = sample_dir(m,l,n,2);
+          double p_3 = sample_dir(m,l,n,3);
+
+          // Calculate coordinates
+          double r = RadialGeodesicCoordinate(x, y, z);
+          double rr = std::sqrt(r * r - z * z);
+          double cth = z / r;
+          double sth = std::sqrt(1.0 - cth * cth);
+          double ph = std::atan2(y, x) + std::atan(bh_a / r);
+          double sph = std::sin(ph);
+          double cph = std::cos(ph);
+
+          // Calculate metric
+          ContravariantGeodesicMetric(x, y, z, gcon);
+          double delta = r * r - 2.0 * bh_m * r + bh_a * bh_a;
+          double sigma = r * r + bh_a * bh_a * cth * cth;
+          double gtt_bl = -(1.0 + 2.0 * bh_m * r * (r * r + bh_a * bh_a) / (delta * sigma));
+          double gtph_bl = -2.0 * bh_m * bh_a * r / (delta * sigma);
+          double grr_bl = delta / sigma;
+          double gthth_bl = 1.0 / sigma;
+          double gphph_bl = (sigma - 2.0 * bh_m * r) / (delta * sigma * sth * sth);
+
+          // Calculate frequency in CGS units
+          double p0 = gcon(0,0) * p_0 + gcon(0,1) * p_1 + gcon(0,2) * p_2 + gcon(0,3) * p_3;
+          double nu_cgs = -p0 / p_0 * im_freq;
+
+          // Calculate angular momentum (C 6)
+          double ll = formula_l0 / (1.0 + rr) * std::pow(rr, 1.0 + formula_q);
+
+          // Calculate 4-velocity (C 7-8)
+          double u_norm = 1.0 / std::sqrt(-gtt_bl + 2.0 * gtph_bl * ll - gphph_bl * ll * ll);
+          double u_t_bl = -u_norm;
+          double u_r_bl = 0.0;
+          double u_th_bl = 0.0;
+          double u_ph_bl = u_norm * ll;
+          double ut_bl = gtt_bl * u_t_bl + gtph_bl * u_ph_bl;
+          double ur_bl = grr_bl * u_r_bl;
+          double uth_bl = gthth_bl * u_th_bl;
+          double uph_bl = gtph_bl * u_t_bl + gphph_bl * u_ph_bl;
+          double ut = ut_bl + 2.0 * bh_m * r / delta * ur_bl;
+          double ur = ur_bl;
+          double uth = uth_bl;
+          double uph = uph_bl + bh_a / delta * ur_bl;
+          double u0 = ut;
+          double u1 = sth * cph * ur + cth * (r * cph + bh_a * sph) * uth
+              + sth * (-r * sph + bh_a * cph) * uph;
+          double u2 = sth * sph * ur + cth * (r * sph - bh_a * cph) * uth
+              + sth * (r * cph + bh_a * sph) * uph;
+          double u3 = cth * ur - r * sth * uth;
+
+          // Calculate frequencies
+          double nu_fluid_cgs = (u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) / p_0 * im_freq;
+          double nu_nu_fluid = nu_cgs / nu_fluid_cgs;
+
+          // Calculate fluid-frame number density (C 5)
+          double n_n0_fluid = std::exp(-0.5
+              * (r * r / (formula_r0 * formula_r0) + formula_h * formula_h * cth * cth));
+
+          // Calculate emission coefficient in CGS units (C 9-10)
+          double j_nu_fluid_cgs =
+              formula_cn0 * n_n0_fluid * std::pow(nu_fluid_cgs / formula_nup, -formula_alpha);
+          double j_nu_cgs = nu_nu_fluid * nu_nu_fluid * j_nu_fluid_cgs;
+
+          // Calculate absorption coefficient in CGS units (C 11-12)
+          double k_nu_fluid_cgs = formula_a * formula_cn0 * n_n0_fluid
+              * std::pow(nu_fluid_cgs / formula_nup, -formula_beta - formula_alpha);
+          double k_nu_cgs = k_nu_fluid_cgs / nu_nu_fluid;
+
+          // Calculate change in invariant intensity
+          double i_nu_cgs = nu_cgs * nu_cgs * nu_cgs * image(m,l);
+          double delta_s_cgs = delta_lambda * formula_mass;
+          if (k_nu_cgs > 0.0)
+          {
+            double delta_tau_nu = k_nu_cgs * delta_s_cgs;
+            double ss_nu_cgs = j_nu_cgs / k_nu_cgs;
+            if (delta_tau_nu <= delta_tau_max)
+              i_nu_cgs = std::exp(-delta_tau_nu) * (i_nu_cgs + ss_nu_cgs * std::expm1(delta_tau_nu));
+            else
+              i_nu_cgs = ss_nu_cgs;
+          } else
+            i_nu_cgs += j_nu_cgs * delta_s_cgs;
           image(m,l) = i_nu_cgs / (nu_cgs * nu_cgs * nu_cgs);
         }
       }
@@ -1366,7 +1573,7 @@ void RayTracer::ContravariantGeodesicMetricDerivative(double x, double y, double
 void RayTracer::CovariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcov)
 {
   // Account for simulation metric
-  switch (coord)
+  switch (simulation_coord)
   {
     // Spherical Kerr-Schild
     case sph_ks:
@@ -1453,7 +1660,7 @@ void RayTracer::CovariantCoordinateMetric(double x1, double x2, double x3, Array
 void RayTracer::ContravariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcon)
 {
   // Account for simulation metric
-  switch (coord)
+  switch (simulation_coord)
   {
     // Spherical Kerr-Schild
     case sph_ks:

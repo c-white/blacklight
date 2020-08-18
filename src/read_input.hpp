@@ -17,21 +17,33 @@ struct InputReader
   // Constructor
   InputReader(const std::string input_file_);
 
-  // Data - general
+  // Input file
   const std::string input_file;
 
-  // Data - file names
-  std::string data_file;
+  // Data - general
   std::string output_file;
+  DataType data_type;
+  int num_threads;
 
-  // Data - coordinates
-  double bh_m;
-  double bh_a;
-  Coordinates coord;
+  // Data - simulation details
+  std::string simulation_file;
+  double simulation_m_msun;
+  double simulation_a;
+  double simulation_rho_cgs;
+  Coordinates simulation_coord;
 
-  // Data - units
-  double m_msun;
-  double rho_unit;
+  // Data - formula parameters
+  double formula_mass;
+  double formula_spin;
+  double formula_r0;
+  double formula_h;
+  double formula_l0;
+  double formula_q;
+  double formula_nup;
+  double formula_cn0;
+  double formula_alpha;
+  double formula_a;
+  double formula_beta;
 
   // Data - plasma
   double plasma_mu;
@@ -57,14 +69,12 @@ struct InputReader
   bool ray_sample_interp;
   bool ray_flat;
 
-  // Data - performance
-  int num_threads;
-
   // Functions
   void Read();
   static bool RemoveableSpace(unsigned char c);
   double ReadPole(const std::string &string, bool *p_pole_flag);
   bool ReadBool(const std::string &string);
+  DataType ReadDataType(const std::string &string);
   Coordinates ReadCoordinates(const std::string &string);
   Camera ReadCamera(const std::string &string);
 };

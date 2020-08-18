@@ -1,17 +1,29 @@
-# File names
-data_file   = data/test_data.athdf    # file containing Athena++ data dump
+# General
 output_file = output/test_output.dat  # file to be (over)written with image data
+data_type   = simulation              # type of data (simulation, formula)
+num_threads = 4                       # number of threads to use in parallel
 
-# Coordinates
-bh_m  = 1.0     # black hole mass scale for data (usually 1)
-bh_a  = 0.9     # black hole spin in units of mass (magnitude less than m)
-coord = sph_ks  # simulation coordinates (sph_ks or cart_ks)
+# Simulation details (only used if data_type == simulation)
+simulation_file    = data/test_data.athdf  # file containing Athena++ data dump if needed
+simulation_m_msun  = 4.152e6               # black hole mass in solar masses
+simulation_a       = 0.9                   # dimensionless black hole spin
+simulation_rho_cgs = 1.6e-16               # unit code density in g/cm^3
+simulation_coord   = sph_ks                # simulation coordinates (sph_ks, cart_ks)
 
-# Units
-m_msun   = 4.152e6  # black hole mass in solar masses
-rho_unit = 1.6e-16  # unit code density in g/cm^3
+# Formula parameters (see 2020 ApJ 897 148, only used if data_type == formula)
+formula_mass  = 6.0e11   # black hole mass in cm
+formula_spin  = 0.9      # dimensionless black hole spin
+formula_r0    = 10.0     # number density parameter in gravitational units
+formula_h     = 0.0      # scale height parameter in gravitational units
+formula_l0    = 0.0      # angular momentum parameter l_0 in gravitational units
+formula_q     = 0.5      # angular momentum index
+formula_nup   = 2.3e11   # pivotal frequency nu_p in Hz
+formula_cn0   = 3.0e-18  # emissivity amplitude parameter C * n_0 in erg/cm^3.s.sr.Hz
+formula_alpha = -3.0     # emissivity index
+formula_a     = 0.0      # source amplitude parameter A in cm^2.s.sr.Hz/erg
+formula_beta  = 2.5      # source index
 
-# Plasma
+# Plasma (only used if data_type == simulation)
 plasma_mu        = 0.5   # molecular weight of fluid in proton masses
 plasma_ne_ni     = 1.0   # electrons per ion
 plasma_rat_high  = 10.0  # ion-electron temperature ratio at infinite plasma beta
@@ -26,13 +38,10 @@ im_phi    = 0.0     # azimuthal coordinate of camera in degrees
 im_rot    = 0.0     # rotation of camera in degrees (0/90 for north up/left)
 im_width  = 24.0    # full width of image in gravitational units
 im_res    = 64      # number of pixels per side
-im_freq   = 2.3e11  # frequency of observation in GHz
+im_freq   = 2.3e11  # frequency of observation in Hz
 
 # Rays
 ray_step          = 0.01   # affine step size along each geodesic in units of current radius
 ray_max_steps     = 1500   # maximum number of steps allowed for each geodesic
 ray_sample_interp = false  # flag indicating resampling should use intrablock interpolation
 ray_flat          = false  # flag indicating ray tracing should assume flat spacetime
-
-# Performance
-num_threads = 4  # number of threads to use in parallel

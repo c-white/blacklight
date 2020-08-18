@@ -16,7 +16,7 @@
 struct AthenaReader
 {
   // Constructors and destructor
-  AthenaReader(const std::string data_file);
+  AthenaReader(const std::string simulation_file);
   AthenaReader(const AthenaReader &source) = delete;
   AthenaReader &operator=(const AthenaReader &source) = delete;
   ~AthenaReader();

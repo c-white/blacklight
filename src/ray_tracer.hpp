@@ -21,14 +21,29 @@ struct RayTracer
   RayTracer &operator=(const RayTracer &source) = delete;
   ~RayTracer();
 
-  // Input data - coordinates
+  // Input data - general
+  DataType data_type;
+
+  // Parameters
   double bh_m;
   double bh_a;
-  Coordinates coord;
 
-  // Input data - units
-  double m_msun;
-  double rho_unit;
+  // Input data - simulation details
+  double simulation_m_msun;
+  double simulation_rho_cgs;
+  Coordinates simulation_coord;
+
+  // Input data - formula details
+  double formula_mass;
+  double formula_r0;
+  double formula_h;
+  double formula_l0;
+  double formula_q;
+  double formula_nup;
+  double formula_cn0;
+  double formula_alpha;
+  double formula_a;
+  double formula_beta;
 
   // Input data - plasma
   double plasma_mu;
@@ -94,8 +109,9 @@ struct RayTracer
   void InitializeGeodesics();
   void IntegrateGeodesics();
   void TransformGeodesics();
-  void SampleAlongGeodesics();
-  void IntegrateRadiation();
+  void SampleSimulationAlongGeodesics();
+  void IntegrateSimulationRadiation();
+  void IntegrateFormulaRadiation();
   double RadialGeodesicCoordinate(double x, double y, double z);
   void CovariantGeodesicMetric(double x, double y, double z, Array<double> &gcov);
   void ContravariantGeodesicMetric(double x, double y, double z, Array<double> &gcon);

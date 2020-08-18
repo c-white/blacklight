@@ -18,11 +18,11 @@
 
 // Athena++ reader constructor
 // Inputs:
-//   data_file: name of input file
+//   simulation_file: name of input file
 // Notes:
 //   Opens stream for reading.
-AthenaReader::AthenaReader(const std::string data_file)
-  : data_stream(data_file, std::ios_base::in | std::ios_base::binary)
+AthenaReader::AthenaReader(const std::string simulation_file)
+  : data_stream(simulation_file, std::ios_base::in | std::ios_base::binary)
 {
   // Check that file is open
   if (not data_stream.is_open())

@@ -52,20 +52,25 @@ int main(int argc, char *argv[])
   omp_set_num_threads(input_reader.num_threads);
 
   // Read data file
-  AthenaReader athena_reader(input_reader.data_file);
-  try
+  AthenaReader *p_athena_reader;
+  if (input_reader.data_type == simulation)
   {
-    athena_reader.Read();
-  } catch (const BlacklightException &exception) {
-    std::cout << exception.what();
-    return 1;
-  } catch (...) {
-    std::cout << "Error: Could not read data file.\n";
-    return 1;
+    AthenaReader athena_reader(input_reader.simulation_file);
+    try
+    {
+      athena_reader.Read();
+    } catch (const BlacklightException &exception) {
+      std::cout << exception.what();
+      return 1;
+    } catch (...) {
+      std::cout << "Error: Could not read data file.\n";
+      return 1;
+    }
+    p_athena_reader = &athena_reader;
   }
 
   // Process data
-  RayTracer ray_tracer(input_reader, athena_reader);
+  RayTracer ray_tracer(input_reader, *p_athena_reader);
   try
   {
     ray_tracer.MakeImage();

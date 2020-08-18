@@ -55,25 +55,49 @@ void InputReader::Read()
     std::string key = line.substr(0, pos);
     std::string val = line.substr(pos + 1, line.size());
 
-    // Store file name data
-    if (key == "data_file")
-      data_file = val;
-    else if (key == "output_file")
+    // Store general data
+    if (key == "output_file")
       output_file = val;
+    else if (key == "data_type")
+      data_type = ReadDataType(val);
+    else if (key == "num_threads")
+      num_threads = std::stoi(val);
 
-    // Store coordinate data
-    else if (key == "bh_m")
-      bh_m = std::stod(val);
-    else if (key == "bh_a")
-      bh_a = std::stod(val);
-    else if (key == "coord")
-      coord = ReadCoordinates(val);
+    // Store simulation details data
+    else if (key == "simulation_file")
+      simulation_file = val;
+    else if (key == "simulation_m_msun")
+      simulation_m_msun = std::stod(val);
+    else if (key == "simulation_a")
+      simulation_a = std::stod(val);
+    else if (key == "simulation_rho_cgs")
+      simulation_rho_cgs = std::stod(val);
+    else if (key == "simulation_coord")
+      simulation_coord = ReadCoordinates(val);
 
-    // Store unit data
-    else if (key == "m_msun")
-      m_msun = std::stod(val);
-    else if (key == "rho_unit")
-      rho_unit = std::stod(val);
+    // Store formula parameters data
+    else if (key == "formula_mass")
+      formula_mass = std::stod(val);
+    else if (key == "formula_spin")
+      formula_spin = std::stod(val);
+    else if (key == "formula_r0")
+      formula_r0 = std::stod(val);
+    else if (key == "formula_h")
+      formula_h = std::stod(val);
+    else if (key == "formula_l0")
+      formula_l0 = std::stod(val);
+    else if (key == "formula_q")
+      formula_q = std::stod(val);
+    else if (key == "formula_nup")
+      formula_nup = std::stod(val);
+    else if (key == "formula_cn0")
+      formula_cn0 = std::stod(val);
+    else if (key == "formula_alpha")
+      formula_alpha = std::stod(val);
+    else if (key == "formula_a")
+      formula_a = std::stod(val);
+    else if (key == "formula_beta")
+      formula_beta = std::stod(val);
 
     // Store plasma data
     else if (key == "plasma_mu")
@@ -114,10 +138,6 @@ void InputReader::Read()
       ray_sample_interp = ReadBool(val);
     else if (key == "ray_flat")
       ray_flat = ReadBool(val);
-
-    // Store performance data
-    else if (key == "num_threads")
-      num_threads = std::stoi(val);
 
     // Handle unknown entry
     else
@@ -173,6 +193,27 @@ bool InputReader::ReadBool(const std::string &string)
     return false;
   else
     throw BlacklightException("Unknown string used for boolean value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as DataType enumerations
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid DataType
+// Notes:
+//   Valid options:
+//     "simulation": Athena++ output
+//     "formula": parameterized formula from 2020 ApJ 897 148
+DataType InputReader::ReadDataType(const std::string &string)
+{
+  if (string == "simulation")
+    return simulation;
+  else if (string == "formula")
+    return formula;
+  else
+    throw BlacklightException("Unknown string used for DataType value.");
 }
 
 //--------------------------------------------------------------------------------------------------

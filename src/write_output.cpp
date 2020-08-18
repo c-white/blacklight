@@ -18,7 +18,8 @@
 //   output_file_: name of output file
 //   ray_tracer: object containing processed image
 OutputWriter::OutputWriter(const std::string output_file_, const RayTracer &ray_tracer)
-  : output_file(output_file_) {
+  : output_file(output_file_)
+{
   image = ray_tracer.image;
 }
 
