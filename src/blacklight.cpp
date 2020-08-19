@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 
   // Read data file
   AthenaReader *p_athena_reader;
-  if (input_reader.data_type == simulation)
+  if (input_reader.model_type == simulation)
   {
     AthenaReader athena_reader(input_reader.simulation_file);
     try
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
   }
 
   // Write output file
-  OutputWriter output_writer(input_reader.output_file, ray_tracer);
+  OutputWriter output_writer(input_reader, ray_tracer);
   try
   {
     output_writer.Write();

@@ -8,7 +8,9 @@
 
 // Blacklight headers
 #include "array.hpp"       // Array
+#include "blacklight.hpp"  // enumerations
 #include "ray_tracer.hpp"  // RayTracer
+#include "read_input.hpp"  // InputReader
 
 //--------------------------------------------------------------------------------------------------
 
@@ -16,10 +18,11 @@
 struct OutputWriter
 {
   // Constructor
-  OutputWriter(const std::string output_file_, const RayTracer &ray_tracer);
+  OutputWriter(const InputReader &input_reader, const RayTracer &ray_tracer);
 
-  // Metadata
-  const std::string output_file;
+  // Input data - output parameters
+  OutputFormat output_format;
+  std::string output_file;
 
   // Image data
   Array<double> image;

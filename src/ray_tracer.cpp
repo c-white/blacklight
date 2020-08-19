@@ -27,30 +27,40 @@
 RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena_reader)
 {
   // Copy general input data
-  data_type = input_reader.data_type;
+  model_type = input_reader.model_type;
 
   // Set parameters
-  if (data_type == simulation)
+  if (model_type == simulation)
   {
     bh_m = 1.0;
     bh_a = input_reader.simulation_a;
   }
-  if (data_type == formula)
+  if (model_type == formula)
   {
     bh_m = 1.0;
     bh_a = input_reader.formula_spin;
   }
 
-  // Copy simulation details data
-  if (data_type == simulation)
+  // Copy simulation parameters
+  if (model_type == simulation)
   {
     simulation_m_msun = input_reader.simulation_m_msun;
     simulation_rho_cgs = input_reader.simulation_rho_cgs;
     simulation_coord = input_reader.simulation_coord;
   }
 
-  // Copy formula details data
-  if (data_type == formula)
+  // Copy plasma parameters
+  if (model_type == simulation)
+  {
+    plasma_mu = input_reader.plasma_mu;
+    plasma_ne_ni = input_reader.plasma_ne_ni;
+    plasma_rat_high = input_reader.plasma_rat_high;
+    plasma_rat_low = input_reader.plasma_rat_low;
+    plasma_sigma_max = input_reader.plasma_sigma_max;
+  }
+
+  // Copy formula parameters
+  if (model_type == formula)
   {
     formula_mass = input_reader.formula_mass;
     formula_r0 = input_reader.formula_r0;
@@ -64,17 +74,7 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
     formula_beta = input_reader.formula_beta;
   }
 
-  // Copy plasma input data
-  if (data_type == simulation)
-  {
-    plasma_mu = input_reader.plasma_mu;
-    plasma_ne_ni = input_reader.plasma_ne_ni;
-    plasma_rat_high = input_reader.plasma_rat_high;
-    plasma_rat_low = input_reader.plasma_rat_low;
-    plasma_sigma_max = input_reader.plasma_sigma_max;
-  }
-
-  // Copy image input data
+  // Copy image parameters
   im_cam = input_reader.im_cam;
   im_r = input_reader.im_r;
   im_th = input_reader.im_th;
@@ -85,14 +85,14 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   im_freq = input_reader.im_freq;
   im_pole = input_reader.im_pole;
 
-  // Copy ray input data
+  // Copy ray-tracing parameters
   ray_step = input_reader.ray_step;
   ray_max_steps = input_reader.ray_max_steps;
   ray_sample_interp = input_reader.ray_sample_interp;
   ray_flat = input_reader.ray_flat;
 
   // Copy raw data scalars
-  if (data_type == simulation)
+  if (model_type == simulation)
   {
     x1_min = athena_reader.x1_min;
     x1_max = athena_reader.x1_max;
@@ -103,7 +103,7 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   }
 
   // Make shallow copies of raw data arrays
-  if (data_type == simulation)
+  if (model_type == simulation)
   {
     x1f = athena_reader.x1f;
     x2f = athena_reader.x2f;
@@ -151,12 +151,12 @@ void RayTracer::MakeImage()
   InitializeGeodesics();
   IntegrateGeodesics();
   TransformGeodesics();
-  if (data_type == simulation)
+  if (model_type == simulation)
   {
     SampleSimulationAlongGeodesics();
     IntegrateSimulationRadiation();
   }
-  if (data_type == formula)
+  if (model_type == formula)
     IntegrateFormulaRadiation();
   return;
 }
@@ -572,7 +572,7 @@ void RayTracer::TransformGeodesics()
         double p_1, p_2, p_3;
 
         // Account for model
-        switch (data_type)
+        switch (model_type)
         {
           // Simulation output
           case simulation:

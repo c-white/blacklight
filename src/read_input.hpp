@@ -21,16 +21,26 @@ struct InputReader
   const std::string input_file;
 
   // Data - general
-  std::string output_file;
-  DataType data_type;
+  ModelType model_type;
   int num_threads;
 
-  // Data - simulation details
+  // Data - output parameters
+  OutputFormat output_format;
+  std::string output_file;
+
+  // Data - simulation parameters
   std::string simulation_file;
   double simulation_m_msun;
   double simulation_a;
   double simulation_rho_cgs;
   Coordinates simulation_coord;
+
+  // Data - plasma parameters
+  double plasma_mu;
+  double plasma_ne_ni;
+  double plasma_rat_high;
+  double plasma_rat_low;
+  double plasma_sigma_max;
 
   // Data - formula parameters
   double formula_mass;
@@ -45,14 +55,7 @@ struct InputReader
   double formula_a;
   double formula_beta;
 
-  // Data - plasma
-  double plasma_mu;
-  double plasma_ne_ni;
-  double plasma_rat_high;
-  double plasma_rat_low;
-  double plasma_sigma_max;
-
-  // Data - image
+  // Data - image parameters
   Camera im_cam;
   double im_r;
   double im_th;
@@ -63,7 +66,7 @@ struct InputReader
   double im_freq;
   bool im_pole;
 
-  // Data - rays
+  // Data - ray-tracing parameters
   double ray_step;
   int ray_max_steps;
   bool ray_sample_interp;
@@ -74,7 +77,8 @@ struct InputReader
   static bool RemoveableSpace(unsigned char c);
   double ReadPole(const std::string &string, bool *p_pole_flag);
   bool ReadBool(const std::string &string);
-  DataType ReadDataType(const std::string &string);
+  ModelType ReadModelType(const std::string &string);
+  OutputFormat ReadOutputFormat(const std::string &string);
   Coordinates ReadCoordinates(const std::string &string);
   Camera ReadCamera(const std::string &string);
 };

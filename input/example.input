@@ -1,16 +1,26 @@
 # General
-output_file = output/test_output.dat  # file to be (over)written with image data
-data_type   = simulation              # type of data (simulation, formula)
-num_threads = 4                       # number of threads to use in parallel
+model_type  = simulation  # type of model (simulation, formula)
+num_threads = 1           # number of threads to use in parallel
 
-# Simulation details (only used if data_type == simulation)
+# Output parameters
+output_format = raw                     # format of output file (raw)
+output_file   = output/test_output.dat  # file to be (over)written with image data
+
+# Simulation parameters (only used if model_type == simulation)
 simulation_file    = data/test_data.athdf  # file containing Athena++ data dump if needed
 simulation_m_msun  = 4.152e6               # black hole mass in solar masses
 simulation_a       = 0.9                   # dimensionless black hole spin
 simulation_rho_cgs = 1.6e-16               # unit code density in g/cm^3
 simulation_coord   = sph_ks                # simulation coordinates (sph_ks, cart_ks)
 
-# Formula parameters (see 2020 ApJ 897 148, only used if data_type == formula)
+# Plasma parameters (only used if model_type == simulation)
+plasma_mu        = 0.5   # molecular weight of fluid in proton masses
+plasma_ne_ni     = 1.0   # electrons per ion
+plasma_rat_high  = 10.0  # ion-electron temperature ratio at infinite plasma beta
+plasma_rat_low   = 1.0   # ion-electron temperature ratio at zero plasma beta
+plasma_sigma_max = 1.0   # if nonnegative, cutoff in sigma above which plasma is considered vacuum
+
+# Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
 formula_mass  = 6.0e11   # black hole mass in cm
 formula_spin  = 0.9      # dimensionless black hole spin
 formula_r0    = 10.0     # number density parameter in gravitational units
@@ -23,14 +33,7 @@ formula_alpha = -3.0     # emissivity index
 formula_a     = 0.0      # source amplitude parameter A in cm^2.s.sr.Hz/erg
 formula_beta  = 2.5      # source index
 
-# Plasma (only used if data_type == simulation)
-plasma_mu        = 0.5   # molecular weight of fluid in proton masses
-plasma_ne_ni     = 1.0   # electrons per ion
-plasma_rat_high  = 10.0  # ion-electron temperature ratio at infinite plasma beta
-plasma_rat_low   = 1.0   # ion-electron temperature ratio at zero plasma beta
-plasma_sigma_max = 1.0   # if nonnegative, cutoff in sigma above which plasma is considered vacuum
-
-# Image
+# Image parameters
 im_camera = plane   # type of camera (plane, pinhole)
 im_radius = 50.0    # radial coordinate of camera center in gravitational units
 im_theta  = 135.0   # polar coordinate of camera center in degrees (0/180 for north/south)
@@ -40,7 +43,7 @@ im_width  = 24.0    # full width of image in gravitational units
 im_res    = 64      # number of pixels per side
 im_freq   = 2.3e11  # frequency of observation in Hz
 
-# Rays
+# Ray-tracing parameters
 ray_step          = 0.01   # affine step size along each geodesic in units of current radius
 ray_max_steps     = 1500   # maximum number of steps allowed for each geodesic
 ray_sample_interp = false  # flag indicating resampling should use intrablock interpolation

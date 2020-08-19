@@ -950,7 +950,7 @@ void AthenaReader::SetHDF5FloatArray(const unsigned char *datatype_raw,
 
 //--------------------------------------------------------------------------------------------------
 
-// Function to dimensions from raw HDF5 dataspace
+// Function to read dimensions from raw HDF5 dataspace
 // Inputs:
 //   dataspace_raw: raw dataspace description
 // Outputs:

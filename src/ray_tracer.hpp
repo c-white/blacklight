@@ -22,18 +22,25 @@ struct RayTracer
   ~RayTracer();
 
   // Input data - general
-  DataType data_type;
+  ModelType model_type;
 
   // Parameters
   double bh_m;
   double bh_a;
 
-  // Input data - simulation details
+  // Input data - simulation parameters
   double simulation_m_msun;
   double simulation_rho_cgs;
   Coordinates simulation_coord;
 
-  // Input data - formula details
+  // Input data - plasma parameters
+  double plasma_mu;
+  double plasma_ne_ni;
+  double plasma_rat_high;
+  double plasma_rat_low;
+  double plasma_sigma_max;
+
+  // Input data - formula parameters
   double formula_mass;
   double formula_r0;
   double formula_h;
@@ -45,14 +52,7 @@ struct RayTracer
   double formula_a;
   double formula_beta;
 
-  // Input data - plasma
-  double plasma_mu;
-  double plasma_ne_ni;
-  double plasma_rat_high;
-  double plasma_rat_low;
-  double plasma_sigma_max;
-
-  // Input data - image
+  // Input data - image parameters
   Camera im_cam;
   double im_r;
   double im_th;
@@ -63,7 +63,7 @@ struct RayTracer
   double im_freq;
   bool im_pole;
 
-  // Input data - rays
+  // Input data - ray-tracing parameters
   double ray_step;
   int ray_max_steps;
   bool ray_sample_interp;

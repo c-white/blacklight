@@ -56,14 +56,18 @@ void InputReader::Read()
     std::string val = line.substr(pos + 1, line.size());
 
     // Store general data
-    if (key == "output_file")
-      output_file = val;
-    else if (key == "data_type")
-      data_type = ReadDataType(val);
+    if (key == "model_type")
+      model_type = ReadModelType(val);
     else if (key == "num_threads")
       num_threads = std::stoi(val);
 
-    // Store simulation details data
+    // Store output parameters
+    else if (key == "output_format")
+      output_format = ReadOutputFormat(val);
+    else if (key == "output_file")
+      output_file = val;
+
+    // Store simulation parameters
     else if (key == "simulation_file")
       simulation_file = val;
     else if (key == "simulation_m_msun")
@@ -75,7 +79,19 @@ void InputReader::Read()
     else if (key == "simulation_coord")
       simulation_coord = ReadCoordinates(val);
 
-    // Store formula parameters data
+    // Store plasma parameters
+    else if (key == "plasma_mu")
+      plasma_mu = std::stod(val);
+    else if (key == "plasma_ne_ni")
+      plasma_ne_ni = std::stod(val);
+    else if (key == "plasma_rat_high")
+      plasma_rat_high = std::stod(val);
+    else if (key == "plasma_rat_low")
+      plasma_rat_low = std::stod(val);
+    else if (key == "plasma_sigma_max")
+      plasma_sigma_max = std::stod(val);
+
+    // Store formula parameters
     else if (key == "formula_mass")
       formula_mass = std::stod(val);
     else if (key == "formula_spin")
@@ -99,19 +115,7 @@ void InputReader::Read()
     else if (key == "formula_beta")
       formula_beta = std::stod(val);
 
-    // Store plasma data
-    else if (key == "plasma_mu")
-      plasma_mu = std::stod(val);
-    else if (key == "plasma_ne_ni")
-      plasma_ne_ni = std::stod(val);
-    else if (key == "plasma_rat_high")
-      plasma_rat_high = std::stod(val);
-    else if (key == "plasma_rat_low")
-      plasma_rat_low = std::stod(val);
-    else if (key == "plasma_sigma_max")
-      plasma_sigma_max = std::stod(val);
-
-    // Store image data
+    // Store image parameters
     else if (key == "im_camera")
       im_cam = ReadCamera(val);
     else if (key == "im_radius")
@@ -129,7 +133,7 @@ void InputReader::Read()
     else if (key == "im_freq")
       im_freq = std::stod(val);
 
-    // Store ray data
+    // Store ray-tracing parameters
     else if (key == "ray_step")
       ray_step = std::stod(val);
     else if (key == "ray_max_steps")
@@ -197,23 +201,41 @@ bool InputReader::ReadBool(const std::string &string)
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for interpreting strings as DataType enumerations
+// Function for interpreting strings as ModelType enumerations
 // Inputs:
 //   string: string to be interpreted
 // Outputs:
-//   returned value: valid DataType
+//   returned value: valid ModelType
 // Notes:
 //   Valid options:
 //     "simulation": Athena++ output
 //     "formula": parameterized formula from 2020 ApJ 897 148
-DataType InputReader::ReadDataType(const std::string &string)
+ModelType InputReader::ReadModelType(const std::string &string)
 {
   if (string == "simulation")
     return simulation;
   else if (string == "formula")
     return formula;
   else
-    throw BlacklightException("Unknown string used for DataType value.");
+    throw BlacklightException("Unknown string used for ModelType value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as OutputFormat enumerations
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid OutputFormat
+// Notes:
+//   Valid options:
+//     "raw": raw binary values of image array with no extra data
+OutputFormat InputReader::ReadOutputFormat(const std::string &string)
+{
+  if (string == "raw")
+    return raw;
+  else
+    throw BlacklightException("Unknown string used for OutputFormat value.");
 }
 
 //--------------------------------------------------------------------------------------------------
