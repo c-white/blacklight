@@ -3,7 +3,7 @@ model_type  = simulation  # type of model (simulation, formula)
 num_threads = 1           # number of threads to use in parallel
 
 # Output parameters
-output_format = raw                     # format of output file (raw)
+output_format = raw                     # format of output file (raw, npy)
 output_file   = output/test_output.dat  # file to be (over)written with image data
 
 # Simulation parameters (only used if model_type == simulation)

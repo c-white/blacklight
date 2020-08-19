@@ -23,19 +23,22 @@ def main(**kwargs):
   data_format = np.float64
   dpi = 300
 
-  # Read image data
-  image = np.fromfile(kwargs['image_data_file'], dtype=data_format)
+  # Read image data from Numpy file
+  if kwargs['image_data_file'][-4:] == '.npy':
+    image = np.load(kwargs['image_data_file'])
 
-  # Reshape image
-  pix_num = len(image)
-  pix_res = int(pix_num ** 0.5)
-  if pix_res ** 2 == pix_num:
-    pass
-  elif (pix_res + 1) ** 2 == pix_num:
-    pix_res += 1
+  # Read image data from raw file
   else:
-    raise RuntimeError('Image data not square')
-  image = np.reshape(image, (pix_res, pix_res))
+    image = np.fromfile(kwargs['image_data_file'], dtype=data_format)
+    pix_num = len(image)
+    pix_res = int(pix_num ** 0.5)
+    if pix_res ** 2 == pix_num:
+      pass
+    elif (pix_res + 1) ** 2 == pix_num:
+      pix_res += 1
+    else:
+      raise RuntimeError('Image data not square')
+    image = np.reshape(image, (pix_res, pix_res))
 
   # Plot figure
   plt.imshow(image, origin='lower', cmap='inferno', vmin=0.0)

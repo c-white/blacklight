@@ -230,10 +230,13 @@ ModelType InputReader::ReadModelType(const std::string &string)
 // Notes:
 //   Valid options:
 //     "raw": raw binary values of image array with no extra data
+//     "npy": Numpy file with image array and minimal metadata
 OutputFormat InputReader::ReadOutputFormat(const std::string &string)
 {
   if (string == "raw")
     return raw;
+  else if (string == "npy")
+    return npy;
   else
     throw BlacklightException("Unknown string used for OutputFormat value.");
 }

@@ -155,7 +155,7 @@ void AthenaReader::ReadHDF5Superblock()
 //   Sets root_object_header_address, btree_address, and root_name_heap_address.
 //   Assumes stream pointer is already set.
 //   Must have size of offsets 8.
-//   Must be run on little-endian machine
+//   Must be run on little-endian machine.
 void AthenaReader::ReadRootGroupSymbolTableEntry()
 {
   // Skip reading link name offset
@@ -973,7 +973,7 @@ void AthenaReader::SetHDF5FloatArray(const unsigned char *datatype_raw,
 //   *p_num_dims: number of dimensions
 // Notes:
 //   Must not have permutation indices.
-//   Must be run on little-endian machine
+//   Must be run on little-endian machine.
 void AthenaReader::ReadHDF5DataspaceDims(const unsigned char *dataspace_raw,
     unsigned long int **p_dims, int *p_num_dims)
 {

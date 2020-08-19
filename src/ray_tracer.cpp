@@ -258,7 +258,6 @@ void RayTracer::InitializeCamera()
 
     // Point with converging rays
     case pinhole:
-    default:
     {
       #pragma omp parallel for schedule(static)
       for (int m = 0; m < im_res; m++)
@@ -576,12 +575,14 @@ void RayTracer::TransformGeodesics()
         {
           // Simulation output
           case simulation:
+          default:
           {
             // Account for simulation metric
             switch (simulation_coord)
             {
               // Spherical Kerr-Schild
               case sph_ks:
+              default:
               {
                 // Calculate spherical position
                 double a2 = bh_a * bh_a;
@@ -626,7 +627,6 @@ void RayTracer::TransformGeodesics()
 
               // Cartesian Kerr-Schild
               case cart_ks:
-              default:
               {
                 x1 = x;
                 x2 = y;
@@ -642,7 +642,6 @@ void RayTracer::TransformGeodesics()
 
           // Formula
           case formula:
-          default:
           {
             x1 = x;
             x2 = y;
