@@ -78,6 +78,8 @@ void InputReader::Read()
       simulation_rho_cgs = std::stod(val);
     else if (key == "simulation_coord")
       simulation_coord = ReadCoordinates(val);
+    else if (key == "simulation_interp")
+      simulation_interp = ReadBool(val);
 
     // Store plasma parameters
     else if (key == "plasma_mu")
@@ -138,10 +140,12 @@ void InputReader::Read()
       ray_step = std::stod(val);
     else if (key == "ray_max_steps")
       ray_max_steps = std::stoi(val);
-    else if (key == "ray_sample_interp")
-      ray_sample_interp = ReadBool(val);
     else if (key == "ray_flat")
       ray_flat = ReadBool(val);
+    else if (key == "ray_terminate")
+      ray_terminate = ReadRayTerminate(val);
+    else if (key == "ray_factor")
+      ray_factor = std::stod(val);
 
     // Handle unknown entry
     else
@@ -283,4 +287,30 @@ Camera InputReader::ReadCamera(const std::string &string)
     return pinhole;
   else
     throw BlacklightException("Unknown string used for Camera value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as RayTerminate enumerations
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid RayTerminate
+// Notes:
+//   Valid options:
+//     "photon": rays are terminated upon reaching the prograde equatorial photon orbit radius
+//     "multiplicative": rays are terminated upon reaching the horizon radius times ray_factor
+//         (dimensionless)
+//     "additive": rays are terminated upon reaching the horizon radius plus ray_factor
+//         (gravitational units)
+RayTerminate InputReader::ReadRayTerminate(const std::string &string)
+{
+  if (string == "photon")
+    return photon;
+  else if (string == "multiplicative")
+    return multiplicative;
+  else if (string == "additive")
+    return additive;
+  else
+    throw BlacklightException("Unknown string used for RayTerminate value.");
 }

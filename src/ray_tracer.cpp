@@ -47,6 +47,7 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
     simulation_m_msun = input_reader.simulation_m_msun;
     simulation_rho_cgs = input_reader.simulation_rho_cgs;
     simulation_coord = input_reader.simulation_coord;
+    simulation_interp = input_reader.simulation_interp;
   }
 
   // Copy plasma parameters
@@ -88,8 +89,10 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   // Copy ray-tracing parameters
   ray_step = input_reader.ray_step;
   ray_max_steps = input_reader.ray_max_steps;
-  ray_sample_interp = input_reader.ray_sample_interp;
   ray_flat = input_reader.ray_flat;
+  ray_terminate = input_reader.ray_terminate;
+  if (ray_terminate != photon)
+    ray_factor = input_reader.ray_factor;
 
   // Copy raw data scalars
   if (model_type == simulation)
@@ -129,8 +132,25 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
     grid_bb3.Slice(5, athena_reader.ind_bb3);
   }
 
-  // Calculate inner photon orbit radius
-  r_photon = 2.0 * bh_m * (1.0 + std::cos(2.0 / 3.0 * std::acos(-std::abs(bh_a) / bh_m)));
+  // Calculate termination radius
+  switch (ray_terminate)
+  {
+    case photon:
+    {
+      r_terminate = 2.0 * bh_m * (1.0 + std::cos(2.0 / 3.0 * std::acos(-std::abs(bh_a) / bh_m)));
+      break;
+    }
+    case multiplicative:
+    {
+      r_terminate = (bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a)) * ray_factor;
+      break;
+    }
+    case additive:
+    {
+      r_terminate = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a) + ray_factor;
+      break;
+    }
+  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -417,7 +437,7 @@ void RayTracer::IntegrateGeodesics()
             geodesic_pos(m,l,n,mu) = x[mu] + step/2.0 * dx1[mu];
           double delta_r = RadialGeodesicCoordinate(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
               geodesic_pos(m,l,n,3)) - r;
-          if ((r > im_r and delta_r > 0.0) or r < r_photon)
+          if ((r > im_r and delta_r > 0.0) or r < r_terminate)
             break;
 
           // Calculate momentum at half step
@@ -488,7 +508,7 @@ void RayTracer::IntegrateGeodesics()
           // Check for too many steps taken
           double r_new = RadialGeodesicCoordinate(x[1], x[2], x[3]);
           delta_r = r_new - r;
-          if (n == ray_max_steps - 1 and not ((r > im_r and delta_r > 0.0) or r < r_photon))
+          if (n == ray_max_steps - 1 and not ((r > im_r and delta_r > 0.0) or r < r_terminate))
             sample_flags(m,l) = true;
           sample_num(m,l)++;
         }
@@ -682,8 +702,8 @@ void RayTracer::TransformGeodesics()
 //   Assumes im_steps, sample_flags, sample_num, sample_pos, and sample_len have been set.
 //   Allocates and initializes sample_rho, sample_pgas, sample_uu1, sample_uu2, sample_uu3,
 //       sample_bb1, sample_bb2, and sample_bb3.
-//   If ray_sample_interp == false, uses primitives from cell containing geodesic sample point.
-//   If ray_sample_interp == true, performs trilinear interpolation to geodesic sample point from
+//   If simulation_interp == false, uses primitives from cell containing geodesic sample point.
+//   If simulation_interp == true, performs trilinear interpolation to geodesic sample point from
 //       cell centers, using only data within the same block of cells (i.e. sometimes using
 //       extrapolation).
 //   TODO: interpolate across block boundaries
@@ -816,7 +836,7 @@ void RayTracer::SampleSimulationAlongGeodesics()
               break;
 
           // Resample values without interpolation
-          if (not ray_sample_interp)
+          if (not simulation_interp)
           {
             sample_rho(m,l,n) = grid_rho(b,k,j,i);
             sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
@@ -829,7 +849,7 @@ void RayTracer::SampleSimulationAlongGeodesics()
           }
 
           // Resample values with interpolation
-          if (ray_sample_interp)
+          if (simulation_interp)
           {
 
             // Calculate interpolation/extrapolation indices and coefficients

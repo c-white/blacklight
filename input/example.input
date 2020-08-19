@@ -1,10 +1,10 @@
 # General
 model_type  = simulation  # type of model (simulation, formula)
-num_threads = 1           # number of threads to use in parallel
+num_threads = 4           # number of threads to use in parallel
 
 # Output parameters
-output_format = raw                     # format of output file (raw, npy)
-output_file   = output/test_output.dat  # file to be (over)written with image data
+output_format = npy                     # format of output file (raw, npy)
+output_file   = output/test_output.npy  # file to be (over)written with image data
 
 # Simulation parameters (only used if model_type == simulation)
 simulation_file    = data/test_data.athdf  # file containing Athena++ data dump if needed
@@ -12,6 +12,7 @@ simulation_m_msun  = 4.152e6               # black hole mass in solar masses
 simulation_a       = 0.9                   # dimensionless black hole spin
 simulation_rho_cgs = 1.6e-16               # unit code density in g/cm^3
 simulation_coord   = sph_ks                # simulation coordinates (sph_ks, cart_ks)
+simulation_interp  = false                 # flag indicating intrablock interpolation should be used
 
 # Plasma parameters (only used if model_type == simulation)
 plasma_mu        = 0.5   # molecular weight of fluid in proton masses
@@ -44,7 +45,8 @@ im_res    = 64      # number of pixels per side
 im_freq   = 2.3e11  # frequency of observation in Hz
 
 # Ray-tracing parameters
-ray_step          = 0.01   # affine step size along each geodesic in units of current radius
-ray_max_steps     = 1500   # maximum number of steps allowed for each geodesic
-ray_sample_interp = false  # flag indicating resampling should use intrablock interpolation
-ray_flat          = false  # flag indicating ray tracing should assume flat spacetime
+ray_step      = 0.005           # affine step size along each geodesic in units of current radius
+ray_max_steps = 2400            # maximum number of steps allowed for each geodesic
+ray_flat      = false           # flag indicating ray tracing should assume flat spacetime
+ray_terminate = multiplicative  # termination condition (photon, multiplicative, additive)
+ray_factor    = 1.005           # constant for terminate (only used for ray_terminate != photon)

@@ -32,6 +32,7 @@ struct RayTracer
   double simulation_m_msun;
   double simulation_rho_cgs;
   Coordinates simulation_coord;
+  bool simulation_interp;
 
   // Input data - plasma parameters
   double plasma_mu;
@@ -66,8 +67,9 @@ struct RayTracer
   // Input data - ray-tracing parameters
   double ray_step;
   int ray_max_steps;
-  bool ray_sample_interp;
   bool ray_flat;
+  RayTerminate ray_terminate;
+  double ray_factor;
 
   // Grid data
   double x1_min, x1_max, x2_min, x2_max, x3_min, x3_max;
@@ -91,7 +93,7 @@ struct RayTracer
   const double delta_tau_max = 100.0;
 
   // Sample and image data
-  double r_photon;
+  double r_terminate;
   int im_steps;
   Array<double> im_pos, im_dir;
   Array<double> geodesic_pos, geodesic_dir, geodesic_len;

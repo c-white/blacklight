@@ -34,6 +34,7 @@ struct InputReader
   double simulation_a;
   double simulation_rho_cgs;
   Coordinates simulation_coord;
+  bool simulation_interp;
 
   // Data - plasma parameters
   double plasma_mu;
@@ -69,8 +70,9 @@ struct InputReader
   // Data - ray-tracing parameters
   double ray_step;
   int ray_max_steps;
-  bool ray_sample_interp;
   bool ray_flat;
+  RayTerminate ray_terminate;
+  double ray_factor;
 
   // Functions
   void Read();
@@ -81,6 +83,7 @@ struct InputReader
   OutputFormat ReadOutputFormat(const std::string &string);
   Coordinates ReadCoordinates(const std::string &string);
   Camera ReadCamera(const std::string &string);
+  RayTerminate ReadRayTerminate(const std::string &string);
 };
 
 #endif
