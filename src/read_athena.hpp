@@ -8,7 +8,9 @@
 #include <string>   // string
 
 // Blacklight headers
-#include "array.hpp"  // Array
+#include "array.hpp"       // Array
+#include "blacklight.hpp"  // enumerations
+#include "read_input.hpp"  // InputReader
 
 //--------------------------------------------------------------------------------------------------
 
@@ -16,10 +18,16 @@
 struct AthenaReader
 {
   // Constructors and destructor
-  AthenaReader(const std::string simulation_file);
+  AthenaReader(const InputReader &input_reader);
   AthenaReader(const AthenaReader &source) = delete;
   AthenaReader &operator=(const AthenaReader &source) = delete;
   ~AthenaReader();
+
+  // Input data - general
+  ModelType model_type;
+
+  // Input data - simulation parameters
+  std::string simulation_file;
 
   // Metadata
   std::ifstream data_stream;

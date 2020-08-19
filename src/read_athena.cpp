@@ -21,12 +21,22 @@
 //   simulation_file: name of input file
 // Notes:
 //   Opens stream for reading.
-AthenaReader::AthenaReader(const std::string simulation_file)
-  : data_stream(simulation_file, std::ios_base::in | std::ios_base::binary)
+AthenaReader::AthenaReader(const InputReader &input_reader)
 {
-  // Check that file is open
-  if (not data_stream.is_open())
-    throw BlacklightException("Could not open data file.");
+  // Copy general input data
+  model_type = input_reader.model_type;
+
+  // Proceed only if needed
+  if (model_type == simulation)
+  {
+    // Copy simulation parameters
+    simulation_file = input_reader.simulation_file;
+
+    // Open file
+    data_stream = std::ifstream(simulation_file, std::ios_base::in | std::ios_base::binary);
+    if (not data_stream.is_open())
+      throw BlacklightException("Could not open data file.");
+  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -49,9 +59,14 @@ AthenaReader::~AthenaReader()
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
+//   Does nothing if model does not need to be read from file.
 //   Initializes all member objects.
 void AthenaReader::Read()
 {
+  // Only proceed if needed
+  if (model_type != simulation)
+    return;
+
   // Read basic data about file
   ReadHDF5Superblock();
   ReadHDF5RootHeap();
