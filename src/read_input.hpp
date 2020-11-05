@@ -57,14 +57,21 @@ struct InputReader
   double formula_beta;
 
   // Data - image parameters
-  Camera im_cam;
+  Camera im_camera;
   double im_r;
   double im_th;
   double im_ph;
+  double im_ur;
+  double im_uth;
+  double im_uph;
+  double im_k_r;
+  double im_k_th;
+  double im_k_ph;
   double im_rot;
   double im_width;
   int im_res;
   double im_freq;
+  FrequencyNormalization im_norm;
   bool im_pole;
 
   // Data - ray-tracing parameters
@@ -83,6 +90,7 @@ struct InputReader
   OutputFormat ReadOutputFormat(const std::string &string);
   Coordinates ReadCoordinates(const std::string &string);
   Camera ReadCamera(const std::string &string);
+  FrequencyNormalization ReadFrequencyNormalization(const std::string &string);
   RayTerminate ReadRayTerminate(const std::string &string);
 };
 

@@ -36,13 +36,20 @@ formula_beta  = 2.5      # source index
 
 # Image parameters
 im_camera = plane   # type of camera (plane, pinhole)
-im_radius = 50.0    # radial coordinate of camera center in gravitational units
-im_theta  = 135.0   # polar coordinate of camera center in degrees (0/180 for north/south)
-im_phi    = 0.0     # azimuthal coordinate of camera in degrees
+im_r      = 50.0    # KS radial coordinate r of camera center in gravitational units
+im_th     = 135.0   # KS polar coordinate theta of camera center in degrees (0/180 for north/south)
+im_ph     = 0.0     # KS azimuthal coordinate phi of camera in degrees
+im_ur     = 0.0     # contravariant KS r-velocity of camera
+im_uth    = 0.0     # contravariant KS theta-velocity of camera (using radians)
+im_uph    = 0.0     # contravariant KS ph-velocity of camera (using radians)
+im_k_r    = 1.0     # covariant KS r-momentum of received photons
+im_k_th   = 0.0     # covariant KS theta-momentum of received photons (using radians)
+im_k_ph   = 0.0     # covariant KS phi-momentum of received photons (using radians)
 im_rot    = 0.0     # rotation of camera in degrees (0/90 for north up/left)
 im_width  = 24.0    # full width of image in gravitational units
 im_res    = 64      # number of pixels per side
 im_freq   = 2.3e11  # frequency of observation in Hz
+im_norm   = camera  # location of im_freq (camera [accounting for velocity], infinity [at rest])
 
 # Ray-tracing parameters
 ray_step      = 0.005           # affine step size along each geodesic in units of current radius

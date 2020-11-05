@@ -54,14 +54,21 @@ struct RayTracer
   double formula_beta;
 
   // Input data - image parameters
-  Camera im_cam;
+  Camera im_camera;
   double im_r;
   double im_th;
   double im_ph;
+  double im_ur;
+  double im_uth;
+  double im_uph;
+  double im_k_r;
+  double im_k_th;
+  double im_k_ph;
   double im_rot;
   double im_width;
   int im_res;
   double im_freq;
+  FrequencyNormalization im_norm;
   bool im_pole;
 
   // Input data - ray-tracing parameters
@@ -93,6 +100,7 @@ struct RayTracer
   const double delta_tau_max = 100.0;
 
   // Sample and image data
+  double momentum_factor;
   double r_terminate;
   int im_steps;
   Array<double> im_pos, im_dir;

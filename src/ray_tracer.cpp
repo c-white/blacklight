@@ -76,14 +76,21 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   }
 
   // Copy image parameters
-  im_cam = input_reader.im_cam;
+  im_camera = input_reader.im_camera;
   im_r = input_reader.im_r;
   im_th = input_reader.im_th;
   im_ph = input_reader.im_ph;
+  im_ur = input_reader.im_ur;
+  im_uth = input_reader.im_uth;
+  im_uph = input_reader.im_uph;
+  im_k_r = input_reader.im_k_r;
+  im_k_th = input_reader.im_k_th;
+  im_k_ph = input_reader.im_k_ph;
   im_rot = input_reader.im_rot;
   im_width = input_reader.im_width;
   im_res = input_reader.im_res;
   im_freq = input_reader.im_freq;
+  im_norm = input_reader.im_norm;
   im_pole = input_reader.im_pole;
 
   // Copy ray-tracing parameters
@@ -193,65 +200,195 @@ void RayTracer::MakeImage()
 //     n: unit outward normal
 //     u: unit right vector
 //     v: unit up vector
-// TODO: calculate initial position, direction, and orientation more exactly
-// TODO: account for flatness when doing above
+// TODO: account for flatness choice of flat metric
+// TODO: check for ambiguity when solving quadratics in ergoregion
+// TODO: compute up_con_xc from up_con_x?
 void RayTracer::InitializeCamera()
 {
   // Calculate trigonometric quantities
-  double im_sth = std::sin(im_th);
-  double im_cth = std::cos(im_th);
-  double im_sph = std::sin(im_ph);
-  double im_cph = std::cos(im_ph);
-  double im_srot = std::sin(im_rot);
-  double im_crot = std::cos(im_rot);
+  double sth = std::sin(im_th);
+  double cth = std::cos(im_th);
+  double sph = std::sin(im_ph);
+  double cph = std::cos(im_ph);
+  double srot = std::sin(im_rot);
+  double crot = std::cos(im_rot);
 
   // Calculate camera position
-  double im_x = im_sth * (im_r * im_cph + bh_a * im_sph);
-  double im_y = im_sth * (im_r * im_sph - bh_a * im_cph);
-  double im_z = im_r * im_cth;
+  double t = 0.0;
+  double x = sth * (im_r * cph + bh_a * sph);
+  double y = sth * (im_r * sph - bh_a * cph);
+  double z = im_r * cth;
 
-  // Calculate camera direction
-  double im_nx = im_sth * im_cph;
-  double im_ny = im_sth * im_sph;
-  double im_nz = im_cth;
+  // Calculate camera velocity
+  double dx_dr = sth * cph;
+  double dy_dr = sth * sph;
+  double dz_dr = cth;
+  double dx_dth = cth * (im_r * cph + bh_a * sph);
+  double dy_dth = cth * (im_r * sph - bh_a * cph);
+  double dz_dth = -im_r * sth;
+  double dx_dph = sth * (-im_r * sph + bh_a * cph);
+  double dy_dph = sth * (im_r * cph + bh_a * sph);
+  double dz_dph = 0.0;
+  double ux = dx_dr * im_ur + dx_dth * im_uth + dx_dph * im_uph;
+  double uy = dy_dr * im_ur + dy_dth * im_uth + dy_dph * im_uph;
+  double uz = dz_dr * im_ur + dz_dth * im_uth + dz_dph * im_uph;
+  Array<double> gcov(4, 4);
+  CovariantGeodesicMetric(x, y, z, gcov);
+  double temp_a = gcov(0,0);
+  double temp_b = 2.0 * (gcov(0,1) * ux + gcov(0,2) * uy + gcov(0,3) * uz);
+  double temp_c = 1.0 + gcov(1,1) * ux * ux + 2.0 * gcov(1,2) * ux * uy + 2.0 * gcov(1,3) * ux * uz
+      + gcov(2,2) * uy * uy + 2.0 * gcov(2,3) * uy * uz + gcov(3,3) * uz * uz;
+  temp_b /= temp_a;
+  temp_c /= temp_a;
+  double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_c);
+  double ut = temp_b <= 0.0 ? (temp_d - temp_b) / 2.0 : -2.0 * temp_c / (temp_b + temp_d);
+  double u_t = gcov(0,0) * ut + gcov(0,1) * ux + gcov(0,2) * uy + gcov(0,3) * uz;
+  double u_x = gcov(1,0) * ut + gcov(1,1) * ux + gcov(1,2) * uy + gcov(1,3) * uz;
+  double u_y = gcov(2,0) * ut + gcov(2,1) * ux + gcov(2,2) * uy + gcov(2,3) * uz;
+  double u_z = gcov(3,0) * ut + gcov(3,1) * ux + gcov(3,2) * uy + gcov(3,3) * uz;
 
-  // Calculate camera vertical orientation without rotation
-  double up_x = 0.0;
-  double up_y = 0.0;
-  double up_z = 1.0;
+  // Calculate photon momentum
+  double a2 = bh_a * bh_a;
+  double r2 = im_r * im_r;
+  double rr2 = x * x + y * y + z * z;
+  double dr_dx = im_r * x / (2.0 * r2 - rr2 + a2);
+  double dr_dy = im_r * y / (2.0 * r2 - rr2 + a2);
+  double dr_dz = (im_r * z + a2 * z / im_r) / (2.0 * r2 - rr2 + a2);
+  double dth_dx = z * dr_dx / (r2 * sth);
+  double dth_dy = z * dr_dy / (r2 * sth);
+  double dth_dz = (z * dr_dz - im_r) / (r2 * sth);
+  double dph_dx = -y / (x * x + y * y) - bh_a / (r2 + a2) * dr_dx;
+  double dph_dy = x / (x * x + y * y) - bh_a / (r2 + a2) * dr_dy;
+  double dph_dz = -bh_a / (r2 + a2) * dr_dz;
+  double k_x = dr_dx * im_k_r + dth_dx * im_k_th + dph_dx * im_k_ph;
+  double k_y = dr_dy * im_k_r + dth_dy * im_k_th + dph_dy * im_k_ph;
+  double k_z = dr_dz * im_k_r + dth_dz * im_k_th + dph_dz * im_k_ph;
+  Array<double> gcon(4, 4);
+  ContravariantGeodesicMetric(x, y, z, gcon);
+  temp_a = gcon(0,0);
+  temp_b = 2.0 * (gcon(0,1) * k_x + gcon(0,2) * k_y + gcon(0,3) * k_z);
+  temp_c = gcon(1,1) * k_x * k_x + 2.0 * gcon(1,2) * k_x * k_y + 2.0 * gcon(1,3) * k_x * k_z
+      + gcon(2,2) * k_y * k_y + 2.0 * gcon(2,3) * k_y * k_z + gcon(3,3) * k_z * k_z;
+  temp_b /= temp_a;
+  temp_c /= temp_a;
+  temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_c);
+  double k_t = temp_b < 0.0 ? 2.0 * temp_c / (temp_d - temp_b) : -(temp_b + temp_d) / 2.0;
+  double k_tc = ut * k_t + ux * k_x + uy * k_y + uz * k_z;
+  switch (im_norm)
+  {
+    case camera:
+    {
+      momentum_factor = -im_freq / k_tc;
+      break;
+    }
+    case infinity:
+    {
+      momentum_factor = -im_freq / k_t;
+      break;
+    }
+  }
+
+  // Calculate camera normal direction in camera frame
+  double norm_cov_xc = k_x - u_x / u_t * k_t;
+  double norm_cov_yc = k_y - u_y / u_t * k_t;
+  double norm_cov_zc = k_z - u_z / u_t * k_t;
+  double gcon_xc_xc = gcon(1,1) + ux * ux;
+  double gcon_xc_yc = gcon(1,2) + ux * uy;
+  double gcon_xc_zc = gcon(1,3) + ux * uz;
+  double gcon_yc_yc = gcon(2,2) + uy * uy;
+  double gcon_yc_zc = gcon(2,3) + uy * uz;
+  double gcon_zc_zc = gcon(3,3) + uz * uz;
+  double norm_con_tc = -k_tc;
+  double norm_con_xc =
+      gcon_xc_xc * norm_cov_xc + gcon_xc_yc * norm_cov_yc + gcon_xc_zc * norm_cov_zc;
+  double norm_con_yc =
+      gcon_xc_yc * norm_cov_xc + gcon_yc_yc * norm_cov_yc + gcon_yc_zc * norm_cov_zc;
+  double norm_con_zc =
+      gcon_xc_zc * norm_cov_xc + gcon_yc_zc * norm_cov_yc + gcon_zc_zc * norm_cov_zc;
+  double norm_norm =
+      std::sqrt(norm_cov_xc * norm_con_xc + norm_cov_yc * norm_con_yc + norm_cov_zc * norm_con_zc);
+  norm_cov_xc /= norm_norm;
+  norm_cov_yc /= norm_norm;
+  norm_cov_zc /= norm_norm;
+  norm_con_tc /= norm_norm;
+  norm_con_xc /= norm_norm;
+  norm_con_yc /= norm_norm;
+  norm_con_zc /= norm_norm;
+  double norm_con_x = norm_con_xc + ux * norm_con_tc;
+  double norm_con_y = norm_con_yc + uy * norm_con_tc;
+  double norm_con_z = norm_con_zc + uz * norm_con_tc;
+
+  // Calculate camera vertical direction without rotation in camera frame
+  double up_con_xc = 0.0;
+  double up_con_yc = 0.0;
+  double up_con_zc = 1.0;
   if (im_pole)
   {
-    up_y = 1.0;
-    up_z = 0.0;
+    up_con_yc = 1.0;
+    up_con_zc = 0.0;
   }
-  double up_n = up_x * im_nx + up_y * im_ny + up_z * im_nz;
-  double vx = up_x - up_n * im_nx;
-  double vy = up_y - up_n * im_ny;
-  double vz = up_z - up_n * im_nz;
-  double v_norm = std::sqrt(vx * vx + vy * vy + vz * vz);
-  vx /= v_norm;
-  vy /= v_norm;
-  vz /= v_norm;
+  double up_norm = up_con_xc * norm_cov_xc + up_con_yc * norm_cov_yc + up_con_zc * norm_cov_zc;
+  double vert_con_tc = 0.0;
+  double vert_con_xc = up_con_xc - up_norm * norm_con_xc;
+  double vert_con_yc = up_con_yc - up_norm * norm_con_yc;
+  double vert_con_zc = up_con_zc - up_norm * norm_con_zc;
+  double gcov_xc_xc = gcov(1,1) - u_x / u_t * gcov(1,0) - u_x / u_t * gcov(1,0)
+      + u_x * u_x / (u_t * u_t) * gcov(0,0);
+  double gcov_xc_yc = gcov(1,2) - u_x / u_t * gcov(2,0) - u_y / u_t * gcov(1,0)
+      + u_x * u_y / (u_t * u_t) * gcov(0,0);
+  double gcov_xc_zc = gcov(1,3) - u_x / u_t * gcov(3,0) - u_z / u_t * gcov(1,0)
+      + u_x * u_z / (u_t * u_t) * gcov(0,0);
+  double gcov_yc_yc = gcov(2,2) - u_y / u_t * gcov(2,0) - u_y / u_t * gcov(2,0)
+      + u_y * u_y / (u_t * u_t) * gcov(0,0);
+  double gcov_yc_zc = gcov(2,3) - u_y / u_t * gcov(3,0) - u_z / u_t * gcov(2,0)
+      + u_y * u_z / (u_t * u_t) * gcov(0,0);
+  double gcov_zc_zc = gcov(3,3) - u_z / u_t * gcov(3,0) - u_z / u_t * gcov(3,0)
+      + u_z * u_z / (u_t * u_t) * gcov(0,0);
+  double vert_cov_xc =
+      gcov_xc_xc * vert_con_xc + gcov_xc_yc * vert_con_yc + gcov_xc_zc * vert_con_zc;
+  double vert_cov_yc =
+      gcov_xc_yc * vert_con_xc + gcov_yc_yc * vert_con_yc + gcov_yc_zc * vert_con_zc;
+  double vert_cov_zc =
+      gcov_xc_zc * vert_con_xc + gcov_yc_zc * vert_con_yc + gcov_zc_zc * vert_con_zc;
+  double vert_norm =
+      std::sqrt(vert_cov_xc * vert_con_xc + vert_cov_yc * vert_con_yc + vert_cov_zc * vert_con_zc);
+  vert_cov_xc /= vert_norm;
+  vert_cov_yc /= vert_norm;
+  vert_cov_zc /= vert_norm;
+  vert_con_xc /= vert_norm;
+  vert_con_yc /= vert_norm;
+  vert_con_zc /= vert_norm;
 
-  // Calculate camera horizontal orientation without rotation
-  double ux = vy * im_nz - vz * im_ny;
-  double uy = vz * im_nx - vx * im_nz;
-  double uz = vx * im_ny - vy * im_nx;
+  // Calculate camera horizontal direction without rotation in camera frame
+  double det = gcov_xc_xc * (gcov_yc_yc * gcov_zc_zc - gcov_yc_zc * gcov_yc_zc)
+      + gcov_xc_yc * (gcov_yc_zc * gcov_xc_zc - gcov_xc_yc * gcov_zc_zc)
+      + gcov_xc_zc * (gcov_xc_yc * gcov_yc_zc - gcov_yc_yc * gcov_xc_zc);
+  double det_sqrt = std::sqrt(det);
+  double hor_con_tc = 0.0;
+  double hor_con_xc = (vert_cov_yc * norm_cov_zc - vert_cov_zc * norm_cov_yc) / det_sqrt;
+  double hor_con_yc = (vert_cov_zc * norm_cov_xc - vert_cov_xc * norm_cov_zc) / det_sqrt;
+  double hor_con_zc = (vert_cov_xc * norm_cov_yc - vert_cov_yc * norm_cov_xc) / det_sqrt;
 
-  // Calculate camera orientation with rotation
-  double im_ux = ux * im_crot - vx * im_srot;
-  double im_uy = uy * im_crot - vy * im_srot;
-  double im_uz = uz * im_crot - vz * im_srot;
-  double im_vx = vx * im_crot + ux * im_srot;
-  double im_vy = vy * im_crot + uy * im_srot;
-  double im_vz = vz * im_crot + uz * im_srot;
+  // Calculate camera direction with rotation in camera frame
+  double temp_hor_con_xc = hor_con_xc;
+  double temp_hor_con_yc = hor_con_yc;
+  double temp_hor_con_zc = hor_con_zc;
+  double temp_vert_con_xc = vert_con_xc;
+  double temp_vert_con_yc = vert_con_yc;
+  double temp_vert_con_zc = vert_con_zc;
+  hor_con_xc = temp_hor_con_xc * crot - temp_vert_con_xc * srot;
+  hor_con_yc = temp_hor_con_yc * crot - temp_vert_con_yc * srot;
+  hor_con_zc = temp_hor_con_zc * crot - temp_vert_con_zc * srot;
+  vert_con_xc = temp_vert_con_xc * crot + temp_hor_con_xc * srot;
+  vert_con_yc = temp_vert_con_yc * crot + temp_hor_con_yc * srot;
+  vert_con_zc = temp_vert_con_zc * crot + temp_hor_con_zc * srot;
 
   // Allocate arrays
   im_pos.Allocate(im_res, im_res, 4);
   im_dir.Allocate(im_res, im_res, 4);
 
   // Initialize arrays based on camera type
-  switch (im_cam)
+  switch (im_camera)
   {
     // Plane with parallel rays
     case plane:
@@ -260,18 +397,26 @@ void RayTracer::InitializeCamera()
       for (int m = 0; m < im_res; m++)
         for (int l = 0; l < im_res; l++)
         {
-          // Calculate position
+          // Set pixel position
           double u = (l - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
           double v = (m - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
-          im_pos(m,l,0) = 0.0;
-          im_pos(m,l,1) = im_x + u * im_ux + v * im_vx;
-          im_pos(m,l,2) = im_y + u * im_uy + v * im_vy;
-          im_pos(m,l,3) = im_z + u * im_uz + v * im_vz;
+          double dtc = u * hor_con_tc + v * vert_con_tc;
+          double dxc = u * hor_con_xc + v * vert_con_xc;
+          double dyc = u * hor_con_yc + v * vert_con_yc;
+          double dzc = u * hor_con_zc + v * vert_con_zc;
+          double dt = ut * dtc - (u_x * dxc + u_y * dyc + u_z * dzc) / u_t;
+          double dx = dxc + ux * dtc;
+          double dy = dyc + uy * dtc;
+          double dz = dzc + uz * dtc;
+          im_pos(m,l,0) = t + dt;
+          im_pos(m,l,1) = x + dx;
+          im_pos(m,l,2) = y + dy;
+          im_pos(m,l,3) = z + dz;
 
-          // Set direction
-          im_dir(m,l,1) = im_nx;
-          im_dir(m,l,2) = im_ny;
-          im_dir(m,l,3) = im_nz;
+          // Set pixel direction
+          im_dir(m,l,1) = norm_con_x;
+          im_dir(m,l,2) = norm_con_y;
+          im_dir(m,l,3) = norm_con_z;
         }
       break;
     }
@@ -283,22 +428,32 @@ void RayTracer::InitializeCamera()
       for (int m = 0; m < im_res; m++)
         for (int l = 0; l < im_res; l++)
         {
-          // Set position
-          im_pos(m,l,0) = 0.0;
-          im_pos(m,l,1) = im_x;
-          im_pos(m,l,2) = im_y;
-          im_pos(m,l,3) = im_z;
+          // Set pixel position
+          im_pos(m,l,0) = t;
+          im_pos(m,l,1) = x;
+          im_pos(m,l,2) = y;
+          im_pos(m,l,3) = z;
 
-          // Calculate direction
+          // Set pixel direction
           double u = (l - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
           double v = (m - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
-          double dir_x = im_x - (u * im_ux + v * im_vx);
-          double dir_y = im_y - (u * im_uy + v * im_vy);
-          double dir_z = im_z - (u * im_uz + v * im_vz);
-          double dir_norm = std::hypot(dir_x, dir_y, dir_z);
-          im_dir(m,l,1) = dir_x / dir_norm;
-          im_dir(m,l,2) = dir_y / dir_norm;
-          im_dir(m,l,3) = dir_z / dir_norm;
+          double normalization = std::hypot(u, v, im_r);
+          double frac_norm = im_r / normalization;
+          double frac_hor = -u / normalization;
+          double frac_vert = -v / normalization;
+          double dir_con_tc = norm_con_tc;
+          double dir_con_xc =
+              frac_norm * norm_con_xc + frac_hor * hor_con_xc + frac_vert * vert_con_xc;
+          double dir_con_yc =
+              frac_norm * norm_con_yc + frac_hor * hor_con_yc + frac_vert * vert_con_yc;
+          double dir_con_zc =
+              frac_norm * norm_con_zc + frac_hor * hor_con_zc + frac_vert * vert_con_zc;
+          double dir_con_x = dir_con_xc + ux * dir_con_tc;
+          double dir_con_y = dir_con_yc + uy * dir_con_tc;
+          double dir_con_z = dir_con_zc + uz * dir_con_tc;
+          im_dir(m,l,1) = dir_con_x;
+          im_dir(m,l,2) = dir_con_y;
+          im_dir(m,l,3) = dir_con_z;
         }
       break;
     }
@@ -1068,7 +1223,7 @@ void RayTracer::IntegrateSimulationRadiation()
 
           // Calculate frequency in CGS units
           double p0 = gcon(0,0) * p_0 + gcon(0,1) * p_1 + gcon(0,2) * p_2 + gcon(0,3) * p_3;
-          double nu_cgs = -p0 / p_0 * im_freq;
+          double nu_cgs = p0 * momentum_factor;
 
           // Calculate 4-velocity
           double temp = gcov(1,1) * uu1 * uu1 + 2.0 * gcov(1,2) * uu1 * uu2
@@ -1145,7 +1300,7 @@ void RayTracer::IntegrateSimulationRadiation()
           double sin_theta = std::sqrt(1.0 - cos2_theta);
 
           // Calculate fluid-frame quantities in CGS units
-          double nu_fluid_cgs = (u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) / p_0 * im_freq;
+          double nu_fluid_cgs = -(u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) * momentum_factor;
           double n_cgs = rho * simulation_rho_cgs / (plasma_mu * physics::m_p);
           double n_e_cgs = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
           double bb_cgs = std::sqrt(4.0 * math::pi * b_sq * e_unit);
@@ -1268,7 +1423,7 @@ void RayTracer::IntegrateFormulaRadiation()
 
           // Calculate frequency in CGS units
           double p0 = gcon(0,0) * p_0 + gcon(0,1) * p_1 + gcon(0,2) * p_2 + gcon(0,3) * p_3;
-          double nu_cgs = -p0 / p_0 * im_freq;
+          double nu_cgs = p0 * momentum_factor;
 
           // Calculate angular momentum (C 6)
           double ll = formula_l0 / (1.0 + rr) * std::pow(rr, 1.0 + formula_q);
@@ -1295,7 +1450,7 @@ void RayTracer::IntegrateFormulaRadiation()
           double u3 = cth * ur - r * sth * uth;
 
           // Calculate frequencies
-          double nu_fluid_cgs = (u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) / p_0 * im_freq;
+          double nu_fluid_cgs = -(u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) * momentum_factor;
           double nu_nu_fluid = nu_cgs / nu_fluid_cgs;
 
           // Calculate fluid-frame number density (C 5)

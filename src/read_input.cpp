@@ -119,13 +119,25 @@ void InputReader::Read()
 
     // Store image parameters
     else if (key == "im_camera")
-      im_cam = ReadCamera(val);
-    else if (key == "im_radius")
+      im_camera = ReadCamera(val);
+    else if (key == "im_r")
       im_r = std::stod(val);
-    else if (key == "im_theta")
+    else if (key == "im_th")
       im_th = ReadPole(val, &im_pole) * math::pi/180.0;
-    else if (key == "im_phi")
+    else if (key == "im_ph")
       im_ph = std::stod(val) * math::pi/180.0;
+    else if (key == "im_ur")
+      im_ur = std::stod(val);
+    else if (key == "im_uth")
+      im_uth = std::stod(val);
+    else if (key == "im_uph")
+      im_uph = std::stod(val);
+    else if (key == "im_k_r")
+      im_k_r = std::stod(val);
+    else if (key == "im_k_th")
+      im_k_th = std::stod(val);
+    else if (key == "im_k_ph")
+      im_k_ph = std::stod(val);
     else if (key == "im_rot")
       im_rot = std::stod(val) * math::pi/180.0;
     else if (key == "im_width")
@@ -134,6 +146,8 @@ void InputReader::Read()
       im_res = std::stoi(val);
     else if (key == "im_freq")
       im_freq = std::stod(val);
+    else if (key == "im_norm")
+      im_norm = ReadFrequencyNormalization(val);
 
     // Store ray-tracing parameters
     else if (key == "ray_step")
@@ -287,6 +301,32 @@ Camera InputReader::ReadCamera(const std::string &string)
     return pinhole;
   else
     throw BlacklightException("Unknown string used for Camera value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as FrequencyNormalization enumerations
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid FrequencyNormalization
+// Notes:
+//   Valid options:
+//     "camera": input im_freq is taken to be the frequency as seen by the center of the camera,
+//         accounting for its position and velocity; that is, the covariant time component of photon
+//         momentum in the camera frame at the camera location is -im_freq
+//     "infinity": input im_freq is taken to be the frequency of the light at the center of the
+//         camera were it to be transported along geodesics to infinity and measured by an observer
+//         at rest; that is, the covariant time component of photon momentum in the coordinate frame
+//         is -im_freq
+FrequencyNormalization InputReader::ReadFrequencyNormalization(const std::string &string)
+{
+  if (string == "camera")
+    return camera;
+  else if (string == "infinity")
+    return infinity;
+  else
+    throw BlacklightException("Unknown string used for FrequencyNormalization value.");
 }
 
 //--------------------------------------------------------------------------------------------------
