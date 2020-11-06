@@ -326,6 +326,7 @@ void RayTracer::InitializeCamera()
   norm_con_xc /= norm_norm;
   norm_con_yc /= norm_norm;
   norm_con_zc /= norm_norm;
+  momentum_factor *= norm_norm;
   double norm_con_x = norm_con_xc + ux * norm_con_tc;
   double norm_con_y = norm_con_yc + uy * norm_con_tc;
   double norm_con_z = norm_con_zc + uz * norm_con_tc;
@@ -1487,7 +1488,8 @@ void RayTracer::IntegrateFormulaRadiation()
             double delta_tau_nu = k_nu_cgs * delta_s_cgs;
             double ss_nu_cgs = j_nu_cgs / k_nu_cgs;
             if (delta_tau_nu <= delta_tau_max)
-              i_nu_cgs = std::exp(-delta_tau_nu) * (i_nu_cgs + ss_nu_cgs * std::expm1(delta_tau_nu));
+              i_nu_cgs =
+                  std::exp(-delta_tau_nu) * (i_nu_cgs + ss_nu_cgs * std::expm1(delta_tau_nu));
             else
               i_nu_cgs = ss_nu_cgs;
           } else
