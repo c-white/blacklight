@@ -30,15 +30,20 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   model_type = input_reader.model_type;
 
   // Set parameters
-  if (model_type == simulation)
+  switch (model_type)
   {
-    bh_m = 1.0;
-    bh_a = input_reader.simulation_a;
-  }
-  if (model_type == formula)
-  {
-    bh_m = 1.0;
-    bh_a = input_reader.formula_spin;
+    case simulation:
+    {
+      bh_m = 1.0;
+      bh_a = input_reader.simulation_a;
+      break;
+    }
+    case formula:
+    {
+      bh_m = 1.0;
+      bh_a = input_reader.formula_spin;
+      break;
+    }
   }
 
   // Copy simulation parameters
@@ -178,13 +183,20 @@ void RayTracer::MakeImage()
   InitializeGeodesics();
   IntegrateGeodesics();
   TransformGeodesics();
-  if (model_type == simulation)
+  switch (model_type)
   {
-    SampleSimulationAlongGeodesics();
-    IntegrateSimulationRadiation();
+    case simulation:
+    {
+      SampleSimulationAlongGeodesics();
+      IntegrateSimulationRadiation();
+      break;
+    }
+    case formula:
+    {
+      IntegrateFormulaRadiation();
+      break;
+    }
   }
-  if (model_type == formula)
-    IntegrateFormulaRadiation();
   return;
 }
 
