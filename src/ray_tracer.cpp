@@ -566,6 +566,7 @@ void RayTracer::IntegrateGeodesics()
   #pragma omp parallel
   {
     // Allocate scratch arrays
+    Array<double> gcov(4, 4);
     Array<double> gcon(4, 4);
     Array<double> dgcon(3, 4, 4);
 
@@ -670,8 +671,15 @@ void RayTracer::IntegrateGeodesics()
           for (int a = 1; a < 4; a++)
             p[a] *= factor;
 
-          // Store length of step
-          geodesic_len(m,l,n) = -step;
+          // Calculate length of step
+          CovariantGeodesicMetric(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
+              geodesic_pos(m,l,n,3), gcov);
+          double delta_s_sq = 0.0;
+          for (int a = 1; a < 4; a++)
+            for (int b = 1; b < 4; b++)
+              delta_s_sq += gcov(a,b) * dx2[a] * dx2[b];
+          delta_s_sq *= step * step;
+          geodesic_len(m,l,n) = std::sqrt(delta_s_sq);
 
           // Check for too many steps taken
           double r_new = RadialGeodesicCoordinate(x[1], x[2], x[3]);
@@ -720,7 +728,7 @@ void RayTracer::IntegrateGeodesics()
 //   Assumes integrating and formula metrics are Cartesian Kerr-Schild.
 //   Transformation of time components is trivial.
 //   Transformation of geodesic length is trivial.
-//   All transformations trivial if both metrics are Cartesian Kerr-Schild.
+//   All transformations are trivial if both metrics are Cartesian Kerr-Schild.
 void RayTracer::TransformGeodesics()
 {
   // Allocate new arrays
