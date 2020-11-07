@@ -52,7 +52,7 @@ im_freq   = 2.3e11  # frequency of observation in Hz
 im_norm   = camera  # location of im_freq (camera [accounting for velocity], infinity [at rest])
 
 # Ray-tracing parameters
-ray_step      = 0.005           # affine step size along each geodesic in units of current radius
+ray_step      = 0.01            # affine step size along each geodesic in units of current radius
 ray_max_steps = 2400            # maximum number of steps allowed for each geodesic
 ray_flat      = false           # flag indicating ray tracing should assume flat spacetime
 ray_terminate = multiplicative  # termination condition (photon, multiplicative, additive)
