@@ -412,8 +412,8 @@ void RayTracer::InitializeCamera()
         for (int l = 0; l < im_res; l++)
         {
           // Set pixel position
-          double u = (l - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
-          double v = (m - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
+          double u = (l - im_res / 2.0 + 0.5) * bh_m * im_width / im_res;
+          double v = (m - im_res / 2.0 + 0.5) * bh_m * im_width / im_res;
           double dtc = u * hor_con_tc + v * vert_con_tc;
           double dxc = u * hor_con_xc + v * vert_con_xc;
           double dyc = u * hor_con_yc + v * vert_con_yc;
@@ -449,8 +449,8 @@ void RayTracer::InitializeCamera()
           im_pos(m,l,3) = z;
 
           // Set pixel direction
-          double u = (l - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
-          double v = (m - im_res/2.0 + 0.5) * bh_m * im_width / im_res;
+          double u = (l - im_res / 2.0 + 0.5) * bh_m * im_width / im_res;
+          double v = (m - im_res / 2.0 + 0.5) * bh_m * im_width / im_res;
           double normalization = std::hypot(u, v, im_r);
           double frac_norm = im_r / normalization;
           double frac_hor = -u / normalization;
@@ -604,7 +604,7 @@ void RayTracer::IntegrateGeodesics()
             for (int nu = 0; nu < 4; nu++)
               dx1[mu] += gcon(mu,nu) * p[nu];
           for (int mu = 0; mu < 4; mu++)
-            geodesic_pos(m,l,n,mu) = x[mu] + step/2.0 * dx1[mu];
+            geodesic_pos(m,l,n,mu) = x[mu] + step / 2.0 * dx1[mu];
           double delta_r = RadialGeodesicCoordinate(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
               geodesic_pos(m,l,n,3)) - r;
           if ((r > im_r and delta_r > 0.0) or r < r_terminate)
@@ -618,7 +618,7 @@ void RayTracer::IntegrateGeodesics()
               for (int nu = 0; nu < 4; nu++)
                 dp1[a] -= 0.5 * dgcon(a-1,mu,nu) * p[mu] * p[nu];
           for (int mu = 0; mu < 4; mu++)
-            geodesic_dir(m,l,n,mu) = p[mu] + step/2.0 * dp1[mu];
+            geodesic_dir(m,l,n,mu) = p[mu] + step / 2.0 * dp1[mu];
 
           // Renormalize momentum
           ContravariantGeodesicMetric(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
@@ -1354,7 +1354,8 @@ void RayTracer::IntegrateSimulationRadiation()
                   * (image(m,l) + ss_nu_invariant_cgs * std::expm1(delta_tau_nu));
             else
               image(m,l) = ss_nu_invariant_cgs;
-          } else
+          }
+          else
             image(m,l) += j_nu_invariant_cgs * delta_lambda_cgs;
         }
       }
@@ -1484,7 +1485,8 @@ void RayTracer::IntegrateFormulaRadiation()
                   * (image(m,l) + ss_nu_invariant_cgs * std::expm1(delta_tau_nu));
             else
               image(m,l) = ss_nu_invariant_cgs;
-          } else
+          }
+          else
             image(m,l) += j_nu_invariant_cgs * delta_lambda_cgs;
         }
       }

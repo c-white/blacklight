@@ -40,10 +40,14 @@ int main(int argc, char *argv[])
   try
   {
     input_reader.Read();
-  } catch (const BlacklightException &exception) {
+  }
+  catch (const BlacklightException &exception)
+  {
     std::cout << exception.what();
     return 1;
-  } catch (...) {
+  }
+  catch (...)
+  {
     std::cout << "Error: Could not read input file.\n";
     return 1;
   }
@@ -56,10 +60,14 @@ int main(int argc, char *argv[])
   try
   {
     athena_reader.Read();
-  } catch (const BlacklightException &exception) {
+  }
+  catch (const BlacklightException &exception)
+  {
     std::cout << exception.what();
     return 1;
-  } catch (...) {
+  }
+  catch (...)
+  {
     std::cout << "Error: Could not read data file.\n";
     return 1;
   }
@@ -69,10 +77,14 @@ int main(int argc, char *argv[])
   try
   {
     ray_tracer.MakeImage();
-  } catch (const BlacklightException &exception) {
+  }
+  catch (const BlacklightException &exception)
+  {
     std::cout << exception.what();
     return 1;
-  } catch (...) {
+  }
+  catch (...)
+  {
     std::cout << "Error: Could not process data.\n";
     return 1;
   }
@@ -82,10 +94,14 @@ int main(int argc, char *argv[])
   try
   {
     output_writer.Write();
-  } catch (const BlacklightException &exception) {
+  }
+  catch (const BlacklightException &exception)
+  {
     std::cout << exception.what();
     return 1;
-  } catch (...) {
+  }
+  catch (...)
+  {
     std::cout << "Error: Could not write output file.\n";
     return 1;
   }

@@ -272,9 +272,11 @@ void AthenaReader::ReadHDF5RootObjectHeader()
       std::memcpy(&new_offset, message_data, 8);
       data_stream.seekg(static_cast<std::streamoff>(new_offset));
       continue;
+    }
 
     // Inspect any attribute messages
-    } else if (message_type == 12) {
+    else if (message_type == 12)
+    {
 
       // Check attribute message version
       int offset = 0;
@@ -317,27 +319,37 @@ void AthenaReader::ReadHDF5RootObjectHeader()
         SetHDF5FloatArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_x1);
         x1_min = root_grid_x1(0);
         x1_max = root_grid_x1(1);
-      } else if (name == "RootGridX2") {
+      }
+      else if (name == "RootGridX2")
+      {
         root_grid_x2_found = true;
         Array<float> root_grid_x2;
         SetHDF5FloatArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_x2);
         x2_min = root_grid_x2(0);
         x2_max = root_grid_x2(1);
-      } else if (name == "RootGridX3") {
+      }
+      else if (name == "RootGridX3")
+      {
         root_grid_x3_found = true;
         Array<float> root_grid_x3;
         SetHDF5FloatArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_x3);
         x3_min = root_grid_x3(0);
         x3_max = root_grid_x3(1);
-      } else if (name == "DatasetNames") {
+      }
+      else if (name == "DatasetNames")
+      {
         dataset_names_found = true;
         SetHDF5StringArray(datatype_raw, dataspace_raw, message_data + offset, &dataset_names,
             &num_dataset_names);
-      } else if (name == "VariableNames") {
+      }
+      else if (name == "VariableNames")
+      {
         variable_names_found = true;
         SetHDF5StringArray(datatype_raw, dataspace_raw, message_data + offset, &variable_names,
             &num_variable_names);
-      } else if (name == "NumVariables") {
+      }
+      else if (name == "NumVariables")
+      {
         num_variables_found = true;
         SetHDF5IntArray(datatype_raw, dataspace_raw, message_data + offset, num_variables);
       }
@@ -645,23 +657,29 @@ void AthenaReader::ReadHDF5DataObjectHeader(unsigned long int data_object_header
       continue;
 
     // Inspect any datatype messages
-    } else if (message_type == 3) {
+    }
+    else if (message_type == 3)
+    {
       if (datatype_found)
         throw BlacklightException("Too many HDF5 datatypes for dataset.");
       datatype_found = true;
       *p_datatype_raw = new unsigned char[message_size];
       std::memcpy(*p_datatype_raw, message_data, message_size);
+    }
 
     // Inspect any dataspace messages
-    } else if (message_type == 1) {
+    else if (message_type == 1)
+    {
       if (dataspace_found)
         throw BlacklightException("Too many HDF5 dataspaces for dataset.");
       dataspace_found = true;
       *p_dataspace_raw = new unsigned char[message_size];
       std::memcpy(*p_dataspace_raw, message_data, message_size);
+    }
 
     // Inspect any data layout messages
-    } else if (message_type == 8) {
+    else if (message_type == 8)
+    {
 
       // Note if data layout has already been found
       if (data_layout_found)

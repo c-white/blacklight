@@ -13,6 +13,7 @@
 
 // Ray tracer
 // TODO: decide if nan should be used for fallback
+// TODO: make const values user inputs?
 struct RayTracer
 {
   // Constructors and destructor
