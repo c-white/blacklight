@@ -101,6 +101,7 @@ struct RayTracer
 
   // Sample and image data
   double momentum_factor;
+  double r_horizon;
   double r_terminate;
   int im_steps;
   Array<double> im_pos, im_dir;

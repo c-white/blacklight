@@ -144,7 +144,8 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
     grid_bb3.Slice(5, athena_reader.ind_bb3);
   }
 
-  // Calculate termination radius
+  // Calculate horizon and termination radii
+  r_horizon = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
   switch (ray_terminate)
   {
     case photon:
@@ -154,12 +155,12 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
     }
     case multiplicative:
     {
-      r_terminate = (bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a)) * ray_factor;
+      r_terminate = r_horizon * ray_factor;
       break;
     }
     case additive:
     {
-      r_terminate = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a) + ray_factor;
+      r_terminate = r_horizon + ray_factor;
       break;
     }
   }
@@ -594,7 +595,7 @@ void RayTracer::IntegrateGeodesics()
         {
           // Calculate step size for going back to source
           double r = RadialGeodesicCoordinate(x[1], x[2], x[3]);
-          double step = -ray_step * r;
+          double step = -ray_step * (r - r_horizon);
 
           // Calculate position at half step, checking that step is worth taking
           ContravariantGeodesicMetric(x[1], x[2], x[3], gcon);
@@ -671,15 +672,8 @@ void RayTracer::IntegrateGeodesics()
           for (int a = 1; a < 4; a++)
             p[a] *= factor;
 
-          // Calculate length of step
-          CovariantGeodesicMetric(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
-              geodesic_pos(m,l,n,3), gcov);
-          double delta_s_sq = 0.0;
-          for (int a = 1; a < 4; a++)
-            for (int b = 1; b < 4; b++)
-              delta_s_sq += gcov(a,b) * dx2[a] * dx2[b];
-          delta_s_sq *= step * step;
-          geodesic_len(m,l,n) = std::sqrt(delta_s_sq);
+          // Store length of step
+          geodesic_len(m,l,n) = -step;
 
           // Check for too many steps taken
           double r_new = RadialGeodesicCoordinate(x[1], x[2], x[3]);
@@ -1242,10 +1236,6 @@ void RayTracer::IntegrateSimulationRadiation()
           CovariantCoordinateMetric(x1, x2, x3, gcov);
           ContravariantCoordinateMetric(x1, x2, x3, gcon);
 
-          // Calculate frequency in CGS units
-          double p0 = gcon(0,0) * p_0 + gcon(0,1) * p_1 + gcon(0,2) * p_2 + gcon(0,3) * p_3;
-          double nu_cgs = p0 * momentum_factor;
-
           // Calculate 4-velocity
           double temp = gcov(1,1) * uu1 * uu1 + 2.0 * gcov(1,2) * uu1 * uu2
               + 2.0 * gcov(1,3) * uu1 * uu3 + gcov(2,2) * uu2 * uu2 + 2.0 * gcov(2,3) * uu2 * uu3
@@ -1345,27 +1335,27 @@ void RayTracer::IntegrateSimulationRadiation()
           double j_nu_fluid_cgs = math::sqrt2 * math::pi * physics::e * physics::e * n_e_cgs
               * nu_s_cgs / (3.0 * k2 * physics::c) * xx_factor * xx_factor
               * std::exp(-std::cbrt(xx));
-          if (j_nu_fluid_cgs == 0.0)
-            continue;
-          double nu_nu_fluid = nu_cgs / nu_fluid_cgs;
-          double j_nu_cgs = nu_nu_fluid * nu_nu_fluid * j_nu_fluid_cgs;
+          double j_nu_invariant_cgs = j_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs);
 
           // Calculate absorption coefficient in CGS units (S 25)
           double b_nu_cgs = 2.0 * physics::h * nu_fluid_cgs * nu_fluid_cgs * nu_fluid_cgs
               / (physics::c * physics::c) / std::expm1(physics::h * nu_fluid_cgs / kb_tt_e_cgs);
           double k_nu_fluid_cgs = j_nu_fluid_cgs / b_nu_cgs;
-          double k_nu_cgs = k_nu_fluid_cgs / nu_nu_fluid;
+          double k_nu_invariant_cgs = k_nu_fluid_cgs * nu_fluid_cgs;
 
           // Calculate change in invariant intensity
-          double i_nu_cgs = nu_cgs * nu_cgs * nu_cgs * image(m,l);
-          double delta_s_cgs = delta_lambda * x_unit;
-          double delta_tau_nu = k_nu_cgs * delta_s_cgs;
-          double ss_nu_cgs = j_nu_cgs / k_nu_cgs;
-          if (delta_tau_nu <= delta_tau_max)
-            i_nu_cgs = std::exp(-delta_tau_nu) * (i_nu_cgs + ss_nu_cgs * std::expm1(delta_tau_nu));
-          else
-            i_nu_cgs = ss_nu_cgs;
-          image(m,l) = i_nu_cgs / (nu_cgs * nu_cgs * nu_cgs);
+          double delta_lambda_cgs = delta_lambda * x_unit / momentum_factor;
+          if (k_nu_invariant_cgs > 0.0)
+          {
+            double delta_tau_nu = k_nu_invariant_cgs * delta_lambda_cgs;
+            double ss_nu_invariant_cgs = j_nu_invariant_cgs / k_nu_invariant_cgs;
+            if (delta_tau_nu <= delta_tau_max)
+              image(m,l) = std::exp(-delta_tau_nu)
+                  * (image(m,l) + ss_nu_invariant_cgs * std::expm1(delta_tau_nu));
+            else
+              image(m,l) = ss_nu_invariant_cgs;
+          } else
+            image(m,l) += j_nu_invariant_cgs * delta_lambda_cgs;
         }
       }
 
@@ -1442,10 +1432,6 @@ void RayTracer::IntegrateFormulaRadiation()
           double gthth_bl = 1.0 / sigma;
           double gphph_bl = (sigma - 2.0 * bh_m * r) / (delta * sigma * sth * sth);
 
-          // Calculate frequency in CGS units
-          double p0 = gcon(0,0) * p_0 + gcon(0,1) * p_1 + gcon(0,2) * p_2 + gcon(0,3) * p_3;
-          double nu_cgs = p0 * momentum_factor;
-
           // Calculate angular momentum (C 6)
           double ll = formula_l0 / (1.0 + rr) * std::pow(rr, 1.0 + formula_q);
 
@@ -1470,39 +1456,36 @@ void RayTracer::IntegrateFormulaRadiation()
               + sth * (r * cph + bh_a * sph) * uph;
           double u3 = cth * ur - r * sth * uth;
 
-          // Calculate frequencies
-          double nu_fluid_cgs = -(u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) * momentum_factor;
-          double nu_nu_fluid = nu_cgs / nu_fluid_cgs;
-
           // Calculate fluid-frame number density (C 5)
           double n_n0_fluid = std::exp(-0.5
               * (r * r / (formula_r0 * formula_r0) + formula_h * formula_h * cth * cth));
 
+          // Calculate frequency in CGS units
+          double nu_fluid_cgs = -(u0 * p_0 + u1 * p_1 + u2 * p_2 + u3 * p_3) * momentum_factor;
+
           // Calculate emission coefficient in CGS units (C 9-10)
           double j_nu_fluid_cgs =
               formula_cn0 * n_n0_fluid * std::pow(nu_fluid_cgs / formula_nup, -formula_alpha);
-          double j_nu_cgs = nu_nu_fluid * nu_nu_fluid * j_nu_fluid_cgs;
+          double j_nu_invariant_cgs = j_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs);
 
           // Calculate absorption coefficient in CGS units (C 11-12)
           double k_nu_fluid_cgs = formula_a * formula_cn0 * n_n0_fluid
               * std::pow(nu_fluid_cgs / formula_nup, -formula_beta - formula_alpha);
-          double k_nu_cgs = k_nu_fluid_cgs / nu_nu_fluid;
+          double k_nu_invariant_cgs = k_nu_fluid_cgs * nu_fluid_cgs;
 
           // Calculate change in invariant intensity
-          double i_nu_cgs = nu_cgs * nu_cgs * nu_cgs * image(m,l);
-          double delta_s_cgs = delta_lambda * formula_mass;
-          if (k_nu_cgs > 0.0)
+          double delta_lambda_cgs = delta_lambda * formula_mass / momentum_factor;
+          if (k_nu_invariant_cgs > 0.0)
           {
-            double delta_tau_nu = k_nu_cgs * delta_s_cgs;
-            double ss_nu_cgs = j_nu_cgs / k_nu_cgs;
+            double delta_tau_nu = k_nu_invariant_cgs * delta_lambda_cgs;
+            double ss_nu_invariant_cgs = j_nu_invariant_cgs / k_nu_invariant_cgs;
             if (delta_tau_nu <= delta_tau_max)
-              i_nu_cgs =
-                  std::exp(-delta_tau_nu) * (i_nu_cgs + ss_nu_cgs * std::expm1(delta_tau_nu));
+              image(m,l) = std::exp(-delta_tau_nu)
+                  * (image(m,l) + ss_nu_invariant_cgs * std::expm1(delta_tau_nu));
             else
-              i_nu_cgs = ss_nu_cgs;
+              image(m,l) = ss_nu_invariant_cgs;
           } else
-            i_nu_cgs += j_nu_cgs * delta_s_cgs;
-          image(m,l) = i_nu_cgs / (nu_cgs * nu_cgs * nu_cgs);
+            image(m,l) += j_nu_invariant_cgs * delta_lambda_cgs;
         }
       }
 
