@@ -219,9 +219,10 @@ void RayTracer::MakeImage()
 //     n: unit outward normal
 //     u: unit right vector
 //     v: unit up vector
-// TODO: account for flatness choice of flat metric
 // TODO: check for ambiguity when solving quadratics in ergoregion
 // TODO: compute up_con_xc from up_con_x?
+// TODO: check all quadratics
+// TODO: check for sqrt->hypot
 void RayTracer::InitializeCamera()
 {
   // Calculate trigonometric quantities
@@ -237,8 +238,13 @@ void RayTracer::InitializeCamera()
   double x = sth * (im_r * cph + bh_a * sph);
   double y = sth * (im_r * sph - bh_a * cph);
   double z = im_r * cth;
+  if (ray_flat)
+  {
+    x = im_r * sth * cph;
+    y = im_r * sth * sph;
+  }
 
-  // Calculate camera velocity
+  // Calculate Jacobian of transformation
   double dx_dr = sth * cph;
   double dy_dr = sth * sph;
   double dz_dr = cth;
@@ -248,6 +254,15 @@ void RayTracer::InitializeCamera()
   double dx_dph = sth * (-im_r * sph + bh_a * cph);
   double dy_dph = sth * (im_r * cph + bh_a * sph);
   double dz_dph = 0.0;
+  if (ray_flat)
+  {
+    dx_dth = im_r * cth * cph;
+    dy_dth = im_r * cth * sph;
+    dx_dph = -im_r * sth * sph;
+    dy_dph = im_r * sth * cph;
+  }
+
+  // Calculate camera velocity
   double ux = dx_dr * im_ur + dx_dth * im_uth + dx_dph * im_uph;
   double uy = dy_dr * im_ur + dy_dth * im_uth + dy_dph * im_uph;
   double uz = dz_dr * im_ur + dz_dth * im_uth + dz_dph * im_uph;
@@ -266,7 +281,7 @@ void RayTracer::InitializeCamera()
   double u_y = gcov(2,0) * ut + gcov(2,1) * ux + gcov(2,2) * uy + gcov(2,3) * uz;
   double u_z = gcov(3,0) * ut + gcov(3,1) * ux + gcov(3,2) * uy + gcov(3,3) * uz;
 
-  // Calculate photon momentum
+  // Calculate Jacobian of transformation
   double a2 = bh_a * bh_a;
   double r2 = im_r * im_r;
   double rr2 = x * x + y * y + z * z;
@@ -279,6 +294,20 @@ void RayTracer::InitializeCamera()
   double dph_dx = -y / (x * x + y * y) - bh_a / (r2 + a2) * dr_dx;
   double dph_dy = x / (x * x + y * y) - bh_a / (r2 + a2) * dr_dy;
   double dph_dz = -bh_a / (r2 + a2) * dr_dz;
+  if (ray_flat)
+  {
+    dr_dx = x / im_r;
+    dr_dy = y / im_r;
+    dr_dz = z / im_r;
+    dth_dx = cth * cph / im_r;
+    dth_dy = cth * sph / im_r;
+    dth_dz = -sth / im_r;
+    dph_dx = -sph / (im_r * sth);
+    dph_dy = cph / (im_r * sth);
+    dph_dz = 0.0;
+  }
+
+  // Calculate photon momentum
   double k_x = dr_dx * im_k_r + dth_dx * im_k_th + dph_dx * im_k_ph;
   double k_y = dr_dy * im_k_r + dth_dy * im_k_th + dph_dy * im_k_ph;
   double k_z = dr_dz * im_k_r + dth_dz * im_k_th + dph_dz * im_k_ph;
@@ -293,6 +322,8 @@ void RayTracer::InitializeCamera()
   temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_c);
   double k_t = temp_b < 0.0 ? 2.0 * temp_c / (temp_d - temp_b) : -(temp_b + temp_d) / 2.0;
   double k_tc = ut * k_t + ux * k_x + uy * k_y + uz * k_z;
+
+  // Calculate momentum normalization
   switch (im_norm)
   {
     case camera:
@@ -307,16 +338,18 @@ void RayTracer::InitializeCamera()
     }
   }
 
-  // Calculate camera normal direction in camera frame
-  double norm_cov_xc = k_x - u_x / u_t * k_t;
-  double norm_cov_yc = k_y - u_y / u_t * k_t;
-  double norm_cov_zc = k_z - u_z / u_t * k_t;
+  // Calculate contravariant metric in camera frame
   double gcon_xc_xc = gcon(1,1) + ux * ux;
   double gcon_xc_yc = gcon(1,2) + ux * uy;
   double gcon_xc_zc = gcon(1,3) + ux * uz;
   double gcon_yc_yc = gcon(2,2) + uy * uy;
   double gcon_yc_zc = gcon(2,3) + uy * uz;
   double gcon_zc_zc = gcon(3,3) + uz * uz;
+
+  // Calculate camera normal direction in camera frame
+  double norm_cov_xc = k_x - u_x / u_t * k_t;
+  double norm_cov_yc = k_y - u_y / u_t * k_t;
+  double norm_cov_zc = k_z - u_z / u_t * k_t;
   double norm_con_tc = -k_tc;
   double norm_con_xc =
       gcon_xc_xc * norm_cov_xc + gcon_xc_yc * norm_cov_yc + gcon_xc_zc * norm_cov_zc;
@@ -338,7 +371,7 @@ void RayTracer::InitializeCamera()
   double norm_con_y = norm_con_yc + uy * norm_con_tc;
   double norm_con_z = norm_con_zc + uz * norm_con_tc;
 
-  // Calculate camera vertical direction without rotation in camera frame
+  // Define unprojected vertical direction in camera frame
   double up_con_xc = 0.0;
   double up_con_yc = 0.0;
   double up_con_zc = 1.0;
@@ -347,11 +380,8 @@ void RayTracer::InitializeCamera()
     up_con_yc = 1.0;
     up_con_zc = 0.0;
   }
-  double up_norm = up_con_xc * norm_cov_xc + up_con_yc * norm_cov_yc + up_con_zc * norm_cov_zc;
-  double vert_con_tc = 0.0;
-  double vert_con_xc = up_con_xc - up_norm * norm_con_xc;
-  double vert_con_yc = up_con_yc - up_norm * norm_con_yc;
-  double vert_con_zc = up_con_zc - up_norm * norm_con_zc;
+
+  // Calculate covariant metric in camera frame
   double gcov_xc_xc = gcov(1,1) - u_x / u_t * gcov(1,0) - u_x / u_t * gcov(1,0)
       + u_x * u_x / (u_t * u_t) * gcov(0,0);
   double gcov_xc_yc = gcov(1,2) - u_x / u_t * gcov(2,0) - u_y / u_t * gcov(1,0)
@@ -364,6 +394,13 @@ void RayTracer::InitializeCamera()
       + u_y * u_z / (u_t * u_t) * gcov(0,0);
   double gcov_zc_zc = gcov(3,3) - u_z / u_t * gcov(3,0) - u_z / u_t * gcov(3,0)
       + u_z * u_z / (u_t * u_t) * gcov(0,0);
+
+  // Calculate camera vertical direction without rotation in camera frame
+  double up_norm = up_con_xc * norm_cov_xc + up_con_yc * norm_cov_yc + up_con_zc * norm_cov_zc;
+  double vert_con_tc = 0.0;
+  double vert_con_xc = up_con_xc - up_norm * norm_con_xc;
+  double vert_con_yc = up_con_yc - up_norm * norm_con_yc;
+  double vert_con_zc = up_con_zc - up_norm * norm_con_zc;
   double vert_cov_xc =
       gcov_xc_xc * vert_con_xc + gcov_xc_yc * vert_con_yc + gcov_xc_zc * vert_con_zc;
   double vert_cov_yc =
@@ -379,11 +416,13 @@ void RayTracer::InitializeCamera()
   vert_con_yc /= vert_norm;
   vert_con_zc /= vert_norm;
 
-  // Calculate camera horizontal direction without rotation in camera frame
+  // Calculate determinant of metric in camera frame
   double det = gcov_xc_xc * (gcov_yc_yc * gcov_zc_zc - gcov_yc_zc * gcov_yc_zc)
       + gcov_xc_yc * (gcov_yc_zc * gcov_xc_zc - gcov_xc_yc * gcov_zc_zc)
       + gcov_xc_zc * (gcov_xc_yc * gcov_yc_zc - gcov_yc_yc * gcov_xc_zc);
   double det_sqrt = std::sqrt(det);
+
+  // Calculate camera horizontal direction without rotation in camera frame
   double hor_con_tc = 0.0;
   double hor_con_xc = (vert_cov_yc * norm_cov_zc - vert_cov_zc * norm_cov_yc) / det_sqrt;
   double hor_con_yc = (vert_cov_zc * norm_cov_xc - vert_cov_xc * norm_cov_zc) / det_sqrt;
