@@ -2,8 +2,8 @@
 
 // C++ headers
 #include <algorithm>  // max, min
-#include <cmath>      // abs, acos, atan, atan2, cbrt, copysign, cos, cyl_bessel_k, exp, expm1,
-                      // fmax, hypot, pow, sin, sqrt
+#include <cmath>      // abs, acos, atan, atan2, cbrt, ceil, copysign, cos, cyl_bessel_k, exp,
+                      // expm1, hypot, isfinite, pow, sin, sqrt
 #include <sstream>    // stringstream
 #include <string>     // string
 
@@ -99,12 +99,18 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   im_pole = input_reader.im_pole;
 
   // Copy ray-tracing parameters
-  ray_step = input_reader.ray_step;
-  ray_max_steps = input_reader.ray_max_steps;
   ray_flat = input_reader.ray_flat;
   ray_terminate = input_reader.ray_terminate;
   if (ray_terminate != photon)
     ray_factor = input_reader.ray_factor;
+  ray_step = input_reader.ray_step;
+  ray_max_steps = input_reader.ray_max_steps;
+  ray_max_retries = input_reader.ray_max_retries;
+  ray_tol_abs = input_reader.ray_tol_abs;
+  ray_tol_rel = input_reader.ray_tol_rel;
+  ray_err_factor = input_reader.ray_err_factor;
+  ray_min_factor = input_reader.ray_min_factor;
+  ray_max_factor = input_reader.ray_max_factor;
 
   // Copy raw data scalars
   if (model_type == simulation)
@@ -144,8 +150,8 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
     grid_bb3.Slice(5, athena_reader.ind_bb3);
   }
 
-  // Calculate horizon and termination radii
-  r_horizon = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
+  // Calculate termination radii
+  double r_horizon = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
   switch (ray_terminate)
   {
     case photon:
@@ -522,7 +528,7 @@ void RayTracer::InitializeGeodesics()
             temp_c += gcov(a,b) * p[a] * p[b];
         double temp_q = -0.5 * (temp_b
             + std::copysign(1.0, temp_b) * std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c));
-        p[0] = std::fmax(temp_q / temp_a, temp_c / temp_q);
+        p[0] = std::max(temp_q / temp_a, temp_c / temp_q);
 
         // Lower momentum components
         for (int mu = 0; mu < 4; mu++)
@@ -547,10 +553,54 @@ void RayTracer::InitializeGeodesics()
 //   Allocates and initializes geodesic_pos, geodesic_dir, geodesic_len, sample_flags, and
 //       sample_num.
 //   Assumes x^0 is ignorable.
-//   Integrates via the midpoint method (2nd-order RK).
-// TODO: calculate better step size
+//   Integrates via the Dormand-Prince method (5th-order Runge-Kutta).
+//     Method is RK5(4)7M of 1980 JCoAM 6 19.
+//     4th-order interpolation follows 1986 MaCom 46 135, which gives a 4th-order estimate of the
+//         midpoint and suggests combining this with values and derivatives at both endpoints to fit
+//         a unique quartic over the step.
+//     See Solving Ordinary Differential Equations I (Hairer, Norsett, Wanner) for coefficients that
+//         accomplish the quartic fit without explicitly evaluating the midpoint.
+//     All three references have different coefficients for the 4th-order step used in error
+//         estimation; the coefficients here follow the original paper.
+//     Interpolation is used to take steps small enough to satisfy user input ray_step.
 void RayTracer::IntegrateGeodesics()
 {
+  // Define coefficients
+  double a_vals[7][6] = {};
+  a_vals[1][0] = 1.0 / 5.0;
+  a_vals[2][0] = 3.0 / 40.0;
+  a_vals[2][1] = 9.0 / 40.0;
+  a_vals[3][0] = 44.0 / 45.0;
+  a_vals[3][1] = -56.0 / 15.0;
+  a_vals[3][2] = 32.0 / 9.0;
+  a_vals[4][0] = 19372.0 / 6561.0;
+  a_vals[4][1] = -25360.0 / 2187.0;
+  a_vals[4][2] = 64448.0 / 6561.0;
+  a_vals[4][3] = -212.0 / 729.0;
+  a_vals[5][0] = 9017.0 / 3168.0;
+  a_vals[5][1] = -355.0 / 33.0;
+  a_vals[5][2] = 46732.0 / 5247.0;
+  a_vals[5][3] = 49.0 / 176.0;
+  a_vals[5][4] = -5103.0 / 18656.0;
+  a_vals[6][0] = 35.0 / 384.0;
+  a_vals[6][2] = 500.0 / 1113.0;
+  a_vals[6][3] = 125.0 / 192.0;
+  a_vals[6][4] = -2187.0 / 6784.0;
+  a_vals[6][5] = 11.0 / 84.0;
+  double b_vals_5[7] =
+      {35.0 / 384.0, 0.0, 500.0 / 1113.0, 125.0 / 192.0, -2187.0 / 6784.0, 11.0 / 84.0, 0.0};
+  double b_vals_4[7] = {5179.0 / 57600.0, 0.0, 7571.0 / 16695.0, 393.0 / 640.0, -92097.0 / 339200.0,
+      187.0 / 2100.0, 1.0 / 40.0};
+  double b_vals_4m[7] = {6025192743.0 / 30085553152.0, 0.0, 51252292925.0 / 65400821598.0,
+      -2691868925.0 / 45128329728.0, 187940372067.0 / 1594534317056.0,
+      -1776094331.0 / 19743644256.0, 11237099.0 / 235043384.0};
+  double d_vals[7] = {-12715105075.0 / 11282082432.0, 0.0, 87487479700.0 / 32700410799.0,
+      -10690763975.0 / 1880347072.0, 701980252875.0 / 199316789632.0, -1453857185.0 / 822651844.0,
+      69997945.0 / 29380423.0};
+
+  // Define numerical parameter
+  double err_power = 0.2;
+
   // Allocate arrays
   geodesic_pos.Allocate(im_res, im_res, ray_max_steps, 4);
   geodesic_dir.Allocate(im_res, im_res, ray_max_steps, 4);
@@ -570,6 +620,13 @@ void RayTracer::IntegrateGeodesics()
     Array<double> gcov(4, 4);
     Array<double> gcon(4, 4);
     Array<double> dgcon(3, 4, 4);
+    double y_vals[9];
+    double y_vals_temp[9];
+    double y_vals_5[9];
+    double y_vals_4[9];
+    double y_vals_4m[8];
+    double k_vals[7][9];
+    double r_vals[4][8];
 
     // Go through image pixels
     #pragma omp for schedule(static)
@@ -577,50 +634,226 @@ void RayTracer::IntegrateGeodesics()
       for (int l = 0; l < im_res; l++)
       {
         // Extract initial position
-        double x[4];
-        x[0] = im_pos(m,l,0);
-        x[1] = im_pos(m,l,1);
-        x[2] = im_pos(m,l,2);
-        x[3] = im_pos(m,l,3);
+        y_vals[0] = im_pos(m,l,0);
+        y_vals[1] = im_pos(m,l,1);
+        y_vals[2] = im_pos(m,l,2);
+        y_vals[3] = im_pos(m,l,3);
 
         // Extract initial momentum
-        double p[4];
-        p[0] = im_dir(m,l,0);
-        p[1] = im_dir(m,l,1);
-        p[2] = im_dir(m,l,2);
-        p[3] = im_dir(m,l,3);
+        y_vals[4] = im_dir(m,l,0);
+        y_vals[5] = im_dir(m,l,1);
+        y_vals[6] = im_dir(m,l,2);
+        y_vals[7] = im_dir(m,l,3);
+
+        // Set initial proper distance
+        y_vals[8] = 0.0;
+
+        // Prepare to take steps
+        for (int p = 0; p < 9; p++)
+          y_vals_5[p] = y_vals[p];
+        double r_new = RadialGeodesicCoordinate(y_vals[1], y_vals[2], y_vals[3]);
+        double h_new = -r_new * ray_step;
+        int num_retry = 0;
+        bool previous_fail = false;
 
         // Take steps
-        for (int n = 0; n < ray_max_steps; n++)
+        for (int n = 0; n < ray_max_steps; )
         {
-          // Calculate step size for going back to source
-          double r = RadialGeodesicCoordinate(x[1], x[2], x[3]);
-          double step = -ray_step * (r - r_horizon);
-
-          // Calculate position at half step, checking that step is worth taking
-          ContravariantGeodesicMetric(x[1], x[2], x[3], gcon);
-          double dx1[4] = {};
-          for (int mu = 0; mu < 4; mu++)
-            for (int nu = 0; nu < 4; nu++)
-              dx1[mu] += gcon(mu,nu) * p[nu];
-          for (int mu = 0; mu < 4; mu++)
-            geodesic_pos(m,l,n,mu) = x[mu] + step / 2.0 * dx1[mu];
-          double delta_r = RadialGeodesicCoordinate(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
-              geodesic_pos(m,l,n,3)) - r;
-          if ((r > im_r and delta_r > 0.0) or r < r_terminate)
+          // Check for too many retries
+          if (num_retry > ray_max_retries)
+          {
+            sample_flags(m,l) = true;
             break;
+          }
 
-          // Calculate momentum at half step
-          ContravariantGeodesicMetricDerivative(x[1], x[2], x[3], dgcon);
-          double dp1[4] = {};
-          for (int a = 1; a <= 3; a++)
-            for (int mu = 0; mu < 4; mu++)
-              for (int nu = 0; nu < 4; nu++)
-                dp1[a] -= 0.5 * dgcon(a-1,mu,nu) * p[mu] * p[nu];
-          for (int mu = 0; mu < 4; mu++)
-            geodesic_dir(m,l,n,mu) = p[mu] + step / 2.0 * dp1[mu];
+          // Update step size
+          double h = h_new;
+
+          // Copy previous results
+          if (not previous_fail and n > 0)
+            for (int p = 0; p < 9; p++)
+            {
+              y_vals[p] = y_vals_5[p];
+              k_vals[0][p] = k_vals[6][p];
+            }
+          if (not previous_fail and n == 0)
+            for (int p = 0; p < 9; p++)
+              GeodesicSubstep(y_vals, k_vals[0], gcov, gcon, dgcon);
+          double r = r_new;
+          if (previous_fail)
+            r = RadialGeodesicCoordinate(y_vals[1], y_vals[2], y_vals[3]);
+
+          // Calculate substeps
+          for (int substep = 1; substep < 7; substep++)
+          {
+            for (int p = 0; p < 9; p++)
+              y_vals_temp[p] = y_vals[p];
+            for (int q = 0; q < substep; q++)
+              for (int p = 0; p < 9; p++)
+                y_vals_temp[p] += a_vals[substep][q] * h * k_vals[q][p];
+            GeodesicSubstep(y_vals_temp, k_vals[substep], gcov, gcon, dgcon);
+          }
+
+          // Calculate values at end of full step
+          for (int p = 0; p < 9; p++)
+          {
+            y_vals_5[p] = y_vals[p];
+            y_vals_4[p] = y_vals[p];
+          }
+          for (int q = 0; q < 7; q++)
+            for (int p = 0; p < 9; p++)
+            {
+              y_vals_5[p] += b_vals_5[q] * h * k_vals[q][p];
+              y_vals_4[p] += b_vals_4[q] * h * k_vals[q][p];
+            }
+          r_new = RadialGeodesicCoordinate(y_vals_5[1], y_vals_5[2], y_vals_5[3]);
+
+          // Estimate error
+          double error = 0.0;
+          for (int p = 0; p < 8; p++)
+          {
+            double y_abs = std::max(std::abs(y_vals[p]), std::abs(y_vals_5[p]));
+            double error_scale = ray_tol_abs + ray_tol_rel * y_abs;
+            double delta_y = std::abs(y_vals_5[p] - y_vals_4[p]);
+            error = std::max(error, delta_y / error_scale);
+          }
+
+          // Decide if step is too far
+          if (not (error <= 1.0))
+          {
+            double h_factor = ray_min_factor;
+            if (std::isfinite(error))
+            {
+              double h_factor_ideal = ray_err_factor * std::pow(error, -err_power);
+              h_factor = std::max(h_factor_ideal, ray_min_factor);
+            }
+            h_new = h * h_factor;
+            num_retry += 1;
+            previous_fail = true;
+            continue;
+          }
+          else
+          {
+            double h_factor = ray_max_factor;
+            if (error > 0.0)
+            {
+              h_factor = ray_err_factor * std::pow(error, -err_power);
+              h_factor = std::max(h_factor, ray_min_factor);
+              h_factor = std::min(h_factor, ray_max_factor);
+            }
+            if (previous_fail)
+              h_factor = std::min(h_factor, 1.0);
+            h_new = h * h_factor;
+            num_retry = 0;
+            previous_fail = false;
+          }
+
+          // Calculate values at middle of full step
+          for (int p = 0; p < 8; p++)
+            y_vals_4m[p] = y_vals[p];
+          for (int q = 0; q < 7; q++)
+            for (int p = 0; p < 8; p++)
+              y_vals_4m[p] += b_vals_4m[q] * h * k_vals[q][p];
+
+          // Subdivide full step
+          double r_mid = RadialGeodesicCoordinate(y_vals_4m[1], y_vals_4m[2], y_vals_4m[3]);
+          double delta_s_step = ray_step * r_mid;
+          double delta_s_full = y_vals_5[8] - y_vals[8];
+          int num_steps_ideal = static_cast<int>(std::ceil(delta_s_full / delta_s_step));
+          delta_s_step = delta_s_full / num_steps_ideal;
+          int num_steps_max = ray_max_steps - n;
+          int num_steps = num_steps_ideal;
+          if (num_steps > num_steps_max)
+          {
+            num_steps = num_steps_max;
+            sample_flags(m,l) = true;
+          }
+
+          // Calculate step midpoint if no subdivision necessary
+          if (num_steps_ideal == 1)
+          {
+            geodesic_pos(m,l,n,0) = y_vals_4m[0];
+            geodesic_pos(m,l,n,1) = y_vals_4m[1];
+            geodesic_pos(m,l,n,2) = y_vals_4m[2];
+            geodesic_pos(m,l,n,3) = y_vals_4m[3];
+            geodesic_dir(m,l,n,0) = y_vals_4m[4];
+            geodesic_dir(m,l,n,1) = y_vals_4m[5];
+            geodesic_dir(m,l,n,2) = y_vals_4m[6];
+            geodesic_dir(m,l,n,3) = y_vals_4m[7];
+            geodesic_len(m,l,n) = h;
+          }
+
+          // Calculate interpolating coefficients for subdivisions
+          if (num_steps_ideal > 1)
+          {
+            for (int p = 0; p < 8; p++)
+            {
+              r_vals[0][p] = y_vals_5[p] - y_vals[p];
+              r_vals[1][p] = y_vals[p] - y_vals_5[p] + h * k_vals[0][p];
+              r_vals[2][p] = 2.0 * (y_vals_5[p] - y_vals[p]) - h * (k_vals[0][p] + k_vals[6][p]);
+              r_vals[3][p] = 0.0;
+            }
+            for (int q = 0; q < 7; q++)
+              for (int p = 0; p < 8; p++)
+                r_vals[3][p] += d_vals[q] * h * k_vals[q][p];
+          }
+
+          // Calculate subdivided steps
+          if (num_steps_ideal > 1)
+            for (int nn = 0; nn < num_steps; nn++)
+            {
+              double frac = (nn + 0.5) / num_steps_ideal;
+              for (int p = 0; p < 8; p++)
+                y_vals_temp[p] = y_vals[p] + frac * (r_vals[0][p] + (1.0 - frac) * (r_vals[1][p]
+                    + frac * (r_vals[2][p] + (1.0 - frac) * r_vals[3][p])));
+              geodesic_pos(m,l,n+nn,0) = y_vals_temp[0];
+              geodesic_pos(m,l,n+nn,1) = y_vals_temp[1];
+              geodesic_pos(m,l,n+nn,2) = y_vals_temp[2];
+              geodesic_pos(m,l,n+nn,3) = y_vals_temp[3];
+              geodesic_dir(m,l,n+nn,0) = y_vals_temp[4];
+              geodesic_dir(m,l,n+nn,1) = y_vals_temp[5];
+              geodesic_dir(m,l,n+nn,2) = y_vals_temp[6];
+              geodesic_dir(m,l,n+nn,3) = y_vals_temp[7];
+              geodesic_len(m,l,n+nn) = h / num_steps_ideal;
+            }
 
           // Renormalize momentum
+          ContravariantGeodesicMetric(y_vals_5[1], y_vals_5[2], y_vals_5[3], gcon);
+          double temp_a = 0.0;
+          for (int a = 1; a < 4; a++)
+            for (int b = 1; b < 4; b++)
+              temp_a += gcon(a,b) * y_vals_5[4+a] * y_vals_5[4+b];
+          double temp_b = 0.0;
+          for (int a = 1; a < 4; a++)
+            temp_b += 2.0 * gcon(0,a) * y_vals_5[4] * y_vals_5[4+a];
+          double temp_c = gcon(0,0) * y_vals_5[4] * y_vals_5[4];
+          double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
+          double factor =
+              temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
+          for (int a = 1; a < 4; a++)
+            y_vals_5[4+a] *= factor;
+
+          // Check termination
+          sample_num(m,l) += num_steps;
+          bool terminate_outer = r_new > im_r and r_new > r;
+          bool terminate_inner = r_new < r_terminate;
+          if (terminate_outer or terminate_inner)
+            break;
+          bool last_step = n + num_steps >= ray_max_steps;
+          if (last_step)
+            sample_flags(m,l) = true;
+
+          // Prepare for next step
+          n += num_steps;
+        }
+      }
+
+    // Renormalize momenta
+    #pragma omp for schedule(static)
+    for (int m = 0; m < im_res; m++)
+      for (int l = 0; l < im_res; l++)
+        for (int n = 0; n < sample_num(m,l); n++)
+        {
           ContravariantGeodesicMetric(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
               geodesic_pos(m,l,n,3), gcon);
           double temp_a = 0.0;
@@ -637,52 +870,7 @@ void RayTracer::IntegrateGeodesics()
           for (int a = 1; a < 4; a++)
             geodesic_dir(m,l,n,a) *= factor;
 
-          // Calculate position at full step
-          double dx2[4] = {};
-          for (int mu = 0; mu < 4; mu++)
-            for (int nu = 0; nu < 4; nu++)
-              dx2[mu] += gcon(mu,nu) * geodesic_dir(m,l,n,nu);
-          for (int mu = 0; mu < 4; mu++)
-            x[mu] += step * dx2[mu];
-
-          // Calculate momentum at full step
-          ContravariantGeodesicMetricDerivative(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
-              geodesic_pos(m,l,n,3), dgcon);
-          double dp2[4] = {};
-          for (int a = 1; a <= 3; a++)
-            for (int mu = 0; mu < 4; mu++)
-              for (int nu = 0; nu < 4; nu++)
-                dp2[a] -= 0.5 * dgcon(a-1,mu,nu) * geodesic_dir(m,l,n,mu) * geodesic_dir(m,l,n,nu);
-          for (int mu = 0; mu < 4; mu++)
-            p[mu] += step * dp2[mu];
-
-          // Renormalize momentum
-          ContravariantGeodesicMetric(x[1], x[2], x[3], gcon);
-          temp_a = 0.0;
-          for (int a = 1; a < 4; a++)
-            for (int b = 1; b < 4; b++)
-              temp_a += gcon(a,b) * p[a] * p[b];
-          temp_b = 0.0;
-          for (int a = 1; a < 4; a++)
-            temp_b += 2.0 * gcon(0,a) * p[0] * p[a];
-          temp_c = gcon(0,0) * p[0] * p[0];
-          temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
-          factor =
-              temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
-          for (int a = 1; a < 4; a++)
-            p[a] *= factor;
-
-          // Store length of step
-          geodesic_len(m,l,n) = -step;
-
-          // Check for too many steps taken
-          double r_new = RadialGeodesicCoordinate(x[1], x[2], x[3]);
-          delta_r = r_new - r;
-          if (n == ray_max_steps - 1 and not ((r > im_r and delta_r > 0.0) or r < r_terminate))
-            sample_flags(m,l) = true;
-          sample_num(m,l)++;
         }
-      }
 
     // Calculate maximum number of steps actually taken
     #pragma omp for schedule(static) reduction(max:im_steps)
@@ -852,7 +1040,7 @@ void RayTracer::TransformGeodesics()
         sample_dir(m,l,num_steps-1-n,1) = p_1;
         sample_dir(m,l,num_steps-1-n,2) = p_2;
         sample_dir(m,l,num_steps-1-n,3) = p_3;
-        sample_len(m,l,num_steps-1-n) = len;
+        sample_len(m,l,num_steps-1-n) = -len;
       }
     }
 
@@ -1913,5 +2101,46 @@ void RayTracer::ContravariantCoordinateMetric(double x1, double x2, double x3, A
       break;
     }
   }
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for taking single forward-Euler substep in time
+// Inputs:
+//   y: dependent variables (positions, momenta, proper distace)
+// Outputs:
+//   k: derivatives with respect to independent variable (affine parameter)
+//   gcov: components set
+//   gcon: components set
+//   dgcon: components set
+// Notes:
+//   Integrates following equations:
+//     d(x^mu) / d(lambda) = g^{mu nu} p_nu
+//     d(p_0) / d(lambda) = 0
+//     d(p_i) / d(lambda) = -1/2 * d(g^{mu nu}) / d(x^i) p_mu p_nu
+//     d(s) / d(lambda) = (g_{i j} g^{i mu} g^{j nu} p_mu p_nu)^(1/2)
+//   Assumes x^0 is ignorable.
+void RayTracer::GeodesicSubstep(double y[9], double k[9], Array<double> &gcov, Array<double> &gcon,
+    Array<double> &dgcon)
+{
+  CovariantGeodesicMetric(y[1], y[2], y[3], gcov);
+  ContravariantGeodesicMetric(y[1], y[2], y[3], gcon);
+  ContravariantGeodesicMetricDerivative(y[1], y[2], y[3], dgcon);
+  for (int p = 0; p < 9; p++)
+    k[p] = 0.0;
+  for (int mu = 0; mu < 4; mu++)
+    for (int nu = 0; nu < 4; nu++)
+      k[mu] += gcon(mu,nu) * y[4+nu];
+  for (int a = 1; a < 4; a++)
+    for (int mu = 0; mu < 4; mu++)
+      for (int nu = 0; nu < 4; nu++)
+        k[4+a] -= 0.5 * dgcon(a-1,mu,nu) * y[4+mu] * y[4+nu];
+  for (int a = 1; a < 4; a++)
+    for (int b = 1; b < 4; b++)
+      for (int mu = 0; mu < 4; mu++)
+        for (int nu = 0; nu < 4; nu++)
+          k[8] += gcov(a,b) * gcon(a,mu) * gcon(b,nu) * y[4+mu] * y[4+nu];
+  k[8] = -std::sqrt(k[8]);
   return;
 }

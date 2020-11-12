@@ -75,11 +75,17 @@ struct InputReader
   bool im_pole;
 
   // Data - ray-tracing parameters
-  double ray_step;
-  int ray_max_steps;
   bool ray_flat;
   RayTerminate ray_terminate;
   double ray_factor;
+  double ray_step;
+  int ray_max_steps;
+  int ray_max_retries;
+  double ray_tol_abs;
+  double ray_tol_rel;
+  double ray_err_factor;
+  double ray_min_factor;
+  double ray_max_factor;
 
   // Functions
   void Read();

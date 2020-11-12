@@ -73,11 +73,17 @@ struct RayTracer
   bool im_pole;
 
   // Input data - ray-tracing parameters
-  double ray_step;
-  int ray_max_steps;
   bool ray_flat;
   RayTerminate ray_terminate;
   double ray_factor;
+  double ray_step;
+  int ray_max_steps;
+  int ray_max_retries;
+  double ray_tol_abs;
+  double ray_tol_rel;
+  double ray_err_factor;
+  double ray_min_factor;
+  double ray_max_factor;
 
   // Grid data
   double x1_min, x1_max, x2_min, x2_max, x3_min, x3_max;
@@ -102,7 +108,6 @@ struct RayTracer
 
   // Sample and image data
   double momentum_factor;
-  double r_horizon;
   double r_terminate;
   int im_steps;
   Array<double> im_pos, im_dir;
@@ -130,6 +135,8 @@ struct RayTracer
   void ContravariantGeodesicMetricDerivative(double x, double y, double z, Array<double> &dgcon);
   void CovariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcov);
   void ContravariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcon);
+  void GeodesicSubstep(double y[9], double k[9], Array<double> &gcov, Array<double> &gcon,
+      Array<double> &dgcon);
 };
 
 #endif

@@ -26,6 +26,7 @@ InputReader::InputReader(const std::string input_file_)
 // Outputs: (none)
 // Notes:
 //   Initializes all member objects.
+//   TODO: Check that all values are read.
 void InputReader::Read()
 {
   // Open input file
@@ -150,16 +151,28 @@ void InputReader::Read()
       im_norm = ReadFrequencyNormalization(val);
 
     // Store ray-tracing parameters
-    else if (key == "ray_step")
-      ray_step = std::stod(val);
-    else if (key == "ray_max_steps")
-      ray_max_steps = std::stoi(val);
     else if (key == "ray_flat")
       ray_flat = ReadBool(val);
     else if (key == "ray_terminate")
       ray_terminate = ReadRayTerminate(val);
     else if (key == "ray_factor")
       ray_factor = std::stod(val);
+    else if (key == "ray_step")
+      ray_step = std::stod(val);
+    else if (key == "ray_max_steps")
+      ray_max_steps = std::stoi(val);
+    else if (key == "ray_max_retries")
+      ray_max_retries = std::stoi(val);
+    else if (key == "ray_tol_abs")
+      ray_tol_abs = std::stod(val);
+    else if (key == "ray_tol_rel")
+      ray_tol_rel = std::stod(val);
+    else if (key == "ray_err_factor")
+      ray_err_factor = std::stod(val);
+    else if (key == "ray_min_factor")
+      ray_min_factor = std::stod(val);
+    else if (key == "ray_max_factor")
+      ray_max_factor = std::stod(val);
 
     // Handle unknown entry
     else
