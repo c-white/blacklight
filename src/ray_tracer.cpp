@@ -2,8 +2,8 @@
 
 // C++ headers
 #include <algorithm>  // max, min
-#include <cmath>      // abs, acos, atan, atan2, cbrt, ceil, copysign, cos, cyl_bessel_k, exp,
-                      // expm1, hypot, isfinite, pow, sin, sqrt
+#include <cmath>      // abs, acos, atan, atan2, cbrt, ceil, cos, cyl_bessel_k, exp, expm1, hypot,
+                      // isfinite, pow, sin, sqrt
 #include <sstream>    // stringstream
 #include <string>     // string
 
@@ -219,9 +219,6 @@ void RayTracer::MakeImage()
 //     n: unit outward normal
 //     u: unit right vector
 //     v: unit up vector
-// TODO: check for ambiguity when solving quadratics in ergoregion
-// TODO: check all quadratics
-// TODO: check for sqrt->hypot
 void RayTracer::InitializeCamera()
 {
   // Calculate trigonometric quantities
@@ -246,6 +243,7 @@ void RayTracer::InitializeCamera()
   // Calculate metric in spherical coordinates
   double a2 = bh_a * bh_a;
   double r2 = im_r * im_r;
+  double delta = r2 - 2.0 * bh_m * im_r + a2;
   double sigma = r2 + a2 * cth * cth;
   double gcov_r_r = 1.0 + 2.0 * bh_m * im_r / sigma;
   double gcov_r_th = 0.0;
@@ -257,6 +255,12 @@ void RayTracer::InitializeCamera()
   double gcon_t_r = 2.0 * bh_m * im_r / sigma;
   double gcon_t_th = 0.0;
   double gcon_t_ph = 0.0;
+  double gcon_r_r = delta / sigma;
+  double gcon_r_th = 0.0;
+  double gcon_r_ph = bh_a / sigma;
+  double gcon_th_th = 1.0 / sigma;
+  double gcon_th_ph = 0.0;
+  double gcon_ph_ph = 1.0 / (sigma * sth * sth);
   if (ray_flat)
   {
     gcov_r_r = 1.0;
@@ -265,6 +269,10 @@ void RayTracer::InitializeCamera()
     gcov_ph_ph = r2 * sth * sth;
     gcon_t_t = -1.0;
     gcon_t_r = 0.0;
+    gcon_r_r = 1.0;
+    gcon_r_ph = 0.0;
+    gcon_th_th = 1.0 / r2;
+    gcon_ph_ph = 1.0 / (r2 * sth * sth);
   }
 
   // Calculate camera velocity in spherical coordinates
@@ -309,6 +317,21 @@ void RayTracer::InitializeCamera()
   double u_y = gcov(2,0) * ut + gcov(2,1) * ux + gcov(2,2) * uy + gcov(2,3) * uz;
   double u_z = gcov(3,0) * ut + gcov(3,1) * ux + gcov(3,2) * uy + gcov(3,3) * uz;
 
+  // Calculate photon momentum in spherical coordinates
+  double gcon_rn_rn = (gcon_t_t * gcon_r_r - gcon_t_r * gcon_t_r) / gcon_t_t;
+  double gcon_rn_thn = (gcon_t_t * gcon_r_th - gcon_t_r * gcon_t_th) / gcon_t_t;
+  double gcon_rn_phn = (gcon_t_t * gcon_r_ph - gcon_t_r * gcon_t_ph) / gcon_t_t;
+  double gcon_thn_thn = (gcon_t_t * gcon_th_th - gcon_t_th * gcon_t_th) / gcon_t_t;
+  double gcon_thn_phn = (gcon_t_t * gcon_th_ph - gcon_t_th * gcon_t_ph) / gcon_t_t;
+  double gcon_phn_phn = (gcon_t_t * gcon_ph_ph - gcon_t_ph * gcon_t_ph) / gcon_t_t;
+  double k_rn = im_k_r;
+  double k_thn = im_k_th;
+  double k_phn = im_k_ph;
+  double k_tn = -std::sqrt(gcon_rn_rn * k_rn * k_rn + 2.0 * gcon_rn_thn * k_rn * k_thn
+      + 2.0 * gcon_rn_phn * k_rn * k_phn + gcon_thn_thn * k_thn * k_thn
+      + 2.0 * gcon_thn_phn * k_thn * k_phn + gcon_phn_phn * k_phn * k_phn);
+  double k_t = alpha * k_tn + (beta_con_r * k_rn + beta_con_th * k_thn + beta_con_ph * k_phn);
+
   // Calculate Jacobian of transformation
   double rr2 = x * x + y * y + z * z;
   double dr_dx = im_r * x / (2.0 * r2 - rr2 + a2);
@@ -337,16 +360,6 @@ void RayTracer::InitializeCamera()
   double k_x = dr_dx * im_k_r + dth_dx * im_k_th + dph_dx * im_k_ph;
   double k_y = dr_dy * im_k_r + dth_dy * im_k_th + dph_dy * im_k_ph;
   double k_z = dr_dz * im_k_r + dth_dz * im_k_th + dph_dz * im_k_ph;
-  Array<double> gcon(4, 4);
-  ContravariantGeodesicMetric(x, y, z, gcon);
-  double temp_a = gcon(0,0);
-  double temp_b = 2.0 * (gcon(0,1) * k_x + gcon(0,2) * k_y + gcon(0,3) * k_z);
-  double temp_c = gcon(1,1) * k_x * k_x + 2.0 * gcon(1,2) * k_x * k_y + 2.0 * gcon(1,3) * k_x * k_z
-      + gcon(2,2) * k_y * k_y + 2.0 * gcon(2,3) * k_y * k_z + gcon(3,3) * k_z * k_z;
-  temp_b /= temp_a;
-  temp_c /= temp_a;
-  double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_c);
-  double k_t = temp_b < 0.0 ? 2.0 * temp_c / (temp_d - temp_b) : -(temp_b + temp_d) / 2.0;
   double k_tc = ut * k_t + ux * k_x + uy * k_y + uz * k_z;
 
   // Calculate momentum normalization
@@ -365,6 +378,8 @@ void RayTracer::InitializeCamera()
   }
 
   // Calculate contravariant metric in camera frame
+  Array<double> gcon(4, 4);
+  ContravariantGeodesicMetric(x, y, z, gcon);
   double gcon_xc_xc = gcon(1,1) + ux * ux;
   double gcon_xc_yc = gcon(1,2) + ux * uy;
   double gcon_xc_zc = gcon(1,3) + ux * uz;
@@ -552,9 +567,14 @@ void RayTracer::InitializeCamera()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes im_pos and im_dir have been set except for time components of im_dir.
+//   Assumes im_pos and im_dir have been set except for the time components of im_dir.
 //   Initializes time components of im_dir.
 //   Lowers all components of im_dir.
+//   Quadratic solved as follows:
+//     Outside ergosphere: unique positive root.
+//     On ergosphere, assuming g_{0i} p^i < 0: unique root, which will be positive
+//     Inside ergosphere, assuming g_{0i} p^i < 0: lesser positive root, which remains finite as
+//         ergosphere is approached.
 void RayTracer::InitializeGeodesics()
 {
   // Work in parallel
@@ -591,9 +611,9 @@ void RayTracer::InitializeGeodesics()
         for (int a = 1; a < 4; a++)
           for (int b = 1; b < 4; b++)
             temp_c += gcov(a,b) * p[a] * p[b];
-        double temp_q = -0.5 * (temp_b
-            + std::copysign(1.0, temp_b) * std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c));
-        p[0] = std::max(temp_q / temp_a, temp_c / temp_q);
+        double temp_d = std::sqrt(std::max(temp_b * temp_b - 4.0 * temp_a * temp_c, 0.0));
+        p[0] = temp_a == 0 ? -temp_c / (2.0 * temp_b) : (temp_b < 0.0 ?
+            2.0 * temp_c / (temp_d - temp_b) : -(temp_b + temp_d) / (2.0 * temp_a));
 
         // Lower momentum components
         for (int mu = 0; mu < 4; mu++)
@@ -1030,8 +1050,7 @@ void RayTracer::TransformGeodesics()
                 // Calculate spherical position
                 double a2 = bh_a * bh_a;
                 double rr2 = x * x + y * y + z * z;
-                double r2 =
-                    0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
+                double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
                 double r = std::sqrt(r2);
                 double th = std::acos(z / r);
                 double ph = std::atan2(y, x) + std::atan(bh_a / r);
@@ -1490,10 +1509,9 @@ void RayTracer::IntegrateSimulationRadiation()
           ContravariantCoordinateMetric(x1, x2, x3, gcon);
 
           // Calculate 4-velocity
-          double temp = gcov(1,1) * uu1 * uu1 + 2.0 * gcov(1,2) * uu1 * uu2
+          double gamma = std::sqrt(1.0 + gcov(1,1) * uu1 * uu1 + 2.0 * gcov(1,2) * uu1 * uu2
               + 2.0 * gcov(1,3) * uu1 * uu3 + gcov(2,2) * uu2 * uu2 + 2.0 * gcov(2,3) * uu2 * uu3
-              + gcov(3,3) * uu3 * uu3;
-          double gamma = std::sqrt(1.0 + temp);
+              + gcov(3,3) * uu3 * uu3);
           double alpha = 1.0 / std::sqrt(-gcon(0,0));
           double beta1 = -gcon(0,1) / gcon(0,0);
           double beta2 = -gcon(0,2) / gcon(0,0);
@@ -1766,7 +1784,7 @@ double RayTracer::RadialGeodesicCoordinate(double x, double y, double z)
 {
   double a2 = bh_a * bh_a;
   double rr2 = x * x + y * y + z * z;
-  double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
+  double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
   double r = std::sqrt(r2);
   return r;
 }
@@ -1797,7 +1815,7 @@ void RayTracer::CovariantGeodesicMetric(double x, double y, double z, Array<doub
   // Calculate useful quantities
   double a2 = bh_a * bh_a;
   double rr2 = x * x + y * y + z * z;
-  double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
+  double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
   double r = std::sqrt(r2);
   double f = 2.0 * bh_m * r * r * r / (r2 * r2 + a2 * z * z);
 
@@ -1853,7 +1871,7 @@ void RayTracer::ContravariantGeodesicMetric(double x, double y, double z, Array<
   // Calculate useful quantities
   double a2 = bh_a * bh_a;
   double rr2 = x * x + y * y + z * z;
-  double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
+  double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
   double r = std::sqrt(r2);
   double f = 2.0 * bh_m * r * r * r / (r2 * r2 + a2 * z * z);
 
@@ -1906,7 +1924,7 @@ void RayTracer::ContravariantGeodesicMetricDerivative(double x, double y, double
   // Calculate useful quantities
   double a2 = bh_a * bh_a;
   double rr2 = x * x + y * y + z * z;
-  double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
+  double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
   double r = std::sqrt(r2);
   double f = 2.0 * bh_m * r * r * r / (r2 * r2 + a2 * z * z);
 
@@ -2049,7 +2067,7 @@ void RayTracer::CovariantCoordinateMetric(double x1, double x2, double x3, Array
       double z = x3;
       double a2 = bh_a * bh_a;
       double rr2 = x * x + y * y + z * z;
-      double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
+      double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
       double r = std::sqrt(r2);
       double f = 2.0 * bh_m * r * r * r / (r2 * r2 + a2 * z * z);
 
@@ -2136,7 +2154,7 @@ void RayTracer::ContravariantCoordinateMetric(double x1, double x2, double x3, A
       double z = x3;
       double a2 = bh_a * bh_a;
       double rr2 = x * x + y * y + z * z;
-      double r2 = 0.5 * (rr2 - a2 + std::sqrt((rr2 - a2) * (rr2 - a2) + 4.0 * a2 * z * z));
+      double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
       double r = std::sqrt(r2);
       double f = 2.0 * bh_m * r * r * r / (r2 * r2 + a2 * z * z);
 
