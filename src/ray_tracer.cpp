@@ -85,9 +85,9 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   im_r = input_reader.im_r;
   im_th = input_reader.im_th;
   im_ph = input_reader.im_ph;
-  im_ur = input_reader.im_ur;
-  im_uth = input_reader.im_uth;
-  im_uph = input_reader.im_uph;
+  im_urn = input_reader.im_urn;
+  im_uthn = input_reader.im_uthn;
+  im_uphn = input_reader.im_uphn;
   im_k_r = input_reader.im_k_r;
   im_k_th = input_reader.im_k_th;
   im_k_ph = input_reader.im_k_ph;
@@ -220,7 +220,6 @@ void RayTracer::MakeImage()
 //     u: unit right vector
 //     v: unit up vector
 // TODO: check for ambiguity when solving quadratics in ergoregion
-// TODO: compute up_con_xc from up_con_x?
 // TODO: check all quadratics
 // TODO: check for sqrt->hypot
 void RayTracer::InitializeCamera()
@@ -244,6 +243,43 @@ void RayTracer::InitializeCamera()
     y = im_r * sth * sph;
   }
 
+  // Calculate metric in spherical coordinates
+  double a2 = bh_a * bh_a;
+  double r2 = im_r * im_r;
+  double sigma = r2 + a2 * cth * cth;
+  double gcov_r_r = 1.0 + 2.0 * bh_m * im_r / sigma;
+  double gcov_r_th = 0.0;
+  double gcov_r_ph = -(1.0 + 2.0 * bh_m * im_r / sigma) * bh_a * sth * sth;
+  double gcov_th_th = sigma;
+  double gcov_th_ph = 0.0;
+  double gcov_ph_ph = (r2 + a2 + 2.0 * bh_m * a2 * im_r / sigma * sth * sth) * sth * sth;
+  double gcon_t_t = -(1.0 + 2.0 * bh_m * im_r / sigma);
+  double gcon_t_r = 2.0 * bh_m * im_r / sigma;
+  double gcon_t_th = 0.0;
+  double gcon_t_ph = 0.0;
+  if (ray_flat)
+  {
+    gcov_r_r = 1.0;
+    gcov_r_ph = 0.0;
+    gcov_th_th = r2;
+    gcov_ph_ph = r2 * sth * sth;
+    gcon_t_t = -1.0;
+    gcon_t_r = 0.0;
+  }
+
+  // Calculate camera velocity in spherical coordinates
+  double alpha = 1.0 / std::sqrt(-gcon_t_t);
+  double beta_con_r = -gcon_t_r / gcon_t_t;
+  double beta_con_th = -gcon_t_th / gcon_t_t;
+  double beta_con_ph = -gcon_t_ph / gcon_t_t;
+  double utn = std::sqrt(1.0 + gcov_r_r * im_urn * im_urn + 2.0 * gcov_r_th * im_urn * im_uthn
+      + 2.0 * gcov_r_ph * im_urn * im_uphn + gcov_th_th * im_uthn * im_uthn
+      + 2.0 * gcov_th_ph * im_uthn * im_uphn + gcov_ph_ph * im_uphn * im_uphn);
+  double ut = utn / alpha;
+  double ur = im_urn - beta_con_r / alpha * utn;
+  double uth = im_uthn - beta_con_th / alpha * utn;
+  double uph = im_uphn - beta_con_ph / alpha * utn;
+
   // Calculate Jacobian of transformation
   double dx_dr = sth * cph;
   double dy_dr = sth * sph;
@@ -263,27 +299,17 @@ void RayTracer::InitializeCamera()
   }
 
   // Calculate camera velocity
-  double ux = dx_dr * im_ur + dx_dth * im_uth + dx_dph * im_uph;
-  double uy = dy_dr * im_ur + dy_dth * im_uth + dy_dph * im_uph;
-  double uz = dz_dr * im_ur + dz_dth * im_uth + dz_dph * im_uph;
+  double ux = dx_dr * ur + dx_dth * uth + dx_dph * uph;
+  double uy = dy_dr * ur + dy_dth * uth + dy_dph * uph;
+  double uz = dz_dr * ur + dz_dth * uth + dz_dph * uph;
   Array<double> gcov(4, 4);
   CovariantGeodesicMetric(x, y, z, gcov);
-  double temp_a = gcov(0,0);
-  double temp_b = 2.0 * (gcov(0,1) * ux + gcov(0,2) * uy + gcov(0,3) * uz);
-  double temp_c = 1.0 + gcov(1,1) * ux * ux + 2.0 * gcov(1,2) * ux * uy + 2.0 * gcov(1,3) * ux * uz
-      + gcov(2,2) * uy * uy + 2.0 * gcov(2,3) * uy * uz + gcov(3,3) * uz * uz;
-  temp_b /= temp_a;
-  temp_c /= temp_a;
-  double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_c);
-  double ut = temp_b <= 0.0 ? (temp_d - temp_b) / 2.0 : -2.0 * temp_c / (temp_b + temp_d);
   double u_t = gcov(0,0) * ut + gcov(0,1) * ux + gcov(0,2) * uy + gcov(0,3) * uz;
   double u_x = gcov(1,0) * ut + gcov(1,1) * ux + gcov(1,2) * uy + gcov(1,3) * uz;
   double u_y = gcov(2,0) * ut + gcov(2,1) * ux + gcov(2,2) * uy + gcov(2,3) * uz;
   double u_z = gcov(3,0) * ut + gcov(3,1) * ux + gcov(3,2) * uy + gcov(3,3) * uz;
 
   // Calculate Jacobian of transformation
-  double a2 = bh_a * bh_a;
-  double r2 = im_r * im_r;
   double rr2 = x * x + y * y + z * z;
   double dr_dx = im_r * x / (2.0 * r2 - rr2 + a2);
   double dr_dy = im_r * y / (2.0 * r2 - rr2 + a2);
@@ -313,13 +339,13 @@ void RayTracer::InitializeCamera()
   double k_z = dr_dz * im_k_r + dth_dz * im_k_th + dph_dz * im_k_ph;
   Array<double> gcon(4, 4);
   ContravariantGeodesicMetric(x, y, z, gcon);
-  temp_a = gcon(0,0);
-  temp_b = 2.0 * (gcon(0,1) * k_x + gcon(0,2) * k_y + gcon(0,3) * k_z);
-  temp_c = gcon(1,1) * k_x * k_x + 2.0 * gcon(1,2) * k_x * k_y + 2.0 * gcon(1,3) * k_x * k_z
+  double temp_a = gcon(0,0);
+  double temp_b = 2.0 * (gcon(0,1) * k_x + gcon(0,2) * k_y + gcon(0,3) * k_z);
+  double temp_c = gcon(1,1) * k_x * k_x + 2.0 * gcon(1,2) * k_x * k_y + 2.0 * gcon(1,3) * k_x * k_z
       + gcon(2,2) * k_y * k_y + 2.0 * gcon(2,3) * k_y * k_z + gcon(3,3) * k_z * k_z;
   temp_b /= temp_a;
   temp_c /= temp_a;
-  temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_c);
+  double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_c);
   double k_t = temp_b < 0.0 ? 2.0 * temp_c / (temp_d - temp_b) : -(temp_b + temp_d) / 2.0;
   double k_tc = ut * k_t + ux * k_x + uy * k_y + uz * k_z;
 

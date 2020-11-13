@@ -61,9 +61,9 @@ struct InputReader
   double im_r;
   double im_th;
   double im_ph;
-  double im_ur;
-  double im_uth;
-  double im_uph;
+  double im_urn;
+  double im_uthn;
+  double im_uphn;
   double im_k_r;
   double im_k_th;
   double im_k_ph;

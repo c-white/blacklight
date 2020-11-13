@@ -127,12 +127,12 @@ void InputReader::Read()
       im_th = ReadPole(val, &im_pole) * math::pi / 180.0;
     else if (key == "im_ph")
       im_ph = std::stod(val) * math::pi / 180.0;
-    else if (key == "im_ur")
-      im_ur = std::stod(val);
-    else if (key == "im_uth")
-      im_uth = std::stod(val);
-    else if (key == "im_uph")
-      im_uph = std::stod(val);
+    else if (key == "im_urn")
+      im_urn = std::stod(val);
+    else if (key == "im_uthn")
+      im_uthn = std::stod(val);
+    else if (key == "im_uphn")
+      im_uphn = std::stod(val);
     else if (key == "im_k_r")
       im_k_r = std::stod(val);
     else if (key == "im_k_th")
