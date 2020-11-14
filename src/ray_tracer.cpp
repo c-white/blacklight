@@ -4,6 +4,7 @@
 #include <algorithm>  // max, min
 #include <cmath>      // abs, acos, atan, atan2, cbrt, ceil, cos, cyl_bessel_k, exp, expm1, hypot,
                       // isfinite, pow, sin, sqrt
+#include <optional>   // optional
 #include <sstream>    // stringstream
 #include <string>     // string
 
@@ -22,12 +23,12 @@
 
 // Ray tracer constructor
 // Inputs:
-//   input_reader: object containing input parameters read from input file
-//   athena_reader: object containing raw data read from data file
-RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena_reader)
+//   p_input_reader: pointer to object containing input parameters
+//   p_athena_reader: pointer to object containing raw simulation data
+RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_athena_reader)
 {
   // Copy general input data
-  model_type = input_reader.model_type;
+  model_type = p_input_reader->model_type.value();
 
   // Set parameters
   switch (model_type)
@@ -35,13 +36,13 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
     case simulation:
     {
       bh_m = 1.0;
-      bh_a = input_reader.simulation_a;
+      bh_a = p_input_reader->simulation_a.value();
       break;
     }
     case formula:
     {
       bh_m = 1.0;
-      bh_a = input_reader.formula_spin;
+      bh_a = p_input_reader->formula_spin.value();
       break;
     }
   }
@@ -49,105 +50,105 @@ RayTracer::RayTracer(const InputReader &input_reader, const AthenaReader &athena
   // Copy simulation parameters
   if (model_type == simulation)
   {
-    simulation_m_msun = input_reader.simulation_m_msun;
-    simulation_rho_cgs = input_reader.simulation_rho_cgs;
-    simulation_coord = input_reader.simulation_coord;
-    simulation_interp = input_reader.simulation_interp;
+    simulation_m_msun = p_input_reader->simulation_m_msun.value();
+    simulation_rho_cgs = p_input_reader->simulation_rho_cgs.value();
+    simulation_coord = p_input_reader->simulation_coord.value();
+    simulation_interp = p_input_reader->simulation_interp.value();
   }
 
   // Copy plasma parameters
   if (model_type == simulation)
   {
-    plasma_mu = input_reader.plasma_mu;
-    plasma_ne_ni = input_reader.plasma_ne_ni;
-    plasma_rat_high = input_reader.plasma_rat_high;
-    plasma_rat_low = input_reader.plasma_rat_low;
-    plasma_sigma_max = input_reader.plasma_sigma_max;
+    plasma_mu = p_input_reader->plasma_mu.value();
+    plasma_ne_ni = p_input_reader->plasma_ne_ni.value();
+    plasma_rat_high = p_input_reader->plasma_rat_high.value();
+    plasma_rat_low = p_input_reader->plasma_rat_low.value();
+    plasma_sigma_max = p_input_reader->plasma_sigma_max.value();
   }
 
   // Copy formula parameters
   if (model_type == formula)
   {
-    formula_mass = input_reader.formula_mass;
-    formula_r0 = input_reader.formula_r0;
-    formula_h = input_reader.formula_h;
-    formula_l0 = input_reader.formula_l0;
-    formula_q = input_reader.formula_q;
-    formula_nup = input_reader.formula_nup;
-    formula_cn0 = input_reader.formula_cn0;
-    formula_alpha = input_reader.formula_alpha;
-    formula_a = input_reader.formula_a;
-    formula_beta = input_reader.formula_beta;
+    formula_mass = p_input_reader->formula_mass.value();
+    formula_r0 = p_input_reader->formula_r0.value();
+    formula_h = p_input_reader->formula_h.value();
+    formula_l0 = p_input_reader->formula_l0.value();
+    formula_q = p_input_reader->formula_q.value();
+    formula_nup = p_input_reader->formula_nup.value();
+    formula_cn0 = p_input_reader->formula_cn0.value();
+    formula_alpha = p_input_reader->formula_alpha.value();
+    formula_a = p_input_reader->formula_a.value();
+    formula_beta = p_input_reader->formula_beta.value();
   }
 
   // Copy image parameters
-  im_camera = input_reader.im_camera;
-  im_r = input_reader.im_r;
-  im_th = input_reader.im_th;
-  im_ph = input_reader.im_ph;
-  im_urn = input_reader.im_urn;
-  im_uthn = input_reader.im_uthn;
-  im_uphn = input_reader.im_uphn;
-  im_k_r = input_reader.im_k_r;
-  im_k_th = input_reader.im_k_th;
-  im_k_ph = input_reader.im_k_ph;
-  im_rot = input_reader.im_rot;
-  im_width = input_reader.im_width;
-  im_res = input_reader.im_res;
-  im_freq = input_reader.im_freq;
-  im_norm = input_reader.im_norm;
-  im_pole = input_reader.im_pole;
+  im_camera = p_input_reader->im_camera.value();
+  im_r = p_input_reader->im_r.value();
+  im_th = p_input_reader->im_th.value();
+  im_ph = p_input_reader->im_ph.value();
+  im_urn = p_input_reader->im_urn.value();
+  im_uthn = p_input_reader->im_uthn.value();
+  im_uphn = p_input_reader->im_uphn.value();
+  im_k_r = p_input_reader->im_k_r.value();
+  im_k_th = p_input_reader->im_k_th.value();
+  im_k_ph = p_input_reader->im_k_ph.value();
+  im_rot = p_input_reader->im_rot.value();
+  im_width = p_input_reader->im_width.value();
+  im_res = p_input_reader->im_res.value();
+  im_freq = p_input_reader->im_freq.value();
+  im_norm = p_input_reader->im_norm.value();
+  im_pole = p_input_reader->im_pole.value();
 
   // Copy ray-tracing parameters
-  ray_flat = input_reader.ray_flat;
-  ray_terminate = input_reader.ray_terminate;
+  ray_flat = p_input_reader->ray_flat.value();
+  ray_terminate = p_input_reader->ray_terminate.value();
   if (ray_terminate != photon)
-    ray_factor = input_reader.ray_factor;
-  ray_step = input_reader.ray_step;
-  ray_max_steps = input_reader.ray_max_steps;
-  ray_max_retries = input_reader.ray_max_retries;
-  ray_tol_abs = input_reader.ray_tol_abs;
-  ray_tol_rel = input_reader.ray_tol_rel;
-  ray_err_factor = input_reader.ray_err_factor;
-  ray_min_factor = input_reader.ray_min_factor;
-  ray_max_factor = input_reader.ray_max_factor;
+    ray_factor = p_input_reader->ray_factor.value();
+  ray_step = p_input_reader->ray_step.value();
+  ray_max_steps = p_input_reader->ray_max_steps.value();
+  ray_max_retries = p_input_reader->ray_max_retries.value();
+  ray_tol_abs = p_input_reader->ray_tol_abs.value();
+  ray_tol_rel = p_input_reader->ray_tol_rel.value();
+  ray_err_factor = p_input_reader->ray_err_factor.value();
+  ray_min_factor = p_input_reader->ray_min_factor.value();
+  ray_max_factor = p_input_reader->ray_max_factor.value();
 
   // Copy raw data scalars
   if (model_type == simulation)
   {
-    x1_min = athena_reader.x1_min;
-    x1_max = athena_reader.x1_max;
-    x2_min = athena_reader.x2_min;
-    x2_max = athena_reader.x2_max;
-    x3_min = athena_reader.x3_min;
-    x3_max = athena_reader.x3_max;
+    x1_min = p_athena_reader->x1_min;
+    x1_max = p_athena_reader->x1_max;
+    x2_min = p_athena_reader->x2_min;
+    x2_max = p_athena_reader->x2_max;
+    x3_min = p_athena_reader->x3_min;
+    x3_max = p_athena_reader->x3_max;
   }
 
   // Make shallow copies of raw data arrays
   if (model_type == simulation)
   {
-    x1f = athena_reader.x1f;
-    x2f = athena_reader.x2f;
-    x3f = athena_reader.x3f;
-    x1v = athena_reader.x1v;
-    x2v = athena_reader.x2v;
-    x3v = athena_reader.x3v;
-    grid_rho = athena_reader.prim;
-    grid_rho.Slice(5, athena_reader.ind_rho);
-    grid_pgas = athena_reader.prim;
-    grid_pgas.Slice(5, athena_reader.ind_pgas);
-    grid_uu1 = athena_reader.prim;
-    grid_uu1.Slice(5, athena_reader.ind_uu1);
-    grid_uu2 = athena_reader.prim;
-    grid_uu2.Slice(5, athena_reader.ind_uu2);
-    grid_uu3 = athena_reader.prim;
-    grid_uu3.Slice(5, athena_reader.ind_uu3);
-    grid_bb1 = athena_reader.bb;
-    grid_bb1.Slice(5, athena_reader.ind_bb1);
-    grid_bb2 = athena_reader.bb;
-    grid_bb2.Slice(5, athena_reader.ind_bb2);
-    grid_bb3 = athena_reader.bb;
-    grid_bb3.Slice(5, athena_reader.ind_bb3);
+    x1f = p_athena_reader->x1f;
+    x2f = p_athena_reader->x2f;
+    x3f = p_athena_reader->x3f;
+    x1v = p_athena_reader->x1v;
+    x2v = p_athena_reader->x2v;
+    x3v = p_athena_reader->x3v;
+    grid_rho = p_athena_reader->prim;
+    grid_rho.Slice(5, p_athena_reader->ind_rho);
+    grid_pgas = p_athena_reader->prim;
+    grid_pgas.Slice(5, p_athena_reader->ind_pgas);
+    grid_uu1 = p_athena_reader->prim;
+    grid_uu1.Slice(5, p_athena_reader->ind_uu1);
+    grid_uu2 = p_athena_reader->prim;
+    grid_uu2.Slice(5, p_athena_reader->ind_uu2);
+    grid_uu3 = p_athena_reader->prim;
+    grid_uu3.Slice(5, p_athena_reader->ind_uu3);
+    grid_bb1 = p_athena_reader->bb;
+    grid_bb1.Slice(5, p_athena_reader->ind_bb1);
+    grid_bb2 = p_athena_reader->bb;
+    grid_bb2.Slice(5, p_athena_reader->ind_bb2);
+    grid_bb3 = p_athena_reader->bb;
+    grid_bb3.Slice(5, p_athena_reader->ind_bb3);
   }
 
   // Calculate termination radii

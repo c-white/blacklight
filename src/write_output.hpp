@@ -18,7 +18,7 @@
 struct OutputWriter
 {
   // Constructor
-  OutputWriter(const InputReader &input_reader, const RayTracer &ray_tracer);
+  OutputWriter(const InputReader *p_input_reader, const RayTracer *p_ray_tracer);
 
   // Input data - output parameters
   OutputFormat output_format;

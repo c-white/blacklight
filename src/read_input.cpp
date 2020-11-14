@@ -1,10 +1,11 @@
 // Blacklight input reader
 
 // C++ headers
-#include <algorithm>   // remove_if
-#include <cctype>      // isspace
-#include <fstream>     // ifstream
-#include <string>      // getline, stod, stoi, string
+#include <algorithm>  // remove_if
+#include <cctype>     // isspace
+#include <fstream>    // ifstream
+#include <optional>   // optional
+#include <string>     // getline, stod, stoi, string
 
 // Blacklight headers
 #include "read_input.hpp"
@@ -26,7 +27,6 @@ InputReader::InputReader(const std::string input_file_)
 // Outputs: (none)
 // Notes:
 //   Initializes all member objects.
-//   TODO: Check that all values are read.
 void InputReader::Read()
 {
   // Open input file
@@ -200,8 +200,8 @@ bool InputReader::RemoveableSpace(unsigned char c)
 //   string: string to be converted
 // Outputs:
 //   returned value: double conversion of string
-//   p_pole_flag: set to true only if input string converts to 0.0 or 180.0
-double InputReader::ReadPole(const std::string &string, bool *p_pole_flag)
+//   p_pole_flag: value set to true only if input string converts to 0.0 or 180.0
+double InputReader::ReadPole(const std::string &string, std::optional<bool> *p_pole_flag)
 {
   double val = std::stod(string);
   if (val == 0.0 or val == 180.0)

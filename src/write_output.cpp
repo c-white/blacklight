@@ -1,10 +1,11 @@
 // Blacklight output writer
 
 // C++ headers
-#include <cstdio>   // size_t, snprintf
-#include <cstring>  // memcpy, memset
-#include <fstream>  // ofstream
-#include <ios>      // ios_base, streamsize
+#include <cstdio>    // size_t, snprintf
+#include <cstring>   // memcpy, memset
+#include <fstream>   // ofstream
+#include <ios>       // ios_base, streamsize
+#include <optional>  // optional
 
 // Blacklight headers
 #include "write_output.hpp"
@@ -18,16 +19,16 @@
 
 // Output writer constructor
 // Inputs:
-//   output_file_: name of output file
-//   ray_tracer: object containing processed image
-OutputWriter::OutputWriter(const InputReader &input_reader, const RayTracer &ray_tracer)
+//   p_input_reader: pointer to object containing input parameters
+//   p_ray_tracer: pointer to object containing processed image
+OutputWriter::OutputWriter(const InputReader *p_input_reader, const RayTracer *p_ray_tracer)
 {
   // Copy output parameters
-  output_format = input_reader.output_format;
-  output_file = input_reader.output_file;
+  output_format = p_input_reader->output_format.value();
+  output_file = p_input_reader->output_file.value();
 
   // Make local shallow copy of image data
-  image = ray_tracer.image;
+  image = p_ray_tracer->image;
 }
 
 //--------------------------------------------------------------------------------------------------

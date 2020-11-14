@@ -1,10 +1,11 @@
 // Blacklight Athena++ reader
 
 // C++ headers
-#include <cstring>  // memcpy, size_t
-#include <fstream>  // ifstream
-#include <ios>      // ios_base, streamoff
-#include <string>   // getline, string
+#include <cstring>   // memcpy, size_t
+#include <fstream>   // ifstream
+#include <ios>       // ios_base, streamoff
+#include <optional>  // optional
+#include <string>    // getline, string
 
 // Library headers
 #include <omp.h>  // pragmas
@@ -18,19 +19,19 @@
 
 // Athena++ reader constructor
 // Inputs:
-//   simulation_file: name of input file
+//   p_input_reader: pointer to object containing input parameters
 // Notes:
 //   Opens stream for reading.
-AthenaReader::AthenaReader(const InputReader &input_reader)
+AthenaReader::AthenaReader(const InputReader *p_input_reader)
 {
   // Copy general input data
-  model_type = input_reader.model_type;
+  model_type = p_input_reader->model_type.value();
 
   // Proceed only if needed
   if (model_type == simulation)
   {
     // Copy simulation parameters
-    simulation_file = input_reader.simulation_file;
+    simulation_file = p_input_reader->simulation_file.value();
 
     // Open file
     data_stream = std::ifstream(simulation_file, std::ios_base::in | std::ios_base::binary);

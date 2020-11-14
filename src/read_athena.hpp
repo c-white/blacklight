@@ -18,7 +18,7 @@
 struct AthenaReader
 {
   // Constructors and destructor
-  AthenaReader(const InputReader &input_reader);
+  AthenaReader(const InputReader *p_input_reader);
   AthenaReader(const AthenaReader &source) = delete;
   AthenaReader &operator=(const AthenaReader &source) = delete;
   ~AthenaReader();

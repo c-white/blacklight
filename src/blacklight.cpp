@@ -2,6 +2,7 @@
 
 // C++ headers
 #include <iostream>  // cout
+#include <optional>  // bad_optional_access, optional
 #include <string>    // string
 
 // Library headers
@@ -36,10 +37,11 @@ int main(int argc, char *argv[])
   const std::string input_file(argv[1]);
 
   // Read input file
-  InputReader input_reader(input_file);
+  InputReader *p_input_reader;
   try
   {
-    input_reader.Read();
+    p_input_reader = new InputReader(input_file);
+    p_input_reader->Read();
   }
   catch (const BlacklightException &exception)
   {
@@ -53,17 +55,36 @@ int main(int argc, char *argv[])
   }
 
   // Set number of threads to use
-  omp_set_num_threads(input_reader.num_threads);
-
-  // Read data file
-  AthenaReader athena_reader(input_reader);
   try
   {
-    athena_reader.Read();
+    omp_set_num_threads(p_input_reader->num_threads.value());
+  }
+  catch (const std::bad_optional_access &exception)
+  {
+    std::cout << "Error: num_threads not specified in input file.\n";
+    return 1;
+  }
+  catch (...)
+  {
+    std::cout << "Error: Could not set number of threads.\n";
+    return 1;
+  }
+
+  // Read data file
+  AthenaReader *p_athena_reader;
+  try
+  {
+    p_athena_reader = new AthenaReader(p_input_reader);
+    p_athena_reader->Read();
   }
   catch (const BlacklightException &exception)
   {
     std::cout << exception.what();
+    return 1;
+  }
+  catch (const std::bad_optional_access &exception)
+  {
+    std::cout << "Error: AthenaReader unable to find all needed values in input file.\n";
     return 1;
   }
   catch (...)
@@ -73,14 +94,20 @@ int main(int argc, char *argv[])
   }
 
   // Process data
-  RayTracer ray_tracer(input_reader, athena_reader);
+  RayTracer *p_ray_tracer;
   try
   {
-    ray_tracer.MakeImage();
+    p_ray_tracer = new RayTracer(p_input_reader, p_athena_reader);
+    p_ray_tracer->MakeImage();
   }
   catch (const BlacklightException &exception)
   {
     std::cout << exception.what();
+    return 1;
+  }
+  catch (const std::bad_optional_access &exception)
+  {
+    std::cout << "Error: RayTracer unable to find all needed values in input file.\n";
     return 1;
   }
   catch (...)
@@ -90,14 +117,20 @@ int main(int argc, char *argv[])
   }
 
   // Write output file
-  OutputWriter output_writer(input_reader, ray_tracer);
+  OutputWriter *p_output_writer;
   try
   {
-    output_writer.Write();
+    p_output_writer = new OutputWriter(p_input_reader, p_ray_tracer);
+    p_output_writer->Write();
   }
   catch (const BlacklightException &exception)
   {
     std::cout << exception.what();
+    return 1;
+  }
+  catch (const std::bad_optional_access &exception)
+  {
+    std::cout << "Error: OutputWriter unable to find all needed values in input file.\n";
     return 1;
   }
   catch (...)
