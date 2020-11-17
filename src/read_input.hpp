@@ -44,11 +44,6 @@ struct InputReader
   std::optional<double> plasma_rat_low;
   std::optional<double> plasma_sigma_max;
 
-  // Data - fallback parameters
-  std::optional<bool> fallback_nan;
-  std::optional<float> fallback_rho;
-  std::optional<float> fallback_pgas;
-
   // Data - formula parameters
   std::optional<double> formula_mass;
   std::optional<double> formula_spin;
@@ -61,6 +56,11 @@ struct InputReader
   std::optional<double> formula_alpha;
   std::optional<double> formula_a;
   std::optional<double> formula_beta;
+
+  // Data - fallback parameters
+  std::optional<bool> fallback_nan;
+  std::optional<float> fallback_rho;
+  std::optional<float> fallback_pgas;
 
   // Data - image parameters
   std::optional<Camera> im_camera;

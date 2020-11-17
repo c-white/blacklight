@@ -67,17 +67,6 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
     plasma_sigma_max = p_input_reader->plasma_sigma_max.value();
   }
 
-  // Copy fallback parameters
-  if (model_type == simulation)
-  {
-    fallback_nan = p_input_reader->fallback_nan.value();
-    if (not fallback_nan)
-    {
-      fallback_rho = p_input_reader->fallback_rho.value();
-      fallback_pgas = p_input_reader->fallback_pgas.value();
-    }
-  }
-
   // Copy formula parameters
   if (model_type == formula)
   {
@@ -91,6 +80,14 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
     formula_alpha = p_input_reader->formula_alpha.value();
     formula_a = p_input_reader->formula_a.value();
     formula_beta = p_input_reader->formula_beta.value();
+  }
+
+  // Copy fallback parameters
+  fallback_nan = p_input_reader->fallback_nan.value();
+  if (model_type == simulation and not fallback_nan)
+  {
+    fallback_rho = p_input_reader->fallback_rho.value();
+    fallback_pgas = p_input_reader->fallback_pgas.value();
   }
 
   // Copy image parameters
@@ -1694,6 +1691,13 @@ void RayTracer::IntegrateFormulaRadiation()
     for (int m = 0; m < im_res; m++)
       for (int l = 0; l < im_res; l++)
       {
+        // Set pixel to NaN if ray has problem
+        if (fallback_nan and sample_flags(m,l))
+        {
+          image(m,l) = std::numeric_limits<double>::quiet_NaN();
+          continue;
+        }
+
         // Go through samples
         int num_steps = sample_num(m,l);
         for (int n = 0; n < num_steps; n++)

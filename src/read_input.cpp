@@ -94,14 +94,6 @@ void InputReader::Read()
     else if (key == "plasma_sigma_max")
       plasma_sigma_max = std::stod(val);
 
-    // Store fallback parameters
-    else if (key == "fallback_nan")
-      fallback_nan = ReadBool(val);
-    else if (key == "fallback_rho")
-      fallback_rho = std::stof(val);
-    else if (key == "fallback_pgas")
-      fallback_pgas = std::stof(val);
-
     // Store formula parameters
     else if (key == "formula_mass")
       formula_mass = std::stod(val);
@@ -125,6 +117,14 @@ void InputReader::Read()
       formula_a = std::stod(val);
     else if (key == "formula_beta")
       formula_beta = std::stod(val);
+
+    // Store fallback parameters
+    else if (key == "fallback_nan")
+      fallback_nan = ReadBool(val);
+    else if (key == "fallback_rho")
+      fallback_rho = std::stof(val);
+    else if (key == "fallback_pgas")
+      fallback_pgas = std::stof(val);
 
     // Store image parameters
     else if (key == "im_camera")
