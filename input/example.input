@@ -21,6 +21,11 @@ plasma_rat_high  = 10.0  # ion-electron temperature ratio at infinite plasma bet
 plasma_rat_low   = 1.0   # ion-electron temperature ratio at zero plasma beta
 plasma_sigma_max = 1.0   # if nonnegative, cutoff in sigma above which plasma is considered vacuum
 
+# Fallback parameters (only used if model_type == simulation)
+fallback_nan  = true    # flag indicating any fallback parameters should result in NaN for that ray
+fallback_rho  = 1.0e-6  # density to fall back to if fallback_nan == false
+fallback_pgas = 1.0e-8  # gas pressure to fall back to if fallback_nan == false
+
 # Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
 formula_mass  = 6.0e11   # black hole mass in cm
 formula_spin  = 0.9      # dimensionless black hole spin

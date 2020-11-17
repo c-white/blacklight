@@ -21,7 +21,13 @@ def main(**kwargs):
 
   # Parameters
   data_format = np.float64
+  cmap_name = 'inferno'
+  nan_color = 'gray'
   dpi = 300
+
+  # Define colormap
+  cmap = plt.get_cmap(cmap_name)
+  cmap.set_bad(nan_color)
 
   # Read image data from Numpy file
   if kwargs['image_data_file'][-4:] == '.npy':
@@ -41,7 +47,7 @@ def main(**kwargs):
     image = np.reshape(image, (pix_res, pix_res))
 
   # Plot figure
-  plt.imshow(image, origin='lower', cmap='inferno', vmin=0.0)
+  plt.imshow(image, origin='lower', cmap=cmap, vmin=0.0)
   plt.colorbar()
   plt.tight_layout()
   plt.savefig(kwargs['image_plot_file'], dpi=dpi)

@@ -4,6 +4,7 @@
 #include <algorithm>  // max, min
 #include <cmath>      // abs, acos, atan, atan2, cbrt, ceil, cos, cyl_bessel_k, exp, expm1, hypot,
                       // isfinite, pow, sin, sqrt
+#include <limits>     // numeric_limits
 #include <optional>   // optional
 #include <sstream>    // stringstream
 #include <string>     // string
@@ -64,6 +65,17 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
     plasma_rat_high = p_input_reader->plasma_rat_high.value();
     plasma_rat_low = p_input_reader->plasma_rat_low.value();
     plasma_sigma_max = p_input_reader->plasma_sigma_max.value();
+  }
+
+  // Copy fallback parameters
+  if (model_type == simulation)
+  {
+    fallback_nan = p_input_reader->fallback_nan.value();
+    if (not fallback_nan)
+    {
+      fallback_rho = p_input_reader->fallback_rho.value();
+      fallback_pgas = p_input_reader->fallback_pgas.value();
+    }
   }
 
   // Copy formula parameters
@@ -1189,19 +1201,19 @@ void RayTracer::SampleSimulationAlongGeodesics()
         // Extract number of steps along this geodesic
         int num_steps = sample_num(m,l);
 
-        // Set fallback values if geodesic poorly terminated
-        if (sample_flags(m,l))
+        // Set NaN fallback values if geodesic poorly terminated
+        if (fallback_nan and sample_flags(m,l))
         {
           for (int n = 0; n < num_steps; n++)
           {
-            sample_rho(m,l,n) = rho_fallback;
-            sample_pgas(m,l,n) = pgas_fallback;
-            sample_uu1(m,l,n) = uu1_fallback;
-            sample_uu2(m,l,n) = uu2_fallback;
-            sample_uu3(m,l,n) = uu3_fallback;
-            sample_bb1(m,l,n) = bb1_fallback;
-            sample_bb2(m,l,n) = bb2_fallback;
-            sample_bb3(m,l,n) = bb3_fallback;
+            sample_rho(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+            sample_pgas(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+            sample_uu1(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+            sample_uu2(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+            sample_uu3(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+            sample_bb1(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+            sample_bb2(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+            sample_bb3(m,l,n) = std::numeric_limits<float>::quiet_NaN();
           }
           continue;
         }
@@ -1246,14 +1258,28 @@ void RayTracer::SampleSimulationAlongGeodesics()
             // Set fallback values if off grid
             if (b_new == n_b)
             {
-              sample_rho(m,l,n) = rho_fallback;
-              sample_pgas(m,l,n) = pgas_fallback;
-              sample_uu1(m,l,n) = uu1_fallback;
-              sample_uu2(m,l,n) = uu2_fallback;
-              sample_uu3(m,l,n) = uu3_fallback;
-              sample_bb1(m,l,n) = bb1_fallback;
-              sample_bb2(m,l,n) = bb2_fallback;
-              sample_bb3(m,l,n) = bb3_fallback;
+              if (fallback_nan)
+              {
+                sample_rho(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+                sample_pgas(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+                sample_uu1(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+                sample_uu2(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+                sample_uu3(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+                sample_bb1(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+                sample_bb2(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+                sample_bb3(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+              }
+              else
+              {
+                sample_rho(m,l,n) = fallback_rho;
+                sample_pgas(m,l,n) = fallback_pgas;
+                sample_uu1(m,l,n) = fallback_uu1;
+                sample_uu2(m,l,n) = fallback_uu2;
+                sample_uu3(m,l,n) = fallback_uu3;
+                sample_bb1(m,l,n) = fallback_bb1;
+                sample_bb2(m,l,n) = fallback_bb2;
+                sample_bb3(m,l,n) = fallback_bb3;
+              }
               continue;
             }
 

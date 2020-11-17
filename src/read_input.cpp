@@ -5,7 +5,7 @@
 #include <cctype>     // isspace
 #include <fstream>    // ifstream
 #include <optional>   // optional
-#include <string>     // getline, stod, stoi, string
+#include <string>     // getline, stod, stof, stoi, string
 
 // Blacklight headers
 #include "read_input.hpp"
@@ -93,6 +93,14 @@ void InputReader::Read()
       plasma_rat_low = std::stod(val);
     else if (key == "plasma_sigma_max")
       plasma_sigma_max = std::stod(val);
+
+    // Store fallback parameters
+    else if (key == "fallback_nan")
+      fallback_nan = ReadBool(val);
+    else if (key == "fallback_rho")
+      fallback_rho = std::stof(val);
+    else if (key == "fallback_pgas")
+      fallback_pgas = std::stof(val);
 
     // Store formula parameters
     else if (key == "formula_mass")

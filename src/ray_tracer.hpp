@@ -12,8 +12,6 @@
 //--------------------------------------------------------------------------------------------------
 
 // Ray tracer
-// TODO: decide if nan should be used for fallback
-// TODO: make const values user inputs?
 struct RayTracer
 {
   // Constructors and destructor
@@ -41,6 +39,11 @@ struct RayTracer
   double plasma_rat_high;
   double plasma_rat_low;
   double plasma_sigma_max;
+
+  // Input data - fallback parameters
+  bool fallback_nan;
+  float fallback_rho;
+  float fallback_pgas;
 
   // Input data - formula parameters
   double formula_mass;
@@ -94,14 +97,12 @@ struct RayTracer
   Array<float> grid_bb1, grid_bb2, grid_bb3;
 
   // Fallback data
-  const float rho_fallback = 1.0e-6f;
-  const float pgas_fallback = 1.0e-8f;
-  const float uu1_fallback = 0.0f;
-  const float uu2_fallback = 0.0f;
-  const float uu3_fallback = 0.0f;
-  const float bb1_fallback = 0.0f;
-  const float bb2_fallback = 0.0f;
-  const float bb3_fallback = 0.0f;
+  const float fallback_uu1 = 0.0f;
+  const float fallback_uu2 = 0.0f;
+  const float fallback_uu3 = 0.0f;
+  const float fallback_bb1 = 0.0f;
+  const float fallback_bb2 = 0.0f;
+  const float fallback_bb3 = 0.0f;
 
   // Limiter data
   const double delta_tau_max = 100.0;
