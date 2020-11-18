@@ -242,9 +242,7 @@ void AthenaReader::ReadHDF5RootObjectHeader()
   data_stream.ignore(4);
 
   // Go through messages
-  bool root_grid_x1_found = false;
-  bool root_grid_x2_found = false;
-  bool root_grid_x3_found = false;
+  bool root_grid_size_found = false;
   bool dataset_names_found = false;
   bool variable_names_found = false;
   bool num_variables_found = false;
@@ -313,29 +311,12 @@ void AthenaReader::ReadHDF5RootObjectHeader()
           static_cast<std::string::size_type>(static_cast<int>(name_size) - 1));
 
       // Read and set desired attributes
-      if (name == "RootGridX1")
+      if (name == "RootGridSize")
       {
-        root_grid_x1_found = true;
-        Array<float> root_grid_x1;
-        SetHDF5FloatArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_x1);
-        x1_min = root_grid_x1(0);
-        x1_max = root_grid_x1(1);
-      }
-      else if (name == "RootGridX2")
-      {
-        root_grid_x2_found = true;
-        Array<float> root_grid_x2;
-        SetHDF5FloatArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_x2);
-        x2_min = root_grid_x2(0);
-        x2_max = root_grid_x2(1);
-      }
-      else if (name == "RootGridX3")
-      {
-        root_grid_x3_found = true;
-        Array<float> root_grid_x3;
-        SetHDF5FloatArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_x3);
-        x3_min = root_grid_x3(0);
-        x3_max = root_grid_x3(1);
+        root_grid_size_found = true;
+        Array<int> root_grid_size;
+        SetHDF5IntArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_size);
+        n_3_root = root_grid_size(2);
       }
       else if (name == "DatasetNames")
       {
@@ -365,14 +346,14 @@ void AthenaReader::ReadHDF5RootObjectHeader()
     delete[] message_data;
 
     // Break when required information found
-    if (root_grid_x1_found and root_grid_x2_found and root_grid_x2_found and dataset_names_found
-        and variable_names_found and num_variables_found)
+    if (root_grid_size_found and dataset_names_found and variable_names_found
+        and num_variables_found)
       break;
   }
 
   // Check that appropriate messages were found
-  if (not (root_grid_x1_found and root_grid_x2_found and root_grid_x3_found and dataset_names_found
-      and variable_names_found and num_variables_found))
+  if (not (root_grid_size_found and dataset_names_found and variable_names_found
+      and num_variables_found))
     throw BlacklightException("Could not find needed file-level attributes.");
   if (num_variables.n1 != num_dataset_names)
     throw BlacklightException("DatasetNames and NumVariables file-level attribute mismatch.");

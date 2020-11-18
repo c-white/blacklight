@@ -36,6 +36,7 @@ struct InputReader
   std::optional<double> simulation_rho_cgs;
   std::optional<Coordinates> simulation_coord;
   std::optional<bool> simulation_interp;
+  std::optional<bool> simulation_block_interp;
 
   // Data - plasma parameters
   std::optional<double> plasma_mu;

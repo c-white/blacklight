@@ -32,6 +32,7 @@ struct RayTracer
   double simulation_rho_cgs;
   Coordinates simulation_coord;
   bool simulation_interp;
+  bool simulation_block_interp;
 
   // Input data - plasma parameters
   double plasma_mu;
@@ -89,7 +90,10 @@ struct RayTracer
   double ray_max_factor;
 
   // Grid data
-  double x1_min, x1_max, x2_min, x2_max, x3_min, x3_max;
+  int n_3_root;
+  int max_level;
+  Array<int> n_3_level;
+  Array<int> levels, locations;
   Array<float> x1f, x2f, x3f;
   Array<float> x1v, x2v, x3v;
   Array<float> grid_rho, grid_pgas;
@@ -138,6 +142,7 @@ struct RayTracer
   void ContravariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcon);
   void GeodesicSubstep(double y[9], double k[9], Array<double> &gcov, Array<double> &gcon,
       Array<double> &dgcon);
+  void FindNearbyVals(int b, int k, int j, int i, double vals[8]);
 };
 
 #endif

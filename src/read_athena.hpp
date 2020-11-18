@@ -54,7 +54,7 @@ struct AthenaReader
   const int ind_bb3 = 2;
 
   // Data
-  float x1_min, x1_max, x2_min, x2_max, x3_min, x3_max;
+  int n_3_root;
   Array<int> levels;
   Array<int> locations;
   Array<float> x1f, x2f, x3f;

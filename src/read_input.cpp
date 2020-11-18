@@ -81,6 +81,8 @@ void InputReader::Read()
       simulation_coord = ReadCoordinates(val);
     else if (key == "simulation_interp")
       simulation_interp = ReadBool(val);
+    else if (key == "simulation_block_interp")
+      simulation_block_interp = ReadBool(val);
 
     // Store plasma parameters
     else if (key == "plasma_mu")
