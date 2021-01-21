@@ -15,8 +15,11 @@
 // Input reader
 struct InputReader
 {
-  // Constructor
+  // Constructors and destructor
   InputReader(const std::string input_file_);
+  InputReader(const InputReader &source) = delete;
+  InputReader &operator=(const InputReader &source) = delete;
+  ~InputReader() {}
 
   // Input file
   const std::string input_file;

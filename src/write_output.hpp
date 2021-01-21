@@ -17,8 +17,11 @@
 // Input reader
 struct OutputWriter
 {
-  // Constructor
+  // Constructors and destructor
   OutputWriter(const InputReader *p_input_reader, const RayTracer *p_ray_tracer);
+  OutputWriter(const OutputWriter &source) = delete;
+  OutputWriter &operator=(const OutputWriter &source) = delete;
+  ~OutputWriter() {}
 
   // Input data - output parameters
   OutputFormat output_format;

@@ -18,7 +18,7 @@ struct RayTracer
   RayTracer(const InputReader *p_input_reader, const AthenaReader *p_athena_reader);
   RayTracer(const RayTracer &source) = delete;
   RayTracer &operator=(const RayTracer &source) = delete;
-  ~RayTracer();
+  ~RayTracer() {}
 
   // Input data - general
   ModelType model_type;

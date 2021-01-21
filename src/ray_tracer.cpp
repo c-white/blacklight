@@ -200,11 +200,6 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
 
 //--------------------------------------------------------------------------------------------------
 
-// Ray tracer destructor
-RayTracer::~RayTracer() {}
-
-//--------------------------------------------------------------------------------------------------
-
 // Top-level function for processing raw data into image
 // Inputs: (none)
 // Output: (none)
