@@ -64,7 +64,7 @@ struct AthenaReader
   // Functions
   void Read();
   void ReadHDF5Superblock();
-  void ReadRootGroupSymbolTableEntry();
+  void ReadHDF5RootGroupSymbolTableEntry();
   void ReadHDF5RootHeap();
   void ReadHDF5RootObjectHeader();
   void VerifyVariables();

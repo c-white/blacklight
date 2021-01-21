@@ -143,7 +143,7 @@ void AthenaReader::ReadHDF5Superblock()
   data_stream.ignore(4 * 8);
 
   // Read root group symbol table entry
-  ReadRootGroupSymbolTableEntry();
+  ReadHDF5RootGroupSymbolTableEntry();
   return;
 }
 
@@ -157,7 +157,7 @@ void AthenaReader::ReadHDF5Superblock()
 //   Assumes stream pointer is already set.
 //   Must have size of offsets 8.
 //   Must be run on little-endian machine.
-void AthenaReader::ReadRootGroupSymbolTableEntry()
+void AthenaReader::ReadHDF5RootGroupSymbolTableEntry()
 {
   // Skip reading link name offset
   data_stream.ignore(8);
