@@ -57,7 +57,7 @@ void OutputWriter::Write()
       break;
     }
 
-    // Numpy file with single array and minimal metadata
+    // NumPy file with single array and minimal metadata
     case npy:
     {
       // Prepare buffer for header

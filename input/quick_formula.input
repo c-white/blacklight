@@ -1,0 +1,53 @@
+# General
+model_type  = formula  # type of model (simulation, formula)
+num_threads = 4        # number of threads to use in parallel
+
+# Output parameters
+output_format = npy                       # format of output file (raw, npy)
+output_file   = output/quick_formula.npy  # file to be (over)written with image data
+
+# Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
+formula_mass  = 6.0e11   # black hole mass in cm
+formula_spin  = 0.9      # dimensionless black hole spin
+formula_r0    = 10.0     # number density parameter in gravitational units
+formula_h     = 0.0      # scale height parameter in gravitational units
+formula_l0    = 0.0      # angular momentum parameter l_0 in gravitational units
+formula_q     = 0.5      # angular momentum index
+formula_nup   = 2.3e11   # pivotal frequency nu_p in Hz
+formula_cn0   = 3.0e-18  # emissivity amplitude parameter C * n_0 in erg/cm^3.s.sr.Hz
+formula_alpha = -3.0     # emissivity index
+formula_a     = 0.0      # source amplitude parameter A in cm^2.s.sr.Hz/erg
+formula_beta  = 2.5      # source index
+
+# Fallback parameters
+fallback_nan  = true  # flag indicating any fallback should result in NaN for that ray
+
+# Image parameters
+im_camera = plane                 # type of camera (plane, pinhole)
+im_r      = 1000.0                # KS radial coordinate r of camera center in gravitational units
+im_th     = 60.0                  # KS polar coordinate theta of camera center in degrees (0/180 for north/south)
+im_ph     = 0.0                   # KS azimuthal coordinate phi of camera in degrees
+im_urn    = 0.001998006586832549  # contravariant KS normal r-velocity of camera
+im_uthn   = 0.0                   # contravariant KS normal theta-velocity of camera (using radians)
+im_uphn   = 0.0                   # contravariant KS normal ph-velocity of camera (using radians)
+im_k_r    = 1.0                   # covariant KS r-momentum of received photons
+im_k_th   = 0.0                   # covariant KS theta-momentum of received photons (using radians)
+im_k_ph   = 0.0                   # covariant KS phi-momentum of received photons (using radians)
+im_rot    = 0.0                   # rotation of camera in degrees (0/90 for north up/left)
+im_width  = 30.0                  # full width of image in gravitational units
+im_res    = 128                   # number of pixels per side
+im_freq   = 2.3e11                # frequency of observation in Hz
+im_norm   = camera                # location of im_freq (camera [accounting for velocity], infinity [at rest])
+
+# Ray-tracing parameters
+ray_flat        = false     # flag indicating ray tracing should assume flat spacetime
+ray_terminate   = additive  # termination condition (photon, multiplicative, additive)
+ray_factor      = 5.0e-4    # constant for terminate (only used for ray_terminate != photon)
+ray_step        = 0.01      # ratio of maximum proper length of step to radial coordinate
+ray_max_steps   = 6000      # maximum number of steps allowed for each geodesic
+ray_max_retries = 10        # maximum number of times a step can fail
+ray_tol_abs     = 1.0e-8    # absolute tolerance for taking full steps
+ray_tol_rel     = 1.0e-8    # relative tolerance for taking full steps
+ray_err_factor  = 0.75      # coefficient used to scale step size based on error
+ray_min_factor  = 0.2       # minimum ratio of new to old step size
+ray_max_factor  = 10.0      # maximum ratio of new to old step size

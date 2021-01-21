@@ -271,7 +271,7 @@ ModelType InputReader::ReadModelType(const std::string &string)
 // Notes:
 //   Valid options:
 //     "raw": raw binary values of image array with no extra data
-//     "npy": Numpy file with image array and minimal metadata
+//     "npy": NumPy file with image array and minimal metadata
 OutputFormat InputReader::ReadOutputFormat(const std::string &string)
 {
   if (string == "raw")

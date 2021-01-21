@@ -29,7 +29,7 @@ def main(**kwargs):
   cmap = plt.get_cmap(cmap_name)
   cmap.set_bad(nan_color)
 
-  # Read image data from Numpy file
+  # Read image data from NumPy file
   if kwargs['image_data_file'][-4:] == '.npy':
     image = np.load(kwargs['image_data_file'])
 

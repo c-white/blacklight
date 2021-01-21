@@ -21,8 +21,13 @@ def main(**kwargs):
   jy = 1.0e-23
   data_format = np.float64
 
-  # Read image data
-  tb = np.fromfile(kwargs['image_data_file'], dtype=data_format)
+  # Read image data from NumPy file
+  if kwargs['image_data_file'][-4:] == '.npy':
+    tb = np.load(kwargs['image_data_file'])
+
+  # Read image data from raw file
+  else:
+    image = np.fromfile(kwargs['image_data_file'], dtype=data_format)
 
   # Calculate flux
   d = kwargs['distance'] * pc

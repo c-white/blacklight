@@ -1,19 +1,19 @@
 # General
-model_type  = formula  # type of model (simulation, formula)
-num_threads = 4        # number of threads to use in parallel
+model_type  = simulation  # type of model (simulation, formula)
+num_threads = 4           # number of threads to use in parallel
 
 # Output parameters
-output_format = npy                 # format of output file (raw, npy)
-output_file   = output/example.npy  # file to be (over)written with image data
+output_format = npy                          # format of output file (raw, npy)
+output_file   = output/quick_simulation.npy  # file to be (over)written with image data
 
 # Simulation parameters (only used if model_type == simulation)
-simulation_file         = data/example.athdf  # file containing Athena++ data dump if needed
-simulation_m_msun       = 4.152e6             # black hole mass in solar masses
-simulation_a            = 0.9                 # dimensionless black hole spin
-simulation_rho_cgs      = 1.6e-16             # unit code density in g/cm^3
-simulation_coord        = sph_ks              # simulation coordinates (sph_ks, cart_ks)
-simulation_interp       = false               # flag indicating interpolation should be used
-simulation_block_interp = false               # flag indicating interpolation should cross blocks
+simulation_file         = data/simulation.athdf  # file containing Athena++ data dump if needed
+simulation_m_msun       = 4.152e6                # black hole mass in solar masses
+simulation_a            = 0.9                    # dimensionless black hole spin
+simulation_rho_cgs      = 1.6e-16                # unit code density in g/cm^3
+simulation_coord        = sph_ks                 # simulation coordinates (sph_ks, cart_ks)
+simulation_interp       = false                  # flag indicating interpolation should be used
+simulation_block_interp = false                  # flag indicating interpolation should cross blocks
 
 # Plasma parameters (only used if model_type == simulation)
 plasma_mu        = 0.5   # molecular weight of fluid in proton masses
@@ -22,23 +22,8 @@ plasma_rat_high  = 10.0  # ion-electron temperature ratio at infinite plasma bet
 plasma_rat_low   = 1.0   # ion-electron temperature ratio at zero plasma beta
 plasma_sigma_max = 1.0   # if nonnegative, cutoff in sigma above which plasma is considered vacuum
 
-# Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
-formula_mass  = 6.0e11   # black hole mass in cm
-formula_spin  = 0.9      # dimensionless black hole spin
-formula_r0    = 10.0     # number density parameter in gravitational units
-formula_h     = 0.0      # scale height parameter in gravitational units
-formula_l0    = 0.0      # angular momentum parameter l_0 in gravitational units
-formula_q     = 0.5      # angular momentum index
-formula_nup   = 2.3e11   # pivotal frequency nu_p in Hz
-formula_cn0   = 3.0e-18  # emissivity amplitude parameter C * n_0 in erg/cm^3.s.sr.Hz
-formula_alpha = -3.0     # emissivity index
-formula_a     = 0.0      # source amplitude parameter A in cm^2.s.sr.Hz/erg
-formula_beta  = 2.5      # source index
-
 # Fallback parameters
-fallback_nan  = true    # flag indicating any fallback should result in NaN for that ray
-fallback_rho  = 1.0e-6  # out-of-bounds density (model_type == simulation and not fallback_nan)
-fallback_pgas = 1.0e-8  # out-of-bounds pressure (model_type == simulation and not fallback_nan)
+fallback_nan  = true  # flag indicating any fallback should result in NaN for that ray
 
 # Image parameters
 im_camera = plane     # type of camera (plane, pinhole)
