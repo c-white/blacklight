@@ -755,6 +755,7 @@ void AthenaReader::SetHDF5StringArray(const unsigned char *datatype_raw,
     std::memcpy(buffer, data_raw + size * static_cast<unsigned int>(n), size);
     (*p_string_array)[n].assign(buffer, size);
   }
+  delete[] buffer;
 
   // Free dimensions
   delete[] dims;

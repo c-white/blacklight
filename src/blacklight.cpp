@@ -139,6 +139,12 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+  // Free memory
+  delete p_output_writer;
+  delete p_ray_tracer;
+  delete p_athena_reader;
+  delete p_input_reader;
+
   // End program
   return 0;
 }
