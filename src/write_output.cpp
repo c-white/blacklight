@@ -13,7 +13,7 @@
 #include "write_output.hpp"
 #include "array.hpp"         // Array
 #include "blacklight.hpp"    // enumerations
-#include "exceptions.hpp"    // BlacklightException, BlacklightWarning
+#include "exceptions.hpp"    // BlacklightException
 #include "ray_tracer.hpp"    // RayTracer
 #include "read_input.hpp"    // InputReader
 
@@ -121,10 +121,6 @@ void OutputWriter::WriteNpy()
 //       be plenty for almost all ray tracing applications.
 void OutputWriter::WriteNpz()
 {
-  // Issue warning
-  BlacklightWarning(".npz file currently unreadable by NumPy (pending correct implementation of \
-    CRC-32)");
-
   // Write image data as .npy file to buffer
   uint8_t *image_buffer;
   std::size_t image_length = GenerateNpyFrom2DDouble(image, &image_buffer);
@@ -239,7 +235,7 @@ std::size_t OutputWriter::GenerateNpyFrom2DDouble(const Array<double> &array, ui
 //   returned value: length of allocated buffer
 // Notes:
 //   Must be run on little-endian machine.
-//   Name in file will be given record_name + ".npz".
+//   Name in file will be given record_name + ".npy".
 std::size_t OutputWriter::GenerateZIPLocalFileHeader(const uint8_t *record,
     std::size_t record_length, const char *record_name, uint8_t **p_buffer)
 {
@@ -313,7 +309,7 @@ std::size_t OutputWriter::GenerateZIPLocalFileHeader(const uint8_t *record,
   length += 2;
 
   // Write name to buffer
-  const char *record_name_extension = ".npz";
+  const char *record_name_extension = ".npy";
   std::memcpy(*p_buffer + length, record_name, name_length - 4);
   length += name_length - 4;
   std::memcpy(*p_buffer + length, record_name_extension, 4);
@@ -332,6 +328,8 @@ std::size_t OutputWriter::GenerateZIPLocalFileHeader(const uint8_t *record,
 //   returned value: length of allocated buffer
 // Notes:
 //   Must be run on little-endian machine.
+//   File attributes are not fully specified by ZIP standard. The values written match what NumPy
+//       writes on at least one system.
 std::size_t OutputWriter::GenerateZIPCentralDirectoryHeader(const uint8_t *local_header,
     uint32_t local_header_offset, uint8_t **p_buffer)
 {
@@ -497,8 +495,79 @@ std::size_t OutputWriter::GenerateZIPEndOfCentralDirectoryRecord(
 //     Calculate a new remainder S = M' % P as above.
 //     Calculate S' as S bit-reversed with no notion of bytes.
 //     S' will have the bit pattern 0xDEBB20E3 = 0b11011110101110110010000011100011.
-//   TODO: implement
+//   Must be run on little-endian machine.
+//   Does not handle messages less than 4 bytes long.
 uint32_t OutputWriter::CalculateCRC32(const uint8_t *message, std::size_t message_length)
 {
-  return 0;
+  // Check message length
+  if (message_length < 4)
+    throw BlacklightException("CRC-32 could not be calculated.");
+
+  // Calculate lookup table for reversing bits within a byte
+  uint8_t bit_reverse_table[256];
+  for (int input = 0; input < 256; input++)
+  {
+    uint8_t byte = static_cast<uint8_t>(input);
+    byte = static_cast<uint8_t>((byte & 0b11110000) >> 4 | (byte & 0b00001111) << 4);
+    byte = static_cast<uint8_t>((byte & 0b11001100) >> 2 | (byte & 0b00110011) << 2);
+    byte = static_cast<uint8_t>((byte & 0b10101010) >> 1 | (byte & 0b01010101) << 1);
+    bit_reverse_table[input] = byte;
+  }
+
+  // Calculate lookup table for dividing by polynomial
+  const uint64_t polynomial = 0x04C11DB700000000ULL;
+  uint32_t division_table[256] = {};
+  for (int input = 0; input < 256; input++)
+  {
+    uint64_t scratch = static_cast<uint64_t>(input) << 56;
+    if (scratch & 0x8000000000000000ULL)
+      scratch ^= polynomial >> 1;
+    if (scratch & 0x4000000000000000ULL)
+      scratch ^= polynomial >> 2;
+    if (scratch & 0x2000000000000000ULL)
+      scratch ^= polynomial >> 3;
+    if (scratch & 0x1000000000000000ULL)
+      scratch ^= polynomial >> 4;
+    if (scratch & 0x0800000000000000ULL)
+      scratch ^= polynomial >> 5;
+    if (scratch & 0x0400000000000000ULL)
+      scratch ^= polynomial >> 6;
+    if (scratch & 0x0200000000000000ULL)
+      scratch ^= polynomial >> 7;
+    if (scratch & 0x0100000000000000ULL)
+      scratch ^= polynomial >> 8;
+    uint32_t output = static_cast<uint32_t>(scratch >> 24 & 0x00000000FFFFFFFFULL);
+    output = (output & 0xFFFF0000) >> 16 | (output & 0x0000FFFF) << 16;
+    output = (output & 0xFF00FF00) >> 8 | (output & 0x00FF00FF) << 8;
+    division_table[input] = output;
+  }
+
+  // Perform division on preconditioned, bit-reversed message appended with 0's
+  uint8_t leading_byte;
+  uint32_t remainder = 0xFFFFFFFF;
+  uint8_t *remainder_bytes = reinterpret_cast<uint8_t *>(&remainder);
+  for (int b = 0; b < 4; b++)
+    remainder_bytes[b] ^= bit_reverse_table[message[b]];
+  for (std::size_t n = 4; n < message_length; n++)
+  {
+    leading_byte = remainder_bytes[0];
+    for (int b = 0; b < 3; b++)
+      remainder_bytes[b] = remainder_bytes[b+1];
+    remainder_bytes[3] = bit_reverse_table[message[n]];
+    remainder ^= division_table[leading_byte];
+  }
+  for (int n = 0; n < 4; n++)
+  {
+    leading_byte = remainder_bytes[0];
+    for (int b = 0; b < 3; b++)
+      remainder_bytes[b] = remainder_bytes[b+1];
+    remainder_bytes[3] = 0;
+    remainder ^= division_table[leading_byte];
+  }
+
+  // Modify remainder to account for bit reversing and postconditioning
+  for (int n = 0; n < 4; n++)
+    remainder_bytes[n] = bit_reverse_table[remainder_bytes[n]];
+  remainder ^= 0xFFFFFFFF;
+  return remainder;
 }

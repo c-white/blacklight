@@ -3,8 +3,8 @@ model_type  = formula  # type of model (simulation, formula)
 num_threads = 4        # number of threads to use in parallel
 
 # Output parameters
-output_format = npy                 # format of output file (raw, npy, npz)
-output_file   = output/example.npy  # file to be (over)written with image data
+output_format = npz                 # format of output file (raw, npy, npz)
+output_file   = output/example.npz  # file to be (over)written with image data
 
 # Simulation parameters (only used if model_type == simulation)
 simulation_file         = data/example.athdf  # file containing Athena++ data dump if needed
