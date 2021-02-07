@@ -97,8 +97,10 @@ struct InputReader
   std::optional<double> ray_min_factor;
   std::optional<double> ray_max_factor;
 
-  // Functions
+  // External function
   void Read();
+
+  // Internal functions
   static bool RemoveableSpace(unsigned char c);
   double ReadPole(const std::string &string, std::optional<bool> *p_pole_flag);
   bool ReadBool(const std::string &string);

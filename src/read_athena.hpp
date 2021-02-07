@@ -61,8 +61,10 @@ struct AthenaReader
   Array<float> x1v, x2v, x3v;
   Array<float> prim, bb;
 
-  // Functions
+  // External function
   void Read();
+
+  // Internal functions
   void ReadHDF5Superblock();
   void ReadHDF5RootGroupSymbolTableEntry();
   void ReadHDF5RootHeap();

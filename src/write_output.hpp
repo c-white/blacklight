@@ -36,8 +36,10 @@ struct OutputWriter
   // Image data
   Array<double> image;
 
-  // Functions
+  // External function
   void Write();
+
+  // Internal functions
   void WriteRaw();
   void WriteNpy();
   void WriteNpz();

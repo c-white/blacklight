@@ -125,8 +125,10 @@ struct RayTracer
   Array<float> sample_bb1, sample_bb2, sample_bb3;
   Array<double> image;
 
-  // Functions
+  // External function
   void MakeImage();
+
+  // Internal functions
   void InitializeCamera();
   void InitializeGeodesics();
   void IntegrateGeodesics();
