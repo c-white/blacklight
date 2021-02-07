@@ -24,7 +24,7 @@ namespace physics
 
 // Enumerations
 enum ModelType {simulation, formula};
-enum OutputFormat {raw, npy};
+enum OutputFormat {raw, npy, npz};
 enum Coordinates {sph_ks, cart_ks};
 enum Camera {plane, pinhole};
 enum FrequencyNormalization {camera, infinity};

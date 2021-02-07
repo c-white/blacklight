@@ -32,6 +32,8 @@ def main(**kwargs):
   # Read image data from NumPy file
   if kwargs['image_data_file'][-4:] == '.npy':
     image = np.load(kwargs['image_data_file'])
+  elif kwargs['image_data_file'][-4:] == '.npz':
+    image = np.load(kwargs['image_data_file'])['image']
 
   # Read image data from raw file
   else:

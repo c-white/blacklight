@@ -62,6 +62,8 @@ AthenaReader::~AthenaReader()
 // Notes:
 //   Does nothing if model does not need to be read from file.
 //   Initializes all member objects.
+//   Implements a subset of the HDF5 standard:
+//       portal.hdfgroup.org/display/HDF5/File+Format+Specification
 void AthenaReader::Read()
 {
   // Only proceed if needed

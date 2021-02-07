@@ -4,7 +4,10 @@
 #define WRITE_OUTPUT_H_
 
 // C++ headers
-#include <string>  // string
+#include <cstdint>  // uint8_t, uint16_t, uint32_t
+#include <cstdio>   // size_t
+#include <fstream>  // ofstream
+#include <string>   // string
 
 // Blacklight headers
 #include "array.hpp"       // Array
@@ -27,11 +30,26 @@ struct OutputWriter
   OutputFormat output_format;
   std::string output_file;
 
+  // File data
+  std::ofstream *p_output_stream;
+
   // Image data
   Array<double> image;
 
   // Functions
   void Write();
+  void WriteRaw();
+  void WriteNpy();
+  void WriteNpz();
+  std::size_t GenerateNpyFrom2DDouble(const Array<double> &array, uint8_t **p_buffer);
+  std::size_t GenerateZIPLocalFileHeader(const uint8_t *record, std::size_t record_length,
+      const char *record_name, uint8_t **p_buffer);
+  std::size_t GenerateZIPCentralDirectoryHeader(const uint8_t *local_header,
+      uint32_t local_header_offset, uint8_t **p_buffer);
+  std::size_t GenerateZIPEndOfCentralDirectoryRecord(std::size_t central_directory_offset,
+      std::size_t central_directory_length, uint16_t num_central_directory_entries,
+      uint8_t **p_buffer);
+  uint32_t CalculateCRC32(const uint8_t *message, std::size_t message_length);
 };
 
 #endif
