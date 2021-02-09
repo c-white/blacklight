@@ -31,6 +31,7 @@ struct InputReader
   // Data - output parameters
   std::optional<OutputFormat> output_format;
   std::optional<std::string> output_file;
+  std::optional<bool> output_camera;
 
   // Data - simulation parameters
   std::optional<std::string> simulation_file;

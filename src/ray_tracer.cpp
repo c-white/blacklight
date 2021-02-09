@@ -176,6 +176,21 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
       n_3_level(level) = n_3_level(level-1) * 2;
   }
 
+  // Calculate black hole mass
+  switch (model_type)
+  {
+    case simulation:
+    {
+      mass_msun = simulation_m_msun;
+      break;
+    }
+    case formula:
+    {
+      mass_msun = formula_mass * physics::c * physics::c / physics::gg_msun;
+      break;
+    }
+  }
+
   // Calculate termination radii
   double r_horizon = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
   switch (ray_terminate)
@@ -1773,11 +1788,11 @@ void RayTracer::IntegrateSimulationRadiation()
         }
       }
 
-    // Transform I_nu/nu^3 to brightness temperature
+    // Transform I_nu/nu^3 to I_nu
     #pragma omp for schedule(static)
     for (int m = 0; m < im_res; m++)
       for (int l = 0; l < im_res; l++)
-        image(m,l) *= im_freq * physics::c * physics::c / (2.0 * physics::k_b);
+        image(m,l) *= im_freq * im_freq * im_freq;
   }
   return;
 }
@@ -1907,11 +1922,11 @@ void RayTracer::IntegrateFormulaRadiation()
         }
       }
 
-    // Transform I_nu/nu^3 to brightness temperature
+    // Transform I_nu/nu^3 to I_nu
     #pragma omp for schedule(static)
     for (int m = 0; m < im_res; m++)
       for (int l = 0; l < im_res; l++)
-        image(m,l) *= im_freq * physics::c * physics::c / (2.0 * physics::k_b);
+        image(m,l) *= im_freq * im_freq * im_freq;
   }
   return;
 }

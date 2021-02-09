@@ -22,7 +22,7 @@
 // Output writer constructor
 // Inputs:
 //   p_input_reader: pointer to object containing input parameters
-//   p_ray_tracer: pointer to object containing processed image
+//   p_ray_tracer: pointer to object containing camera and processed image
 // Notes:
 //   File is not opened for writing until Write() function is called, in order to not bother keeping
 //       an open file idle for the bulk of the computation.
@@ -31,9 +31,23 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader, const RayTracer *p
   // Copy output parameters
   output_format = p_input_reader->output_format.value();
   output_file = p_input_reader->output_file.value();
+  if (output_format == npz)
+    output_camera = p_input_reader->output_camera.value();
 
-  // Make local shallow copy of image data
+  // Copy image parameters
+  if (output_format == npz and output_camera)
+  {
+    im_camera = p_input_reader->im_camera.value();
+    im_width = p_input_reader->im_width.value();
+    mass_msun = p_ray_tracer->mass_msun;
+  }
+
+  // Make local shallow copies of data
   image = p_ray_tracer->image;
+  if (output_format == npz and output_camera and im_camera == plane)
+    im_pos = p_ray_tracer->im_pos;
+  if (output_format == npz and output_camera and im_camera == pinhole)
+    im_dir = p_ray_tracer->im_dir;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -99,7 +113,7 @@ void OutputWriter::WriteRaw()
 void OutputWriter::WriteNpy()
 {
   uint8_t *image_buffer;
-  std::size_t image_length = GenerateNpyFrom2DDouble(image, &image_buffer);
+  std::size_t image_length = GenerateNpyFromDoubleArray(image, &image_buffer);
   char *buffer = reinterpret_cast<char *>(image_buffer);
   std::streamsize buffer_length = static_cast<std::streamsize>(image_length);
   p_output_stream->write(buffer, buffer_length);
@@ -121,55 +135,106 @@ void OutputWriter::WriteNpy()
 //       be plenty for almost all ray tracing applications.
 void OutputWriter::WriteNpz()
 {
-  // Write image data as .npy file to buffer
-  uint8_t *image_buffer;
-  std::size_t image_length = GenerateNpyFrom2DDouble(image, &image_buffer);
+  // Construct singleton arrays
+  Array<double> im_width_array(1);
+  im_width_array(0) = im_width;
+  Array<double> mass_msun_array(1);
+  mass_msun_array(0) = mass_msun;
 
-  // Write local file header for image data to buffer
-  uint8_t *image_local_header_buffer = nullptr;
-  std::size_t image_local_header_length = GenerateZIPLocalFileHeader(image_buffer, image_length,
-      "image", &image_local_header_buffer);
+  // Prepare buffers for data and headers
+  int num_arrays = 1;
+  if (output_camera)
+    num_arrays += 3;
+  uint8_t **data_buffers = new uint8_t *[num_arrays];
+  uint8_t **local_header_buffers = new uint8_t *[num_arrays];
+  uint8_t **central_header_buffers = new uint8_t *[num_arrays];
+  std::size_t *data_lengths = new std::size_t[num_arrays];
+  std::size_t *local_header_lengths = new std::size_t[num_arrays];
+  std::size_t *central_header_lengths = new std::size_t[num_arrays];
 
-  // Write central directory header for image data to buffer
-  uint8_t *image_central_header_buffer = nullptr;
-  std::size_t image_central_header_length =
-      GenerateZIPCentralDirectoryHeader(image_local_header_buffer, 0,
-      &image_central_header_buffer);
+  // Write data as .npy files to buffers
+  data_lengths[0] = GenerateNpyFromDoubleArray(image, &data_buffers[0]);
+  if (output_camera)
+  {
+    if (im_camera == plane)
+      data_lengths[1] = GenerateNpyFromDoubleArray(im_pos, &data_buffers[1]);
+    else if (im_camera == pinhole)
+      data_lengths[1] = GenerateNpyFromDoubleArray(im_dir, &data_buffers[1]);
+    data_lengths[2] = GenerateNpyFromDoubleArray(im_width_array, &data_buffers[2]);
+    data_lengths[3] = GenerateNpyFromDoubleArray(mass_msun_array, &data_buffers[3]);
+  }
+
+  // Write local file headers to buffers
+  local_header_lengths[0] = GenerateZIPLocalFileHeader(data_buffers[0], data_lengths[0], "image",
+      &local_header_buffers[0]);
+  if (output_camera)
+  {
+    if (im_camera == plane)
+      local_header_lengths[1] = GenerateZIPLocalFileHeader(data_buffers[1], data_lengths[1],
+          "im_pos", &local_header_buffers[1]);
+    else if (im_camera == pinhole)
+      local_header_lengths[1] = GenerateZIPLocalFileHeader(data_buffers[1], data_lengths[1],
+          "im_dir", &local_header_buffers[1]);
+    local_header_lengths[2] = GenerateZIPLocalFileHeader(data_buffers[2], data_lengths[2],
+        "im_width", &local_header_buffers[2]);
+    local_header_lengths[3] = GenerateZIPLocalFileHeader(data_buffers[3], data_lengths[3],
+        "mass_msun", &local_header_buffers[3]);
+  }
+
+  // Write central directory headers to buffers
+  std::size_t offset = 0;
+  for (int n = 0; n < num_arrays; n++)
+  {
+    central_header_lengths[n] = GenerateZIPCentralDirectoryHeader(local_header_buffers[n], offset,
+        &central_header_buffers[n]);
+    offset += local_header_lengths[n] + data_lengths[n];
+  }
 
   // Write end of central directory record to buffer
-  const uint16_t num_central_directory_entries = 1;
-  std::size_t central_directory_offset = image_local_header_length + image_length;
-  std::size_t central_directory_length = image_central_header_length;
+  std::size_t central_directory_length = 0;
+  for (int n = 0; n < num_arrays; n++)
+    central_directory_length += central_header_lengths[n];
   uint8_t *end_of_directory_buffer = nullptr;
-  std::size_t end_of_directory_length =
-      GenerateZIPEndOfCentralDirectoryRecord(central_directory_offset, central_directory_length,
-      num_central_directory_entries, &end_of_directory_buffer);
+  std::size_t end_of_directory_length = GenerateZIPEndOfCentralDirectoryRecord(offset,
+      central_directory_length, num_arrays, &end_of_directory_buffer);
 
   // Write buffers to file
-  char *buffer = reinterpret_cast<char *>(image_local_header_buffer);
-  std::streamsize buffer_length = static_cast<std::streamsize>(image_local_header_length);
-  p_output_stream->write(buffer, buffer_length);
-  buffer = reinterpret_cast<char *>(image_buffer);
-  buffer_length = static_cast<std::streamsize>(image_length);
-  p_output_stream->write(buffer, buffer_length);
-  buffer = reinterpret_cast<char *>(image_central_header_buffer);
-  buffer_length = static_cast<std::streamsize>(image_central_header_length);
-  p_output_stream->write(buffer, buffer_length);
-  buffer = reinterpret_cast<char *>(end_of_directory_buffer);
-  buffer_length = static_cast<std::streamsize>(end_of_directory_length);
-  p_output_stream->write(buffer, buffer_length);
+  for (int n = 0; n < num_arrays; n++)
+  {
+    char *buffer = reinterpret_cast<char *>(local_header_buffers[n]);
+    std::streamsize length = static_cast<std::streamsize>(local_header_lengths[n]);
+    p_output_stream->write(buffer, length);
+    buffer = reinterpret_cast<char *>(data_buffers[n]);
+    length = static_cast<std::streamsize>(data_lengths[n]);
+    p_output_stream->write(buffer, length);
+  }
+  for (int n = 0; n < num_arrays; n++)
+  {
+    char *buffer = reinterpret_cast<char *>(central_header_buffers[n]);
+    std::streamsize length = static_cast<std::streamsize>(central_header_lengths[n]);
+    p_output_stream->write(buffer, length);
+  }
+  char *buffer = reinterpret_cast<char *>(end_of_directory_buffer);
+  std::streamsize length = static_cast<std::streamsize>(end_of_directory_length);
+  p_output_stream->write(buffer, length);
 
   // Free memory
-  delete[] image_buffer;
-  delete[] image_local_header_buffer;
-  delete[] image_central_header_buffer;
+  for (int n = 0; n < num_arrays; n++)
+  {
+    delete[] data_buffers[n];
+    delete[] local_header_buffers[n];
+    delete[] central_header_buffers[n];
+  }
+  delete[] data_buffers;
+  delete[] local_header_buffers;
+  delete[] central_header_buffers;
   delete[] end_of_directory_buffer;
   return;
 }
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for populating a buffer with the contents of a NumPy .npy file from a 2D double Array
+// Function for populating a buffer with the contents of a NumPy .npy file from a double Array
 // Inputs:
 //   array: Array to be written to buffer
 // Outputs:
@@ -181,7 +246,7 @@ void OutputWriter::WriteNpz()
 //       numpy.org/doc/stable/reference/generated/numpy.lib.format.html#module-numpy.lib.format
 //   A .npy file is simply a binary dump of a NumPy array prepended with an ASCII string that can be
 //       interpreted as a Python dictionary literal with certain entries.
-std::size_t OutputWriter::GenerateNpyFrom2DDouble(const Array<double> &array, uint8_t **p_buffer)
+std::size_t OutputWriter::GenerateNpyFromDoubleArray(const Array<double> &array, uint8_t **p_buffer)
 {
   // Prepare buffer
   const std::size_t header_length = 128;
@@ -205,8 +270,21 @@ std::size_t OutputWriter::GenerateNpyFrom2DDouble(const Array<double> &array, ui
 
   // Write header proper to buffer
   char *buffer_address = reinterpret_cast<char *>(*p_buffer + length);
-  int num_written = std::snprintf(buffer_address, header_length - length,
-      "{'descr': '<f8', 'fortran_order': False, 'shape': (%d, %d)}", array.n2, array.n1);
+  int num_written = -1;
+  if (array.n2 == 1 and array.n3 == 1 and array.n4 == 1 and array.n5 == 1)
+    num_written = std::snprintf(buffer_address, header_length - length,
+        "{'descr': '<f8', 'fortran_order': False, 'shape': (%d,)}", array.n1);
+  else if (array.n3 == 1 and array.n4 == 1 and array.n5 == 1)
+    num_written = std::snprintf(buffer_address, header_length - length,
+        "{'descr': '<f8', 'fortran_order': False, 'shape': (%d, %d)}", array.n2, array.n1);
+  else if (array.n4 == 1 and array.n5 == 1)
+    num_written = std::snprintf(buffer_address, header_length - length,
+        "{'descr': '<f8', 'fortran_order': False, 'shape': (%d, %d, %d)}", array.n3, array.n2,
+        array.n1);
+  else if (array.n5 == 1)
+    num_written = std::snprintf(buffer_address, header_length - length,
+        "{'descr': '<f8', 'fortran_order': False, 'shape': (%d, %d, %d, %d)}", array.n4, array.n3,
+        array.n2, array.n1);
   if (num_written < 0 or num_written > static_cast<int>(header_length - length - 1))
     throw BlacklightException("Error converting data to .npy format.");
   std::size_t num_spaces =
@@ -331,7 +409,7 @@ std::size_t OutputWriter::GenerateZIPLocalFileHeader(const uint8_t *record,
 //   File attributes are not fully specified by ZIP standard. The values written match what NumPy
 //       writes on at least one system.
 std::size_t OutputWriter::GenerateZIPCentralDirectoryHeader(const uint8_t *local_header,
-    uint32_t local_header_offset, uint8_t **p_buffer)
+    std::size_t local_header_offset, uint8_t **p_buffer)
 {
   // Extract length of file name
   uint16_t name_length = *reinterpret_cast<const uint16_t *>(local_header + 26);
@@ -379,7 +457,8 @@ std::size_t OutputWriter::GenerateZIPCentralDirectoryHeader(const uint8_t *local
   length += 4;
 
   // Write local header offset to buffer
-  std::memcpy(*p_buffer + length, reinterpret_cast<const uint8_t *>(&local_header_offset), 4);
+  uint32_t local_header_offset_32 = static_cast<uint32_t>(local_header_offset);
+  std::memcpy(*p_buffer + length, reinterpret_cast<const uint8_t *>(&local_header_offset_32), 4);
   length += 4;
 
   // Write name to buffer
@@ -402,7 +481,7 @@ std::size_t OutputWriter::GenerateZIPCentralDirectoryHeader(const uint8_t *local
 //   Must be run on little-endian machine.
 std::size_t OutputWriter::GenerateZIPEndOfCentralDirectoryRecord(
     std::size_t central_directory_offset, std::size_t central_directory_length,
-    uint16_t num_central_directory_entries, uint8_t **p_buffer)
+    int num_central_directory_entries, uint8_t **p_buffer)
 {
   // Prepare buffer
   const std::size_t buffer_length = 22;
@@ -422,9 +501,10 @@ std::size_t OutputWriter::GenerateZIPEndOfCentralDirectoryRecord(
   length += 2;
 
   // Write number of entries to buffer
-  std::memcpy(*p_buffer + length, &num_central_directory_entries, 2);
+  uint16_t num_central_directory_entries_16 = static_cast<uint16_t>(num_central_directory_entries);
+  std::memcpy(*p_buffer + length, &num_central_directory_entries_16, 2);
   length += 2;
-  std::memcpy(*p_buffer + length, &num_central_directory_entries, 2);
+  std::memcpy(*p_buffer + length, &num_central_directory_entries_16, 2);
   length += 2;
 
   // Write central directory size to buffer

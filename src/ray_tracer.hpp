@@ -112,8 +112,9 @@ struct RayTracer
   const double delta_tau_max = 100.0;
 
   // Sample and image data
-  double momentum_factor;
+  double mass_msun;
   double r_terminate;
+  double momentum_factor;
   int im_steps;
   Array<double> im_pos, im_dir;
   Array<double> geodesic_pos, geodesic_dir, geodesic_len;
