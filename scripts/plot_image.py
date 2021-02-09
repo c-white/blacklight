@@ -33,7 +33,7 @@ def main(**kwargs):
   cmap = plt.get_cmap(cmap_name)
   cmap.set_bad(nan_color)
 
-  # Prepare to read camera data
+  # Prepare to read data
   im_camera = None
   im_width = None
   mass_msun = None
@@ -76,7 +76,8 @@ def main(**kwargs):
   elif scale_exponent == 1:
     label = r'$I_\nu$ ($10\ \mathrm{erg\ s^{-1}\ cm^{-2}\ sr^{-1}\ Hz^{-1}}$)'
   else:
-    label = r'$I_\nu$ ($10^{' + repr(scale_exponent) + r'}\ \mathrm{erg\ s^{-1}\ cm^{-2}\ sr^{-1}\ Hz^{-1}}$)'
+    label = r'$I_\nu$ ($10^{' + repr(scale_exponent) \
+        + r'}\ \mathrm{erg\ s^{-1}\ cm^{-2}\ sr^{-1}\ Hz^{-1}}$)'
 
   # Calculate grid
   extent = None
@@ -96,7 +97,8 @@ def main(**kwargs):
     y_label = r'$y$-pixel'
 
   # Plot figure
-  plt.imshow(image, cmap=cmap, vmin=0.0, vmax=vmax, aspect='equal', origin='lower', extent=extent, interpolation=interpolation)
+  plt.imshow(image, cmap=cmap, vmin=0.0, vmax=vmax, aspect='equal', origin='lower', extent=extent,
+      interpolation=interpolation)
   plt.xlabel(x_label)
   plt.ylabel(y_label)
   plt.colorbar(label=label)
@@ -108,6 +110,6 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('image_data_file', help='file containing raw image data')
   parser.add_argument('image_plot_file', help='image file to create')
-  parser.add_argument('-d', '--distance', type=float, help='distance to source in pc')
+  parser.add_argument('-d', '--distance', type=float, help='distance to black hole in parsecs')
   args = parser.parse_args()
   main(**vars(args))
