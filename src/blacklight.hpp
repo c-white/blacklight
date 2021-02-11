@@ -23,11 +23,11 @@ namespace physics
 }
 
 // Enumerations
-enum ModelType {simulation, formula};
-enum OutputFormat {raw, npy, npz};
-enum Coordinates {sph_ks, cart_ks};
-enum Camera {plane, pinhole};
-enum FrequencyNormalization {camera, infinity};
-enum RayTerminate {photon, multiplicative, additive};
+enum struct ModelType {simulation, formula};
+enum struct OutputFormat {raw, npy, npz};
+enum struct Coordinates {sph_ks, cart_ks};
+enum struct Camera {plane, pinhole};
+enum struct FrequencyNormalization {camera, infinity};
+enum struct RayTerminate {photon, multiplicative, additive};
 
 #endif

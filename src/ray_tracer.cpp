@@ -34,13 +34,13 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   // Set parameters
   switch (model_type)
   {
-    case simulation:
+    case ModelType::simulation:
     {
       bh_m = 1.0;
       bh_a = p_input_reader->simulation_a.value();
       break;
     }
-    case formula:
+    case ModelType::formula:
     {
       bh_m = 1.0;
       bh_a = p_input_reader->formula_spin.value();
@@ -49,7 +49,7 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   }
 
   // Copy simulation parameters
-  if (model_type == simulation)
+  if (model_type == ModelType::simulation)
   {
     simulation_m_msun = p_input_reader->simulation_m_msun.value();
     simulation_rho_cgs = p_input_reader->simulation_rho_cgs.value();
@@ -60,7 +60,7 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   }
 
   // Copy plasma parameters
-  if (model_type == simulation)
+  if (model_type == ModelType::simulation)
   {
     plasma_mu = p_input_reader->plasma_mu.value();
     plasma_ne_ni = p_input_reader->plasma_ne_ni.value();
@@ -70,7 +70,7 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   }
 
   // Copy formula parameters
-  if (model_type == formula)
+  if (model_type == ModelType::formula)
   {
     formula_mass = p_input_reader->formula_mass.value();
     formula_r0 = p_input_reader->formula_r0.value();
@@ -86,7 +86,7 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
 
   // Copy fallback parameters
   fallback_nan = p_input_reader->fallback_nan.value();
-  if (model_type == simulation and not fallback_nan)
+  if (model_type == ModelType::simulation and not fallback_nan)
   {
     fallback_rho = p_input_reader->fallback_rho.value();
     fallback_pgas = p_input_reader->fallback_pgas.value();
@@ -113,7 +113,7 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   // Copy ray-tracing parameters
   ray_flat = p_input_reader->ray_flat.value();
   ray_terminate = p_input_reader->ray_terminate.value();
-  if (ray_terminate != photon)
+  if (ray_terminate != RayTerminate::photon)
     ray_factor = p_input_reader->ray_factor.value();
   ray_step = p_input_reader->ray_step.value();
   ray_max_steps = p_input_reader->ray_max_steps.value();
@@ -125,12 +125,12 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   ray_max_factor = p_input_reader->ray_max_factor.value();
 
   // Copy raw data scalars
-  if (model_type == simulation and simulation_coord == sph_ks and simulation_interp
-      and simulation_block_interp)
+  if (model_type == ModelType::simulation and simulation_coord == Coordinates::sph_ks
+      and simulation_interp and simulation_block_interp)
     n_3_root = p_athena_reader->n_3_root;
 
   // Make shallow copies of raw data arrays
-  if (model_type == simulation)
+  if (model_type == ModelType::simulation)
   {
     if (simulation_interp and simulation_block_interp)
     {
@@ -162,8 +162,8 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   }
 
   // Calculate maximum refinement level and number of blocks in x^3-direction at each level
-  if (model_type == simulation and simulation_coord == sph_ks and simulation_interp
-      and simulation_block_interp)
+  if (model_type == ModelType::simulation and simulation_coord == Coordinates::sph_ks
+      and simulation_interp and simulation_block_interp)
   {
     int n_b = x1f.n2;
     int n_k = x3v.n1;
@@ -179,12 +179,12 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   // Calculate black hole mass
   switch (model_type)
   {
-    case simulation:
+    case ModelType::simulation:
     {
       mass_msun = simulation_m_msun;
       break;
     }
-    case formula:
+    case ModelType::formula:
     {
       mass_msun = formula_mass * physics::c * physics::c / physics::gg_msun;
       break;
@@ -195,17 +195,17 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   double r_horizon = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
   switch (ray_terminate)
   {
-    case photon:
+    case RayTerminate::photon:
     {
       r_terminate = 2.0 * bh_m * (1.0 + std::cos(2.0 / 3.0 * std::acos(-std::abs(bh_a) / bh_m)));
       break;
     }
-    case multiplicative:
+    case RayTerminate::multiplicative:
     {
       r_terminate = r_horizon * ray_factor;
       break;
     }
-    case additive:
+    case RayTerminate::additive:
     {
       r_terminate = r_horizon + ray_factor;
       break;
@@ -228,13 +228,13 @@ void RayTracer::MakeImage()
   TransformGeodesics();
   switch (model_type)
   {
-    case simulation:
+    case ModelType::simulation:
     {
       SampleSimulationAlongGeodesics();
       IntegrateSimulationRadiation();
       break;
     }
-    case formula:
+    case ModelType::formula:
     {
       IntegrateFormulaRadiation();
       break;
@@ -401,12 +401,12 @@ void RayTracer::InitializeCamera()
   // Calculate momentum normalization
   switch (im_norm)
   {
-    case camera:
+    case FrequencyNormalization::camera:
     {
       momentum_factor = -im_freq / k_tc;
       break;
     }
-    case infinity:
+    case FrequencyNormalization::infinity:
     {
       momentum_factor = -im_freq / k_t;
       break;
@@ -527,7 +527,7 @@ void RayTracer::InitializeCamera()
   switch (im_camera)
   {
     // Plane with parallel rays
-    case plane:
+    case Camera::plane:
     {
       #pragma omp parallel for schedule(static)
       for (int m = 0; m < im_res; m++)
@@ -558,7 +558,7 @@ void RayTracer::InitializeCamera()
     }
 
     // Point with converging rays
-    case pinhole:
+    case Camera::pinhole:
     {
       #pragma omp parallel for schedule(static)
       for (int m = 0; m < im_res; m++)
@@ -1073,14 +1073,14 @@ void RayTracer::TransformGeodesics()
         switch (model_type)
         {
           // Simulation output
-          case simulation:
+          case ModelType::simulation:
           default:
           {
             // Account for simulation metric
             switch (simulation_coord)
             {
               // Spherical Kerr-Schild
-              case sph_ks:
+              case Coordinates::sph_ks:
               default:
               {
                 // Calculate spherical position
@@ -1124,7 +1124,7 @@ void RayTracer::TransformGeodesics()
               }
 
               // Cartesian Kerr-Schild
-              case cart_ks:
+              case Coordinates::cart_ks:
               {
                 x1 = x;
                 x2 = y;
@@ -1139,7 +1139,7 @@ void RayTracer::TransformGeodesics()
           }
 
           // Formula
-          case formula:
+          case ModelType::formula:
           {
             x1 = x;
             x2 = y;
@@ -2188,7 +2188,7 @@ void RayTracer::CovariantCoordinateMetric(double x1, double x2, double x3, Array
   switch (simulation_coord)
   {
     // Spherical Kerr-Schild
-    case sph_ks:
+    case Coordinates::sph_ks:
     {
       // Calculate useful quantities
       double r = x1;
@@ -2219,7 +2219,7 @@ void RayTracer::CovariantCoordinateMetric(double x1, double x2, double x3, Array
     }
 
     // Cartesian Kerr-Schild
-    case cart_ks:
+    case Coordinates::cart_ks:
     {
       // Calculate useful quantities
       double x = x1;
@@ -2275,7 +2275,7 @@ void RayTracer::ContravariantCoordinateMetric(double x1, double x2, double x3, A
   switch (simulation_coord)
   {
     // Spherical Kerr-Schild
-    case sph_ks:
+    case Coordinates::sph_ks:
     {
       // Calculate useful quantities
       double r = x1;
@@ -2306,7 +2306,7 @@ void RayTracer::ContravariantCoordinateMetric(double x1, double x2, double x3, A
     }
 
     // Cartesian Kerr-Schild
-    case cart_ks:
+    case Coordinates::cart_ks:
     {
       // Calculate useful quantities
       double x = x1;
@@ -2406,8 +2406,9 @@ void RayTracer::GeodesicSubstep(double y[9], double k[9], Array<double> &gcov, A
 //   If the requested cell is not on the grid, values are copied from the unique cell on the grid
 //       closest to the appropriate ghost cell, effectively resulting in constant (rather than
 //       linear) extrapolation near the edges of the grid.
-//   In the case of simulation_coord == sph_ks, neighboring blocks are understood to cross the
-//       periodic boundary in x^3 (phi), but the domain is not stitched together at the poles.
+//   In the case of simulation_coord == Coordinates::sph_ks, neighboring blocks are understood to
+//       cross the periodic boundary in x^3 (phi), but the domain is not stitched together at the
+//       poles.
 void RayTracer::FindNearbyVals(int b, int k, int j, int i, double vals[8])
 {
   // Extract location data
@@ -2522,7 +2523,7 @@ void RayTracer::FindNearbyVals(int b, int k, int j, int i, double vals[8])
     }
 
     // Check x^3-direction across periodic boundary
-    if (x3_off_grid and simulation_coord == sph_ks and k == -1 and location_k == 0) {
+    if (x3_off_grid and simulation_coord == Coordinates::sph_ks and k == -1 and location_k == 0) {
       bool same_level_exists = level_alt == level;
       same_level_exists = same_level_exists and location_i_alt == location_i;
       same_level_exists = same_level_exists and location_j_alt == location_j;
@@ -2540,7 +2541,7 @@ void RayTracer::FindNearbyVals(int b, int k, int j, int i, double vals[8])
       if (same_level_exists or coarser_level_exists or finer_level_exists)
         x3_off_grid = false;
     }
-    if (x3_off_grid and simulation_coord == sph_ks and k == n_k
+    if (x3_off_grid and simulation_coord == Coordinates::sph_ks and k == n_k
         and location_k == n_3_level(level) - 1) {
       bool same_level_exists = level_alt == level;
       same_level_exists = same_level_exists and location_i_alt == location_i;
@@ -2582,9 +2583,9 @@ void RayTracer::FindNearbyVals(int b, int k, int j, int i, double vals[8])
   int location_i_sought = i == i_safe ? location_i : i == -1 ? location_i - 1 : location_i + 1;
   int location_j_sought = j == j_safe ? location_j : j == -1 ? location_j - 1 : location_j + 1;
   int location_k_sought = k == k_safe ? location_k : k == -1 ? location_k - 1 : location_k + 1;
-  if (simulation_coord == sph_ks and k == -1 and location_k == 0)
+  if (simulation_coord == Coordinates::sph_ks and k == -1 and location_k == 0)
     location_k_sought = n_3_level(level_sought) - 1;
-  if (simulation_coord == sph_ks and k == n_k and location_k == n_3_level(level) - 1)
+  if (simulation_coord == Coordinates::sph_ks and k == n_k and location_k == n_3_level(level) - 1)
     location_k_sought = 0;
   int i_sought = i == i_safe ? i : i == -1 ? n_i - 1 : 0;
   int j_sought = j == j_safe ? j : j == -1 ? n_j - 1 : 0;
@@ -2614,9 +2615,9 @@ void RayTracer::FindNearbyVals(int b, int k, int j, int i, double vals[8])
         j == j_safe ? location_j / 2 : j == -1 ? (location_j - 1) / 2 : (location_j + 1) / 2;
     location_k_sought =
         k == k_safe ? location_k / 2 : k == -1 ? (location_k - 1) / 2 : (location_k + 1) / 2;
-    if (simulation_coord == sph_ks and k == -1 and location_k == 0)
+    if (simulation_coord == Coordinates::sph_ks and k == -1 and location_k == 0)
       location_k_sought = n_3_level(level_sought) - 1;
-    if (simulation_coord == sph_ks and k == n_k and location_k == n_3_level(level) - 1)
+    if (simulation_coord == Coordinates::sph_ks and k == n_k and location_k == n_3_level(level) - 1)
       location_k_sought = 0;
     i_sought = i == i_safe ? (location_i % 2 * n_i + i) / 2 : i == -1 ? n_i - 1 : 0;
     j_sought = j == j_safe ? (location_j % 2 * n_j + j) / 2 : j == -1 ? n_j - 1 : 0;
@@ -2642,9 +2643,10 @@ void RayTracer::FindNearbyVals(int b, int k, int j, int i, double vals[8])
   location_i_sought = location_i * 2 + (i == i_safe ? 0 : i == -1 ? -1 : 1) + (upper_i ? 1 : 0);
   location_j_sought = location_j * 2 + (j == j_safe ? 0 : j == -1 ? -1 : 1) + (upper_j ? 1 : 0);
   location_k_sought = location_k * 2 + (k == k_safe ? 0 : k == -1 ? -1 : 1) + (upper_k ? 1 : 0);
-  if (simulation_coord == sph_ks and k == -1 and location_k == 0 and level_sought <= max_level)
+  if (simulation_coord == Coordinates::sph_ks and k == -1 and location_k == 0
+      and level_sought <= max_level)
     location_k_sought = n_3_level(level_sought) - 1;
-  if (simulation_coord == sph_ks and k == n_k and location_k == n_3_level(level) - 1)
+  if (simulation_coord == Coordinates::sph_ks and k == n_k and location_k == n_3_level(level) - 1)
     location_k_sought = 0;
   i_sought = i == i_safe ? (upper_i ? (i - n_i / 2) * 2 : i * 2) : i == -1 ? n_i - 2 : 0;
   j_sought = j == j_safe ? (upper_j ? (j - n_j / 2) * 2 : j * 2) : j == -1 ? n_j - 2 : 0;

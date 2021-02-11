@@ -31,11 +31,11 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader, const RayTracer *p
   // Copy output parameters
   output_format = p_input_reader->output_format.value();
   output_file = p_input_reader->output_file.value();
-  if (output_format == npz)
+  if (output_format == OutputFormat::npz)
     output_camera = p_input_reader->output_camera.value();
 
   // Copy image parameters
-  if (output_format == npz and output_camera)
+  if (output_format == OutputFormat::npz and output_camera)
   {
     im_camera = p_input_reader->im_camera.value();
     im_width = p_input_reader->im_width.value();
@@ -44,9 +44,9 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader, const RayTracer *p
 
   // Make local shallow copies of data
   image = p_ray_tracer->image;
-  if (output_format == npz and output_camera and im_camera == plane)
+  if (output_format == OutputFormat::npz and output_camera and im_camera == Camera::plane)
     im_pos = p_ray_tracer->im_pos;
-  if (output_format == npz and output_camera and im_camera == pinhole)
+  if (output_format == OutputFormat::npz and output_camera and im_camera == Camera::pinhole)
     im_dir = p_ray_tracer->im_dir;
 }
 
@@ -65,17 +65,17 @@ void OutputWriter::Write()
   // Write image data based on desired file format
   switch (output_format)
   {
-    case raw:
+    case OutputFormat::raw:
     {
       WriteRaw();
       break;
     }
-    case npy:
+    case OutputFormat::npy:
     {
       WriteNpy();
       break;
     }
-    case npz:
+    case OutputFormat::npz:
     {
       WriteNpz();
       break;
@@ -156,9 +156,9 @@ void OutputWriter::WriteNpz()
   data_lengths[0] = GenerateNpyFromDoubleArray(image, &data_buffers[0]);
   if (output_camera)
   {
-    if (im_camera == plane)
+    if (im_camera == Camera::plane)
       data_lengths[1] = GenerateNpyFromDoubleArray(im_pos, &data_buffers[1]);
-    else if (im_camera == pinhole)
+    else if (im_camera == Camera::pinhole)
       data_lengths[1] = GenerateNpyFromDoubleArray(im_dir, &data_buffers[1]);
     data_lengths[2] = GenerateNpyFromDoubleArray(im_width_array, &data_buffers[2]);
     data_lengths[3] = GenerateNpyFromDoubleArray(mass_msun_array, &data_buffers[3]);
@@ -169,10 +169,10 @@ void OutputWriter::WriteNpz()
       &local_header_buffers[0]);
   if (output_camera)
   {
-    if (im_camera == plane)
+    if (im_camera == Camera::plane)
       local_header_lengths[1] = GenerateZIPLocalFileHeader(data_buffers[1], data_lengths[1],
           "im_pos", &local_header_buffers[1]);
-    else if (im_camera == pinhole)
+    else if (im_camera == Camera::pinhole)
       local_header_lengths[1] = GenerateZIPLocalFileHeader(data_buffers[1], data_lengths[1],
           "im_dir", &local_header_buffers[1]);
     local_header_lengths[2] = GenerateZIPLocalFileHeader(data_buffers[2], data_lengths[2],

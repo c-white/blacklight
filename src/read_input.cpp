@@ -256,9 +256,9 @@ bool InputReader::ReadBool(const std::string &string)
 ModelType InputReader::ReadModelType(const std::string &string)
 {
   if (string == "simulation")
-    return simulation;
+    return ModelType::simulation;
   else if (string == "formula")
-    return formula;
+    return ModelType::formula;
   else
     throw BlacklightException("Unknown string used for ModelType value.");
 }
@@ -278,11 +278,11 @@ ModelType InputReader::ReadModelType(const std::string &string)
 OutputFormat InputReader::ReadOutputFormat(const std::string &string)
 {
   if (string == "raw")
-    return raw;
+    return OutputFormat::raw;
   else if (string == "npy")
-    return npy;
+    return OutputFormat::npy;
   else if (string == "npz")
-    return npz;
+    return OutputFormat::npz;
   else
     throw BlacklightException("Unknown string used for OutputFormat value.");
 }
@@ -301,9 +301,9 @@ OutputFormat InputReader::ReadOutputFormat(const std::string &string)
 Coordinates InputReader::ReadCoordinates(const std::string &string)
 {
   if (string == "sph_ks")
-    return sph_ks;
+    return Coordinates::sph_ks;
   else if (string == "cart_ks")
-    return cart_ks;
+    return Coordinates::cart_ks;
   else
     throw BlacklightException("Unknown string used for Coordinates value.");
 }
@@ -324,9 +324,9 @@ Coordinates InputReader::ReadCoordinates(const std::string &string)
 Camera InputReader::ReadCamera(const std::string &string)
 {
   if (string == "plane")
-    return plane;
+    return Camera::plane;
   else if (string == "pinhole")
-    return pinhole;
+    return Camera::pinhole;
   else
     throw BlacklightException("Unknown string used for Camera value.");
 }
@@ -350,9 +350,9 @@ Camera InputReader::ReadCamera(const std::string &string)
 FrequencyNormalization InputReader::ReadFrequencyNormalization(const std::string &string)
 {
   if (string == "camera")
-    return camera;
+    return FrequencyNormalization::camera;
   else if (string == "infinity")
-    return infinity;
+    return FrequencyNormalization::infinity;
   else
     throw BlacklightException("Unknown string used for FrequencyNormalization value.");
 }
@@ -374,11 +374,11 @@ FrequencyNormalization InputReader::ReadFrequencyNormalization(const std::string
 RayTerminate InputReader::ReadRayTerminate(const std::string &string)
 {
   if (string == "photon")
-    return photon;
+    return RayTerminate::photon;
   else if (string == "multiplicative")
-    return multiplicative;
+    return RayTerminate::multiplicative;
   else if (string == "additive")
-    return additive;
+    return RayTerminate::additive;
   else
     throw BlacklightException("Unknown string used for RayTerminate value.");
 }

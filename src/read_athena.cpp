@@ -28,7 +28,7 @@ AthenaReader::AthenaReader(const InputReader *p_input_reader)
   model_type = p_input_reader->model_type.value();
 
   // Proceed only if needed
-  if (model_type == simulation)
+  if (model_type == ModelType::simulation)
   {
     // Copy simulation parameters
     simulation_file = p_input_reader->simulation_file.value();
@@ -67,7 +67,7 @@ AthenaReader::~AthenaReader()
 void AthenaReader::Read()
 {
   // Only proceed if needed
-  if (model_type != simulation)
+  if (model_type != ModelType::simulation)
     return;
 
   // Read basic data about file
