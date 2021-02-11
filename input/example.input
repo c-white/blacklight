@@ -1,4 +1,4 @@
-# General
+# General parameters
 model_type  = formula  # type of model (simulation, formula)
 num_threads = 4        # number of threads to use in parallel
 
@@ -42,21 +42,21 @@ fallback_rho  = 1.0e-6  # out-of-bounds density (model_type == simulation and no
 fallback_pgas = 1.0e-8  # out-of-bounds pressure (model_type == simulation and not fallback_nan)
 
 # Image parameters
-im_camera = plane     # type of camera (plane, pinhole)
-im_r      = 50.0      # KS radial coordinate r of camera center in gravitational units
-im_th     = 45.0      # KS polar coordinate theta of camera center in degrees (0/180 for north/south)
-im_ph     = 0.0       # KS azimuthal coordinate phi of camera in degrees
-im_urn    = 0.0       # contravariant KS normal r-velocity of camera
-im_uthn   = 0.0       # contravariant KS normal theta-velocity of camera (using radians)
-im_uphn   = 0.0       # contravariant KS normal ph-velocity of camera (using radians)
-im_k_r    = 1.0       # covariant KS r-momentum of received photons
-im_k_th   = 0.0       # covariant KS theta-momentum of received photons (using radians)
-im_k_ph   = 0.0       # covariant KS phi-momentum of received photons (using radians)
-im_rot    = 0.0       # rotation of camera in degrees (0/90 for north up/left)
-im_width  = 24.0      # full width of image in gravitational units
-im_res    = 64        # number of pixels per side
-im_freq   = 2.3e11    # frequency of observation in Hz
-im_norm   = infinity  # location of im_freq (camera [accounting for velocity], infinity [at rest])
+image_camera        = plane     # type of camera (plane, pinhole)
+image_r             = 50.0      # KS radial coordinate r of camera in gravitational units
+image_th            = 45.0      # KS polar coordinate theta of camera in degrees (0/180 for N/S)
+image_ph            = 0.0       # KS azimuthal coordinate phi of camera in degrees
+image_urn           = 0.0       # contravariant KS normal r-velocity of camera
+image_uthn          = 0.0       # contravariant KS normal theta-velocity of camera (using radians)
+image_uphn          = 0.0       # contravariant KS normal ph-velocity of camera (using radians)
+image_k_r           = 1.0       # covariant KS r-momentum of received photons
+image_k_th          = 0.0       # covariant KS theta-momentum of received photons (using radians)
+image_k_ph          = 0.0       # covariant KS phi-momentum of received photons (using radians)
+image_rotation      = 0.0       # rotation of camera in degrees (0/90 for north up/left)
+image_width         = 24.0      # full width of image in gravitational units
+image_resolution    = 64        # number of pixels per side
+image_frequency     = 2.3e11    # frequency of observation in Hz
+image_normalization = infinity  # image_frequency location (camera [w/ velocity], infinity [rest])
 
 # Ray-tracing parameters
 ray_flat        = false           # flag indicating ray tracing should assume flat spacetime

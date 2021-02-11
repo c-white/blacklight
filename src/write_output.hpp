@@ -32,16 +32,16 @@ struct OutputWriter
   bool output_camera;
 
   // Input data - image parameters
-  Camera im_camera;
+  Camera image_camera;
 
   // File data
   std::ofstream *p_output_stream;
 
   // Image data
   Array<double> image;
-  Array<double> im_pos;
-  Array<double> im_dir;
-  double im_width;
+  Array<double> image_position;
+  Array<double> image_direction;
+  double image_width;
   double mass_msun;
 
   // External function

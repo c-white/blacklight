@@ -131,36 +131,36 @@ void InputReader::Read()
       fallback_pgas = std::stof(val);
 
     // Store image parameters
-    else if (key == "im_camera")
-      im_camera = ReadCamera(val);
-    else if (key == "im_r")
-      im_r = std::stod(val);
-    else if (key == "im_th")
-      im_th = ReadPole(val, &im_pole) * math::pi / 180.0;
-    else if (key == "im_ph")
-      im_ph = std::stod(val) * math::pi / 180.0;
-    else if (key == "im_urn")
-      im_urn = std::stod(val);
-    else if (key == "im_uthn")
-      im_uthn = std::stod(val);
-    else if (key == "im_uphn")
-      im_uphn = std::stod(val);
-    else if (key == "im_k_r")
-      im_k_r = std::stod(val);
-    else if (key == "im_k_th")
-      im_k_th = std::stod(val);
-    else if (key == "im_k_ph")
-      im_k_ph = std::stod(val);
-    else if (key == "im_rot")
-      im_rot = std::stod(val) * math::pi / 180.0;
-    else if (key == "im_width")
-      im_width = std::stod(val);
-    else if (key == "im_res")
-      im_res = std::stoi(val);
-    else if (key == "im_freq")
-      im_freq = std::stod(val);
-    else if (key == "im_norm")
-      im_norm = ReadFrequencyNormalization(val);
+    else if (key == "image_camera")
+      image_camera = ReadCamera(val);
+    else if (key == "image_r")
+      image_r = std::stod(val);
+    else if (key == "image_th")
+      image_th = ReadPole(val, &image_pole) * math::pi / 180.0;
+    else if (key == "image_ph")
+      image_ph = std::stod(val) * math::pi / 180.0;
+    else if (key == "image_urn")
+      image_urn = std::stod(val);
+    else if (key == "image_uthn")
+      image_uthn = std::stod(val);
+    else if (key == "image_uphn")
+      image_uphn = std::stod(val);
+    else if (key == "image_k_r")
+      image_k_r = std::stod(val);
+    else if (key == "image_k_th")
+      image_k_th = std::stod(val);
+    else if (key == "image_k_ph")
+      image_k_ph = std::stod(val);
+    else if (key == "image_rotation")
+      image_rotation = std::stod(val) * math::pi / 180.0;
+    else if (key == "image_width")
+      image_width = std::stod(val);
+    else if (key == "image_resolution")
+      image_resolution = std::stoi(val);
+    else if (key == "image_frequency")
+      image_frequency = std::stod(val);
+    else if (key == "image_normalization")
+      image_normalization = ReadFrequencyNormalization(val);
 
     // Store ray-tracing parameters
     else if (key == "ray_flat")
@@ -340,13 +340,13 @@ Camera InputReader::ReadCamera(const std::string &string)
 //   returned value: valid FrequencyNormalization
 // Notes:
 //   Valid options:
-//     "camera": input im_freq is taken to be the frequency as seen by the center of the camera,
-//         accounting for its position and velocity; that is, the covariant time component of photon
-//         momentum in the camera frame at the camera location is -im_freq
-//     "infinity": input im_freq is taken to be the frequency of the light at the center of the
-//         camera were it to be transported along geodesics to infinity and measured by an observer
-//         at rest; that is, the covariant time component of photon momentum in the coordinate frame
-//         is -im_freq
+//     "camera": input image_frequency is taken to be the frequency as seen by the center of the
+//         camera, accounting for its position and velocity; that is, the covariant time component
+//         of photon momentum in the camera frame at the camera location is -image_frequency
+//     "infinity": input image_frequency is taken to be the frequency of the light at the center of
+//         the camera were it to be transported along geodesics to infinity and measured by an
+//         observer at rest; that is, the covariant time component of photon momentum in the
+//         coordinate frame is -image_frequency
 FrequencyNormalization InputReader::ReadFrequencyNormalization(const std::string &string)
 {
   if (string == "camera")

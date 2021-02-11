@@ -68,22 +68,22 @@ struct InputReader
   std::optional<float> fallback_pgas;
 
   // Data - image parameters
-  std::optional<Camera> im_camera;
-  std::optional<double> im_r;
-  std::optional<double> im_th;
-  std::optional<double> im_ph;
-  std::optional<double> im_urn;
-  std::optional<double> im_uthn;
-  std::optional<double> im_uphn;
-  std::optional<double> im_k_r;
-  std::optional<double> im_k_th;
-  std::optional<double> im_k_ph;
-  std::optional<double> im_rot;
-  std::optional<double> im_width;
-  std::optional<int> im_res;
-  std::optional<double> im_freq;
-  std::optional<FrequencyNormalization> im_norm;
-  std::optional<bool> im_pole;
+  std::optional<Camera> image_camera;
+  std::optional<double> image_r;
+  std::optional<double> image_th;
+  std::optional<double> image_ph;
+  std::optional<double> image_urn;
+  std::optional<double> image_uthn;
+  std::optional<double> image_uphn;
+  std::optional<double> image_k_r;
+  std::optional<double> image_k_th;
+  std::optional<double> image_k_ph;
+  std::optional<double> image_rotation;
+  std::optional<double> image_width;
+  std::optional<int> image_resolution;
+  std::optional<double> image_frequency;
+  std::optional<FrequencyNormalization> image_normalization;
+  std::optional<bool> image_pole;
 
   // Data - ray-tracing parameters
   std::optional<bool> ray_flat;

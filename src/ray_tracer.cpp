@@ -93,22 +93,22 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   }
 
   // Copy image parameters
-  im_camera = p_input_reader->im_camera.value();
-  im_r = p_input_reader->im_r.value();
-  im_th = p_input_reader->im_th.value();
-  im_ph = p_input_reader->im_ph.value();
-  im_urn = p_input_reader->im_urn.value();
-  im_uthn = p_input_reader->im_uthn.value();
-  im_uphn = p_input_reader->im_uphn.value();
-  im_k_r = p_input_reader->im_k_r.value();
-  im_k_th = p_input_reader->im_k_th.value();
-  im_k_ph = p_input_reader->im_k_ph.value();
-  im_rot = p_input_reader->im_rot.value();
-  im_width = p_input_reader->im_width.value();
-  im_res = p_input_reader->im_res.value();
-  im_freq = p_input_reader->im_freq.value();
-  im_norm = p_input_reader->im_norm.value();
-  im_pole = p_input_reader->im_pole.value();
+  image_camera = p_input_reader->image_camera.value();
+  image_r = p_input_reader->image_r.value();
+  image_th = p_input_reader->image_th.value();
+  image_ph = p_input_reader->image_ph.value();
+  image_urn = p_input_reader->image_urn.value();
+  image_uthn = p_input_reader->image_uthn.value();
+  image_uphn = p_input_reader->image_uphn.value();
+  image_k_r = p_input_reader->image_k_r.value();
+  image_k_th = p_input_reader->image_k_th.value();
+  image_k_ph = p_input_reader->image_k_ph.value();
+  image_rotation = p_input_reader->image_rotation.value();
+  image_width = p_input_reader->image_width.value();
+  image_resolution = p_input_reader->image_resolution.value();
+  image_frequency = p_input_reader->image_frequency.value();
+  image_normalization = p_input_reader->image_normalization.value();
+  image_pole = p_input_reader->image_pole.value();
 
   // Copy ray-tracing parameters
   ray_flat = p_input_reader->ray_flat.value();
@@ -249,7 +249,8 @@ void RayTracer::MakeImage()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Allocates and initializes im_pos and im_dir except for time components of im_dir.
+//   Allocates and initializes image_position and image_direction except for time components of
+//       image_direction.
 //   Neglects spacetime curvature at camera location.
 //   Symbols:
 //     n: unit outward normal
@@ -258,37 +259,37 @@ void RayTracer::MakeImage()
 void RayTracer::InitializeCamera()
 {
   // Calculate trigonometric quantities
-  double sth = std::sin(im_th);
-  double cth = std::cos(im_th);
-  double sph = std::sin(im_ph);
-  double cph = std::cos(im_ph);
-  double srot = std::sin(im_rot);
-  double crot = std::cos(im_rot);
+  double sth = std::sin(image_th);
+  double cth = std::cos(image_th);
+  double sph = std::sin(image_ph);
+  double cph = std::cos(image_ph);
+  double srot = std::sin(image_rotation);
+  double crot = std::cos(image_rotation);
 
   // Calculate camera position
   double t = 0.0;
-  double x = sth * (im_r * cph + bh_a * sph);
-  double y = sth * (im_r * sph - bh_a * cph);
-  double z = im_r * cth;
+  double x = sth * (image_r * cph + bh_a * sph);
+  double y = sth * (image_r * sph - bh_a * cph);
+  double z = image_r * cth;
   if (ray_flat)
   {
-    x = im_r * sth * cph;
-    y = im_r * sth * sph;
+    x = image_r * sth * cph;
+    y = image_r * sth * sph;
   }
 
   // Calculate metric in spherical coordinates
   double a2 = bh_a * bh_a;
-  double r2 = im_r * im_r;
-  double delta = r2 - 2.0 * bh_m * im_r + a2;
+  double r2 = image_r * image_r;
+  double delta = r2 - 2.0 * bh_m * image_r + a2;
   double sigma = r2 + a2 * cth * cth;
-  double gcov_r_r = 1.0 + 2.0 * bh_m * im_r / sigma;
+  double gcov_r_r = 1.0 + 2.0 * bh_m * image_r / sigma;
   double gcov_r_th = 0.0;
-  double gcov_r_ph = -(1.0 + 2.0 * bh_m * im_r / sigma) * bh_a * sth * sth;
+  double gcov_r_ph = -(1.0 + 2.0 * bh_m * image_r / sigma) * bh_a * sth * sth;
   double gcov_th_th = sigma;
   double gcov_th_ph = 0.0;
-  double gcov_ph_ph = (r2 + a2 + 2.0 * bh_m * a2 * im_r / sigma * sth * sth) * sth * sth;
-  double gcon_t_t = -(1.0 + 2.0 * bh_m * im_r / sigma);
-  double gcon_t_r = 2.0 * bh_m * im_r / sigma;
+  double gcov_ph_ph = (r2 + a2 + 2.0 * bh_m * a2 * image_r / sigma * sth * sth) * sth * sth;
+  double gcon_t_t = -(1.0 + 2.0 * bh_m * image_r / sigma);
+  double gcon_t_r = 2.0 * bh_m * image_r / sigma;
   double gcon_t_th = 0.0;
   double gcon_t_ph = 0.0;
   double gcon_r_r = delta / sigma;
@@ -316,30 +317,31 @@ void RayTracer::InitializeCamera()
   double beta_con_r = -gcon_t_r / gcon_t_t;
   double beta_con_th = -gcon_t_th / gcon_t_t;
   double beta_con_ph = -gcon_t_ph / gcon_t_t;
-  double utn = std::sqrt(1.0 + gcov_r_r * im_urn * im_urn + 2.0 * gcov_r_th * im_urn * im_uthn
-      + 2.0 * gcov_r_ph * im_urn * im_uphn + gcov_th_th * im_uthn * im_uthn
-      + 2.0 * gcov_th_ph * im_uthn * im_uphn + gcov_ph_ph * im_uphn * im_uphn);
+  double utn = std::sqrt(1.0 + gcov_r_r * image_urn * image_urn
+      + 2.0 * gcov_r_th * image_urn * image_uthn + 2.0 * gcov_r_ph * image_urn * image_uphn
+      + gcov_th_th * image_uthn * image_uthn + 2.0 * gcov_th_ph * image_uthn * image_uphn
+      + gcov_ph_ph * image_uphn * image_uphn);
   double ut = utn / alpha;
-  double ur = im_urn - beta_con_r / alpha * utn;
-  double uth = im_uthn - beta_con_th / alpha * utn;
-  double uph = im_uphn - beta_con_ph / alpha * utn;
+  double ur = image_urn - beta_con_r / alpha * utn;
+  double uth = image_uthn - beta_con_th / alpha * utn;
+  double uph = image_uphn - beta_con_ph / alpha * utn;
 
   // Calculate Jacobian of transformation
   double dx_dr = sth * cph;
   double dy_dr = sth * sph;
   double dz_dr = cth;
-  double dx_dth = cth * (im_r * cph + bh_a * sph);
-  double dy_dth = cth * (im_r * sph - bh_a * cph);
-  double dz_dth = -im_r * sth;
-  double dx_dph = sth * (-im_r * sph + bh_a * cph);
-  double dy_dph = sth * (im_r * cph + bh_a * sph);
+  double dx_dth = cth * (image_r * cph + bh_a * sph);
+  double dy_dth = cth * (image_r * sph - bh_a * cph);
+  double dz_dth = -image_r * sth;
+  double dx_dph = sth * (-image_r * sph + bh_a * cph);
+  double dy_dph = sth * (image_r * cph + bh_a * sph);
   double dz_dph = 0.0;
   if (ray_flat)
   {
-    dx_dth = im_r * cth * cph;
-    dy_dth = im_r * cth * sph;
-    dx_dph = -im_r * sth * sph;
-    dy_dph = im_r * sth * cph;
+    dx_dth = image_r * cth * cph;
+    dy_dth = image_r * cth * sph;
+    dx_dph = -image_r * sth * sph;
+    dy_dph = image_r * sth * cph;
   }
 
   // Calculate camera velocity
@@ -360,9 +362,9 @@ void RayTracer::InitializeCamera()
   double gcon_thn_thn = (gcon_t_t * gcon_th_th - gcon_t_th * gcon_t_th) / gcon_t_t;
   double gcon_thn_phn = (gcon_t_t * gcon_th_ph - gcon_t_th * gcon_t_ph) / gcon_t_t;
   double gcon_phn_phn = (gcon_t_t * gcon_ph_ph - gcon_t_ph * gcon_t_ph) / gcon_t_t;
-  double k_rn = im_k_r;
-  double k_thn = im_k_th;
-  double k_phn = im_k_ph;
+  double k_rn = image_k_r;
+  double k_thn = image_k_th;
+  double k_phn = image_k_ph;
   double k_tn = -std::sqrt(gcon_rn_rn * k_rn * k_rn + 2.0 * gcon_rn_thn * k_rn * k_thn
       + 2.0 * gcon_rn_phn * k_rn * k_phn + gcon_thn_thn * k_thn * k_thn
       + 2.0 * gcon_thn_phn * k_thn * k_phn + gcon_phn_phn * k_phn * k_phn);
@@ -370,45 +372,45 @@ void RayTracer::InitializeCamera()
 
   // Calculate Jacobian of transformation
   double rr2 = x * x + y * y + z * z;
-  double dr_dx = im_r * x / (2.0 * r2 - rr2 + a2);
-  double dr_dy = im_r * y / (2.0 * r2 - rr2 + a2);
-  double dr_dz = (im_r * z + a2 * z / im_r) / (2.0 * r2 - rr2 + a2);
+  double dr_dx = image_r * x / (2.0 * r2 - rr2 + a2);
+  double dr_dy = image_r * y / (2.0 * r2 - rr2 + a2);
+  double dr_dz = (image_r * z + a2 * z / image_r) / (2.0 * r2 - rr2 + a2);
   double dth_dx = z * dr_dx / (r2 * sth);
   double dth_dy = z * dr_dy / (r2 * sth);
-  double dth_dz = (z * dr_dz - im_r) / (r2 * sth);
+  double dth_dz = (z * dr_dz - image_r) / (r2 * sth);
   double dph_dx = -y / (x * x + y * y) - bh_a / (r2 + a2) * dr_dx;
   double dph_dy = x / (x * x + y * y) - bh_a / (r2 + a2) * dr_dy;
   double dph_dz = -bh_a / (r2 + a2) * dr_dz;
   if (ray_flat)
   {
-    dr_dx = x / im_r;
-    dr_dy = y / im_r;
-    dr_dz = z / im_r;
-    dth_dx = cth * cph / im_r;
-    dth_dy = cth * sph / im_r;
-    dth_dz = -sth / im_r;
-    dph_dx = -sph / (im_r * sth);
-    dph_dy = cph / (im_r * sth);
+    dr_dx = x / image_r;
+    dr_dy = y / image_r;
+    dr_dz = z / image_r;
+    dth_dx = cth * cph / image_r;
+    dth_dy = cth * sph / image_r;
+    dth_dz = -sth / image_r;
+    dph_dx = -sph / (image_r * sth);
+    dph_dy = cph / (image_r * sth);
     dph_dz = 0.0;
   }
 
   // Calculate photon momentum
-  double k_x = dr_dx * im_k_r + dth_dx * im_k_th + dph_dx * im_k_ph;
-  double k_y = dr_dy * im_k_r + dth_dy * im_k_th + dph_dy * im_k_ph;
-  double k_z = dr_dz * im_k_r + dth_dz * im_k_th + dph_dz * im_k_ph;
+  double k_x = dr_dx * image_k_r + dth_dx * image_k_th + dph_dx * image_k_ph;
+  double k_y = dr_dy * image_k_r + dth_dy * image_k_th + dph_dy * image_k_ph;
+  double k_z = dr_dz * image_k_r + dth_dz * image_k_th + dph_dz * image_k_ph;
   double k_tc = ut * k_t + ux * k_x + uy * k_y + uz * k_z;
 
   // Calculate momentum normalization
-  switch (im_norm)
+  switch (image_normalization)
   {
     case FrequencyNormalization::camera:
     {
-      momentum_factor = -im_freq / k_tc;
+      momentum_factor = -image_frequency / k_tc;
       break;
     }
     case FrequencyNormalization::infinity:
     {
-      momentum_factor = -im_freq / k_t;
+      momentum_factor = -image_frequency / k_t;
       break;
     }
   }
@@ -452,7 +454,7 @@ void RayTracer::InitializeCamera()
   double up_con_xc = 0.0;
   double up_con_yc = 0.0;
   double up_con_zc = 1.0;
-  if (im_pole)
+  if (image_pole)
   {
     up_con_yc = 1.0;
     up_con_zc = 0.0;
@@ -520,22 +522,22 @@ void RayTracer::InitializeCamera()
   vert_con_zc = temp_vert_con_zc * crot + temp_hor_con_zc * srot;
 
   // Allocate arrays
-  im_pos.Allocate(im_res, im_res, 4);
-  im_dir.Allocate(im_res, im_res, 4);
+  image_position.Allocate(image_resolution, image_resolution, 4);
+  image_direction.Allocate(image_resolution, image_resolution, 4);
 
   // Initialize arrays based on camera type
-  switch (im_camera)
+  switch (image_camera)
   {
     // Plane with parallel rays
     case Camera::plane:
     {
       #pragma omp parallel for schedule(static)
-      for (int m = 0; m < im_res; m++)
-        for (int l = 0; l < im_res; l++)
+      for (int m = 0; m < image_resolution; m++)
+        for (int l = 0; l < image_resolution; l++)
         {
           // Set pixel position
-          double u = (l - im_res / 2.0 + 0.5) * bh_m * im_width / im_res;
-          double v = (m - im_res / 2.0 + 0.5) * bh_m * im_width / im_res;
+          double u = (l - image_resolution / 2.0 + 0.5) * bh_m * image_width / image_resolution;
+          double v = (m - image_resolution / 2.0 + 0.5) * bh_m * image_width / image_resolution;
           double dtc = u * hor_con_tc + v * vert_con_tc;
           double dxc = u * hor_con_xc + v * vert_con_xc;
           double dyc = u * hor_con_yc + v * vert_con_yc;
@@ -544,15 +546,15 @@ void RayTracer::InitializeCamera()
           double dx = dxc + ux * dtc;
           double dy = dyc + uy * dtc;
           double dz = dzc + uz * dtc;
-          im_pos(m,l,0) = t + dt;
-          im_pos(m,l,1) = x + dx;
-          im_pos(m,l,2) = y + dy;
-          im_pos(m,l,3) = z + dz;
+          image_position(m,l,0) = t + dt;
+          image_position(m,l,1) = x + dx;
+          image_position(m,l,2) = y + dy;
+          image_position(m,l,3) = z + dz;
 
           // Set pixel direction
-          im_dir(m,l,1) = norm_con_x;
-          im_dir(m,l,2) = norm_con_y;
-          im_dir(m,l,3) = norm_con_z;
+          image_direction(m,l,1) = norm_con_x;
+          image_direction(m,l,2) = norm_con_y;
+          image_direction(m,l,3) = norm_con_z;
         }
       break;
     }
@@ -561,20 +563,20 @@ void RayTracer::InitializeCamera()
     case Camera::pinhole:
     {
       #pragma omp parallel for schedule(static)
-      for (int m = 0; m < im_res; m++)
-        for (int l = 0; l < im_res; l++)
+      for (int m = 0; m < image_resolution; m++)
+        for (int l = 0; l < image_resolution; l++)
         {
           // Set pixel position
-          im_pos(m,l,0) = t;
-          im_pos(m,l,1) = x;
-          im_pos(m,l,2) = y;
-          im_pos(m,l,3) = z;
+          image_position(m,l,0) = t;
+          image_position(m,l,1) = x;
+          image_position(m,l,2) = y;
+          image_position(m,l,3) = z;
 
           // Set pixel direction
-          double u = (l - im_res / 2.0 + 0.5) * bh_m * im_width / im_res;
-          double v = (m - im_res / 2.0 + 0.5) * bh_m * im_width / im_res;
-          double normalization = std::hypot(u, v, im_r);
-          double frac_norm = im_r / normalization;
+          double u = (l - image_resolution / 2.0 + 0.5) * bh_m * image_width / image_resolution;
+          double v = (m - image_resolution / 2.0 + 0.5) * bh_m * image_width / image_resolution;
+          double normalization = std::hypot(u, v, image_r);
+          double frac_norm = image_r / normalization;
           double frac_hor = -u / normalization;
           double frac_vert = -v / normalization;
           double dir_con_tc = norm_con_tc;
@@ -587,9 +589,9 @@ void RayTracer::InitializeCamera()
           double dir_con_x = dir_con_xc + ux * dir_con_tc;
           double dir_con_y = dir_con_yc + uy * dir_con_tc;
           double dir_con_z = dir_con_zc + uz * dir_con_tc;
-          im_dir(m,l,1) = dir_con_x;
-          im_dir(m,l,2) = dir_con_y;
-          im_dir(m,l,3) = dir_con_z;
+          image_direction(m,l,1) = dir_con_x;
+          image_direction(m,l,2) = dir_con_y;
+          image_direction(m,l,3) = dir_con_z;
         }
       break;
     }
@@ -603,9 +605,10 @@ void RayTracer::InitializeCamera()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes im_pos and im_dir have been set except for the time components of im_dir.
-//   Initializes time components of im_dir.
-//   Lowers all components of im_dir.
+//   Assumes image_position and image_direction have been set except for the time components of
+//       image_direction.
+//   Initializes time components of image_direction.
+//   Lowers all components of image_direction.
 //   Quadratic solved as follows:
 //     Outside ergosphere: unique positive root.
 //     On ergosphere, assuming g_{0i} p^i < 0: unique root, which will be positive
@@ -621,21 +624,21 @@ void RayTracer::InitializeGeodesics()
 
     // Go through image pixels
     #pragma omp for schedule(static)
-    for (int m = 0; m < im_res; m++)
-      for (int l = 0; l < im_res; l++)
+    for (int m = 0; m < image_resolution; m++)
+      for (int l = 0; l < image_resolution; l++)
       {
         // Extract position
         double x[4];
-        x[0] = im_pos(m,l,0);
-        x[1] = im_pos(m,l,1);
-        x[2] = im_pos(m,l,2);
-        x[3] = im_pos(m,l,3);
+        x[0] = image_position(m,l,0);
+        x[1] = image_position(m,l,1);
+        x[2] = image_position(m,l,2);
+        x[3] = image_position(m,l,3);
 
         // Extract spatial components of momentum
         double p[4];
-        p[1] = im_dir(m,l,1);
-        p[2] = im_dir(m,l,2);
-        p[3] = im_dir(m,l,3);
+        p[1] = image_direction(m,l,1);
+        p[2] = image_direction(m,l,2);
+        p[3] = image_direction(m,l,3);
 
         // Calculate time component of momentum
         CovariantGeodesicMetric(x[1], x[2], x[3], gcov);
@@ -654,9 +657,9 @@ void RayTracer::InitializeGeodesics()
         // Lower momentum components
         for (int mu = 0; mu < 4; mu++)
         {
-          im_dir(m,l,mu) = 0.0;
+          image_direction(m,l,mu) = 0.0;
           for (int nu = 0; nu < 4; nu++)
-            im_dir(m,l,mu) += gcov(mu,nu) * p[nu];
+            image_direction(m,l,mu) += gcov(mu,nu) * p[nu];
         }
       }
   }
@@ -669,8 +672,8 @@ void RayTracer::InitializeGeodesics()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes im_pos and im_dir have been set.
-//   Initializes im_steps.
+//   Assumes image_position and image_direction have been set.
+//   Initializes image_steps.
 //   Allocates and initializes geodesic_pos, geodesic_dir, geodesic_len, sample_flags, and
 //       sample_num.
 //   Assumes x^0 is ignorable.
@@ -723,17 +726,17 @@ void RayTracer::IntegrateGeodesics()
   double err_power = 0.2;
 
   // Allocate arrays
-  geodesic_pos.Allocate(im_res, im_res, ray_max_steps, 4);
-  geodesic_dir.Allocate(im_res, im_res, ray_max_steps, 4);
-  geodesic_len.Allocate(im_res, im_res, ray_max_steps);
+  geodesic_pos.Allocate(image_resolution, image_resolution, ray_max_steps, 4);
+  geodesic_dir.Allocate(image_resolution, image_resolution, ray_max_steps, 4);
+  geodesic_len.Allocate(image_resolution, image_resolution, ray_max_steps);
   geodesic_len.Zero();
-  sample_flags.Allocate(im_res, im_res);
+  sample_flags.Allocate(image_resolution, image_resolution);
   sample_flags.Zero();
-  sample_num.Allocate(im_res, im_res);
+  sample_num.Allocate(image_resolution, image_resolution);
   sample_num.Zero();
 
   // Work in parallel
-  im_steps = 0;
+  image_steps = 0;
   int num_bad_geodesics = 0;
   #pragma omp parallel
   {
@@ -751,20 +754,20 @@ void RayTracer::IntegrateGeodesics()
 
     // Go through image pixels
     #pragma omp for schedule(static)
-    for (int m = 0; m < im_res; m++)
-      for (int l = 0; l < im_res; l++)
+    for (int m = 0; m < image_resolution; m++)
+      for (int l = 0; l < image_resolution; l++)
       {
         // Extract initial position
-        y_vals[0] = im_pos(m,l,0);
-        y_vals[1] = im_pos(m,l,1);
-        y_vals[2] = im_pos(m,l,2);
-        y_vals[3] = im_pos(m,l,3);
+        y_vals[0] = image_position(m,l,0);
+        y_vals[1] = image_position(m,l,1);
+        y_vals[2] = image_position(m,l,2);
+        y_vals[3] = image_position(m,l,3);
 
         // Extract initial momentum
-        y_vals[4] = im_dir(m,l,0);
-        y_vals[5] = im_dir(m,l,1);
-        y_vals[6] = im_dir(m,l,2);
-        y_vals[7] = im_dir(m,l,3);
+        y_vals[4] = image_direction(m,l,0);
+        y_vals[5] = image_direction(m,l,1);
+        y_vals[6] = image_direction(m,l,2);
+        y_vals[7] = image_direction(m,l,3);
 
         // Set initial proper distance
         y_vals[8] = 0.0;
@@ -956,7 +959,7 @@ void RayTracer::IntegrateGeodesics()
 
           // Check termination
           sample_num(m,l) += num_steps;
-          bool terminate_outer = r_new > im_r and r_new > r;
+          bool terminate_outer = r_new > image_r and r_new > r;
           bool terminate_inner = r_new < r_terminate;
           if (terminate_outer or terminate_inner)
             break;
@@ -971,8 +974,8 @@ void RayTracer::IntegrateGeodesics()
 
     // Renormalize momenta
     #pragma omp for schedule(static)
-    for (int m = 0; m < im_res; m++)
-      for (int l = 0; l < im_res; l++)
+    for (int m = 0; m < image_resolution; m++)
+      for (int l = 0; l < image_resolution; l++)
         for (int n = 0; n < sample_num(m,l); n++)
         {
           ContravariantGeodesicMetric(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
@@ -994,15 +997,15 @@ void RayTracer::IntegrateGeodesics()
         }
 
     // Calculate maximum number of steps actually taken
-    #pragma omp for schedule(static) reduction(max:im_steps)
-    for (int m = 0; m < im_res; m++)
-      for (int l = 0; l < im_res; l++)
-        im_steps = std::max(im_steps, sample_num(m,l));
+    #pragma omp for schedule(static) reduction(max:image_steps)
+    for (int m = 0; m < image_resolution; m++)
+      for (int l = 0; l < image_resolution; l++)
+        image_steps = std::max(image_steps, sample_num(m,l));
 
     // Calculate number of geodesics that do not terminate properly
     #pragma omp for schedule(static) reduction(+:num_bad_geodesics)
-    for (int m = 0; m < im_res; m++)
-      for (int l = 0; l < im_res; l++)
+    for (int m = 0; m < image_resolution; m++)
+      for (int l = 0; l < image_resolution; l++)
         if (sample_flags(m,l))
           num_bad_geodesics++;
   }
@@ -1011,7 +1014,7 @@ void RayTracer::IntegrateGeodesics()
   if (num_bad_geodesics > 0)
   {
     std::stringstream message;
-    message << num_bad_geodesics << " out of " << im_res * im_res
+    message << num_bad_geodesics << " out of " << image_resolution * image_resolution
         << " geodesics terminate unexpectedly.";
     BlacklightWarning(message.str().c_str());
   }
@@ -1024,7 +1027,7 @@ void RayTracer::IntegrateGeodesics()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes im_steps, geodesic_pos, geodesic_dir, geodesic_len, and sample_num have been set.
+//   Assumes image_steps, geodesic_pos, geodesic_dir, geodesic_len, and sample_num have been set.
 //   Allocates and initializes sample_pos, sample_dir, and sample_len, except transformed from
 //       integrating metric to simulation/formula metric and reversed in the sampling dimension.
 //   Deallocates geodesic_pos, geodesic_dir, and geodesic_len.
@@ -1035,15 +1038,15 @@ void RayTracer::IntegrateGeodesics()
 void RayTracer::TransformGeodesics()
 {
   // Allocate new arrays
-  sample_pos.Allocate(im_res, im_res, im_steps, 4);
-  sample_dir.Allocate(im_res, im_res, im_steps, 4);
-  sample_len.Allocate(im_res, im_res, im_steps);
+  sample_pos.Allocate(image_resolution, image_resolution, image_steps, 4);
+  sample_dir.Allocate(image_resolution, image_resolution, image_steps, 4);
+  sample_len.Allocate(image_resolution, image_resolution, image_steps);
   sample_len.Zero();
 
   // Go through samples
   #pragma omp parallel for schedule(static)
-  for (int m = 0; m < im_res; m++)
-    for (int l = 0; l < im_res; l++)
+  for (int m = 0; m < image_resolution; m++)
+    for (int l = 0; l < image_resolution; l++)
     {
       int num_steps = sample_num(m,l);
       for (int n = 0; n < num_steps; n++)
@@ -1177,7 +1180,7 @@ void RayTracer::TransformGeodesics()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes im_steps, sample_flags, sample_num, sample_pos, and sample_len have been set.
+//   Assumes image_steps, sample_flags, sample_num, sample_pos, and sample_len have been set.
 //   Allocates and initializes sample_rho, sample_pgas, sample_uu1, sample_uu2, sample_uu3,
 //       sample_bb1, sample_bb2, and sample_bb3.
 //   If simulation_interp == false, uses primitives from cell containing geodesic sample point.
@@ -1190,14 +1193,14 @@ void RayTracer::TransformGeodesics()
 void RayTracer::SampleSimulationAlongGeodesics()
 {
   // Allocate resampling arrays
-  sample_rho.Allocate(im_res, im_res, im_steps);
-  sample_pgas.Allocate(im_res, im_res, im_steps);
-  sample_uu1.Allocate(im_res, im_res, im_steps);
-  sample_uu2.Allocate(im_res, im_res, im_steps);
-  sample_uu3.Allocate(im_res, im_res, im_steps);
-  sample_bb1.Allocate(im_res, im_res, im_steps);
-  sample_bb2.Allocate(im_res, im_res, im_steps);
-  sample_bb3.Allocate(im_res, im_res, im_steps);
+  sample_rho.Allocate(image_resolution, image_resolution, image_steps);
+  sample_pgas.Allocate(image_resolution, image_resolution, image_steps);
+  sample_uu1.Allocate(image_resolution, image_resolution, image_steps);
+  sample_uu2.Allocate(image_resolution, image_resolution, image_steps);
+  sample_uu3.Allocate(image_resolution, image_resolution, image_steps);
+  sample_bb1.Allocate(image_resolution, image_resolution, image_steps);
+  sample_bb2.Allocate(image_resolution, image_resolution, image_steps);
+  sample_bb3.Allocate(image_resolution, image_resolution, image_steps);
 
   // Work in parallel
   #pragma omp parallel
@@ -1220,8 +1223,8 @@ void RayTracer::SampleSimulationAlongGeodesics()
 
     // Resample cell data onto geodesics
     #pragma omp for schedule(static)
-    for (int m = 0; m < im_res; m++)
-      for (int l = 0; l < im_res; l++)
+    for (int m = 0; m < image_resolution; m++)
+      for (int l = 0; l < image_resolution; l++)
       {
         // Extract number of steps along this geodesic
         int num_steps = sample_num(m,l);
@@ -1614,7 +1617,7 @@ void RayTracer::SampleSimulationAlongGeodesics()
 void RayTracer::IntegrateSimulationRadiation()
 {
   // Allocate image array
-  image.Allocate(im_res, im_res);
+  image.Allocate(image_resolution, image_resolution);
   image.Zero();
 
   // Calculate units
@@ -1630,8 +1633,8 @@ void RayTracer::IntegrateSimulationRadiation()
 
     // Go through pixels
     #pragma omp for schedule(static)
-    for (int m = 0; m < im_res; m++)
-      for (int l = 0; l < im_res; l++)
+    for (int m = 0; m < image_resolution; m++)
+      for (int l = 0; l < image_resolution; l++)
       {
         // Go through samples
         int num_steps = sample_num(m,l);
@@ -1790,9 +1793,9 @@ void RayTracer::IntegrateSimulationRadiation()
 
     // Transform I_nu/nu^3 to I_nu
     #pragma omp for schedule(static)
-    for (int m = 0; m < im_res; m++)
-      for (int l = 0; l < im_res; l++)
-        image(m,l) *= im_freq * im_freq * im_freq;
+    for (int m = 0; m < image_resolution; m++)
+      for (int l = 0; l < image_resolution; l++)
+        image(m,l) *= image_frequency * image_frequency * image_frequency;
   }
   return;
 }
@@ -1810,7 +1813,7 @@ void RayTracer::IntegrateSimulationRadiation()
 void RayTracer::IntegrateFormulaRadiation()
 {
   // Allocate image array
-  image.Allocate(im_res, im_res);
+  image.Allocate(image_resolution, image_resolution);
   image.Zero();
 
   // Work in parallel
@@ -1821,8 +1824,8 @@ void RayTracer::IntegrateFormulaRadiation()
 
     // Go through pixels
     #pragma omp for schedule(static)
-    for (int m = 0; m < im_res; m++)
-      for (int l = 0; l < im_res; l++)
+    for (int m = 0; m < image_resolution; m++)
+      for (int l = 0; l < image_resolution; l++)
       {
         // Set pixel to NaN if ray has problem
         if (fallback_nan and sample_flags(m,l))
@@ -1924,9 +1927,9 @@ void RayTracer::IntegrateFormulaRadiation()
 
     // Transform I_nu/nu^3 to I_nu
     #pragma omp for schedule(static)
-    for (int m = 0; m < im_res; m++)
-      for (int l = 0; l < im_res; l++)
-        image(m,l) *= im_freq * im_freq * im_freq;
+    for (int m = 0; m < image_resolution; m++)
+      for (int l = 0; l < image_resolution; l++)
+        image(m,l) *= image_frequency * image_frequency * image_frequency;
   }
   return;
 }

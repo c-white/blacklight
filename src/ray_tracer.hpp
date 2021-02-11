@@ -59,22 +59,22 @@ struct RayTracer
   float fallback_pgas;
 
   // Input data - image parameters
-  Camera im_camera;
-  double im_r;
-  double im_th;
-  double im_ph;
-  double im_urn;
-  double im_uthn;
-  double im_uphn;
-  double im_k_r;
-  double im_k_th;
-  double im_k_ph;
-  double im_rot;
-  double im_width;
-  int im_res;
-  double im_freq;
-  FrequencyNormalization im_norm;
-  bool im_pole;
+  Camera image_camera;
+  double image_r;
+  double image_th;
+  double image_ph;
+  double image_urn;
+  double image_uthn;
+  double image_uphn;
+  double image_k_r;
+  double image_k_th;
+  double image_k_ph;
+  double image_rotation;
+  double image_width;
+  int image_resolution;
+  double image_frequency;
+  FrequencyNormalization image_normalization;
+  bool image_pole;
 
   // Input data - ray-tracing parameters
   bool ray_flat;
@@ -115,8 +115,8 @@ struct RayTracer
   double mass_msun;
   double r_terminate;
   double momentum_factor;
-  int im_steps;
-  Array<double> im_pos, im_dir;
+  int image_steps;
+  Array<double> image_position, image_direction;
   Array<double> geodesic_pos, geodesic_dir, geodesic_len;
   Array<bool> sample_flags;
   Array<int> sample_num;
