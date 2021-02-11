@@ -29,6 +29,7 @@ struct OutputWriter
   // Input data - output parameters
   OutputFormat output_format;
   std::string output_file;
+  bool output_params;
   bool output_camera;
 
   // Input data - image parameters
@@ -41,8 +42,9 @@ struct OutputWriter
   Array<double> image;
   Array<double> image_position;
   Array<double> image_direction;
-  double image_width;
-  double mass_msun;
+  Array<double> image_width_array;
+  Array<double> image_frequency_array;
+  Array<double> mass_msun_array;
 
   // External function
   void Write();

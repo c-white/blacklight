@@ -67,6 +67,8 @@ void InputReader::Read()
       output_format = ReadOutputFormat(val);
     else if (key == "output_file")
       output_file = val;
+    else if (key == "output_params")
+      output_params = ReadBool(val);
     else if (key == "output_camera")
       output_camera = ReadBool(val);
 

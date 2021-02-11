@@ -32,18 +32,26 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader, const RayTracer *p
   output_format = p_input_reader->output_format.value();
   output_file = p_input_reader->output_file.value();
   if (output_format == OutputFormat::npz)
+  {
+    output_params = p_input_reader->output_params.value();
     output_camera = p_input_reader->output_camera.value();
+  }
 
   // Copy image parameters
-  if (output_format == OutputFormat::npz and output_camera)
+  if (output_format == OutputFormat::npz and output_params)
   {
-    image_camera = p_input_reader->image_camera.value();
-    image_width = p_input_reader->image_width.value();
-    mass_msun = p_ray_tracer->mass_msun;
+    image_width_array.Allocate(1);
+    image_frequency_array.Allocate(1);
+    mass_msun_array.Allocate(1);
+    image_width_array(0) = p_input_reader->image_width.value();
+    image_frequency_array(0) = p_input_reader->image_frequency.value();
+    mass_msun_array(0) = p_ray_tracer->mass_msun;
   }
 
   // Make local shallow copies of data
   image = p_ray_tracer->image;
+  if (output_format == OutputFormat::npz and output_camera)
+    image_camera = p_input_reader->image_camera.value();
   if (output_format == OutputFormat::npz and output_camera and image_camera == Camera::plane)
     image_position = p_ray_tracer->image_position;
   if (output_format == OutputFormat::npz and output_camera and image_camera == Camera::pinhole)
@@ -135,16 +143,9 @@ void OutputWriter::WriteNpy()
 //       be plenty for almost all ray tracing applications.
 void OutputWriter::WriteNpz()
 {
-  // Construct singleton arrays
-  Array<double> image_width_array(1);
-  image_width_array(0) = image_width;
-  Array<double> mass_msun_array(1);
-  mass_msun_array(0) = mass_msun;
-
   // Prepare buffers for data and headers
-  int num_arrays = 1;
-  if (output_camera)
-    num_arrays += 3;
+  int num_arrays = 1 + (output_params ? 3 : 0) + (output_camera ? 1 : 0);
+  int camera_offset = 1 + (output_params ? 3 : 0);
   uint8_t **data_buffers = new uint8_t *[num_arrays];
   uint8_t **local_header_buffers = new uint8_t *[num_arrays];
   uint8_t **central_header_buffers = new uint8_t *[num_arrays];
@@ -154,31 +155,42 @@ void OutputWriter::WriteNpz()
 
   // Write data as .npy files to buffers
   data_lengths[0] = GenerateNpyFromDoubleArray(image, &data_buffers[0]);
+  if (output_params)
+  {
+    data_lengths[1] = GenerateNpyFromDoubleArray(image_width_array, &data_buffers[1]);
+    data_lengths[2] = GenerateNpyFromDoubleArray(image_frequency_array, &data_buffers[2]);
+    data_lengths[3] = GenerateNpyFromDoubleArray(mass_msun_array, &data_buffers[3]);
+  }
   if (output_camera)
   {
     if (image_camera == Camera::plane)
-      data_lengths[1] = GenerateNpyFromDoubleArray(image_position, &data_buffers[1]);
+      data_lengths[camera_offset] =
+          GenerateNpyFromDoubleArray(image_position, &data_buffers[camera_offset]);
     else if (image_camera == Camera::pinhole)
-      data_lengths[1] = GenerateNpyFromDoubleArray(image_direction, &data_buffers[1]);
-    data_lengths[2] = GenerateNpyFromDoubleArray(image_width_array, &data_buffers[2]);
-    data_lengths[3] = GenerateNpyFromDoubleArray(mass_msun_array, &data_buffers[3]);
+      data_lengths[camera_offset] =
+          GenerateNpyFromDoubleArray(image_direction, &data_buffers[camera_offset]);
   }
 
   // Write local file headers to buffers
   local_header_lengths[0] = GenerateZIPLocalFileHeader(data_buffers[0], data_lengths[0], "image",
       &local_header_buffers[0]);
+  if (output_params)
+  {
+    local_header_lengths[1] = GenerateZIPLocalFileHeader(data_buffers[1], data_lengths[1],
+        "image_width", &local_header_buffers[1]);
+    local_header_lengths[2] = GenerateZIPLocalFileHeader(data_buffers[2], data_lengths[2],
+        "image_frequency", &local_header_buffers[2]);
+    local_header_lengths[3] = GenerateZIPLocalFileHeader(data_buffers[3], data_lengths[3],
+        "mass_msun", &local_header_buffers[3]);
+  }
   if (output_camera)
   {
     if (image_camera == Camera::plane)
-      local_header_lengths[1] = GenerateZIPLocalFileHeader(data_buffers[1], data_lengths[1],
-          "image_position", &local_header_buffers[1]);
+      local_header_lengths[camera_offset] = GenerateZIPLocalFileHeader(data_buffers[camera_offset],
+          data_lengths[camera_offset], "image_position", &local_header_buffers[camera_offset]);
     else if (image_camera == Camera::pinhole)
-      local_header_lengths[1] = GenerateZIPLocalFileHeader(data_buffers[1], data_lengths[1],
-          "image_direction", &local_header_buffers[1]);
-    local_header_lengths[2] = GenerateZIPLocalFileHeader(data_buffers[2], data_lengths[2],
-        "image_width", &local_header_buffers[2]);
-    local_header_lengths[3] = GenerateZIPLocalFileHeader(data_buffers[3], data_lengths[3],
-        "mass_msun", &local_header_buffers[3]);
+      local_header_lengths[camera_offset] = GenerateZIPLocalFileHeader(data_buffers[camera_offset],
+          data_lengths[camera_offset], "image_direction", &local_header_buffers[camera_offset]);
   }
 
   // Write central directory headers to buffers

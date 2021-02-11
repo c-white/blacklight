@@ -5,7 +5,8 @@ num_threads = 4        # number of threads to use in parallel
 # Output parameters
 output_format = npz                 # format of output file (raw, npy, npz)
 output_file   = output/example.npz  # file to be (over)written with image data
-output_camera = true                # flag indicating camera should be output (output_format == npz)
+output_params = true                # flag for saving camera parameters (output_format == npz)
+output_camera = false               # flag for saving camera details (output_format == npz)
 
 # Simulation parameters (only used if model_type == simulation)
 simulation_file         = data/example.athdf  # file containing Athena++ data dump if needed
