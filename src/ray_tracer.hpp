@@ -27,6 +27,18 @@ struct RayTracer
   double bh_m;
   double bh_a;
 
+  // Input data - formula parameters
+  double formula_mass;
+  double formula_r0;
+  double formula_h;
+  double formula_l0;
+  double formula_q;
+  double formula_nup;
+  double formula_cn0;
+  double formula_alpha;
+  double formula_a;
+  double formula_beta;
+
   // Input data - simulation parameters
   double simulation_m_msun;
   double simulation_rho_cgs;
@@ -40,18 +52,6 @@ struct RayTracer
   double plasma_rat_high;
   double plasma_rat_low;
   double plasma_sigma_max;
-
-  // Input data - formula parameters
-  double formula_mass;
-  double formula_r0;
-  double formula_h;
-  double formula_l0;
-  double formula_q;
-  double formula_nup;
-  double formula_cn0;
-  double formula_alpha;
-  double formula_a;
-  double formula_beta;
 
   // Input data - fallback parameters
   bool fallback_nan;

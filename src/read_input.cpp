@@ -72,6 +72,30 @@ void InputReader::Read()
     else if (key == "output_camera")
       output_camera = ReadBool(val);
 
+    // Store formula parameters
+    else if (key == "formula_mass")
+      formula_mass = std::stod(val);
+    else if (key == "formula_spin")
+      formula_spin = std::stod(val);
+    else if (key == "formula_r0")
+      formula_r0 = std::stod(val);
+    else if (key == "formula_h")
+      formula_h = std::stod(val);
+    else if (key == "formula_l0")
+      formula_l0 = std::stod(val);
+    else if (key == "formula_q")
+      formula_q = std::stod(val);
+    else if (key == "formula_nup")
+      formula_nup = std::stod(val);
+    else if (key == "formula_cn0")
+      formula_cn0 = std::stod(val);
+    else if (key == "formula_alpha")
+      formula_alpha = std::stod(val);
+    else if (key == "formula_a")
+      formula_a = std::stod(val);
+    else if (key == "formula_beta")
+      formula_beta = std::stod(val);
+
     // Store simulation parameters
     else if (key == "simulation_file")
       simulation_file = val;
@@ -99,30 +123,6 @@ void InputReader::Read()
       plasma_rat_low = std::stod(val);
     else if (key == "plasma_sigma_max")
       plasma_sigma_max = std::stod(val);
-
-    // Store formula parameters
-    else if (key == "formula_mass")
-      formula_mass = std::stod(val);
-    else if (key == "formula_spin")
-      formula_spin = std::stod(val);
-    else if (key == "formula_r0")
-      formula_r0 = std::stod(val);
-    else if (key == "formula_h")
-      formula_h = std::stod(val);
-    else if (key == "formula_l0")
-      formula_l0 = std::stod(val);
-    else if (key == "formula_q")
-      formula_q = std::stod(val);
-    else if (key == "formula_nup")
-      formula_nup = std::stod(val);
-    else if (key == "formula_cn0")
-      formula_cn0 = std::stod(val);
-    else if (key == "formula_alpha")
-      formula_alpha = std::stod(val);
-    else if (key == "formula_a")
-      formula_a = std::stod(val);
-    else if (key == "formula_beta")
-      formula_beta = std::stod(val);
 
     // Store fallback parameters
     else if (key == "fallback_nan")

@@ -1,5 +1,5 @@
 # General parameters
-model_type  = formula  # type of model (simulation, formula)
+model_type  = formula  # type of model (formula, simulation)
 num_threads = 4        # number of threads to use in parallel
 
 # Output parameters
@@ -9,9 +9,9 @@ output_file   = output/quick_formula.npy  # file to be (over)written with image 
 # Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
 formula_mass  = 6.0e11   # black hole mass in cm
 formula_spin  = 0.9      # dimensionless black hole spin
-formula_r0    = 10.0     # number density parameter in gravitational units
+formula_r0    = 10.0     # radial scale parameter in gravitational units
 formula_h     = 0.0      # scale height parameter in gravitational units
-formula_l0    = 0.0      # angular momentum parameter l_0 in gravitational units
+formula_l0    = 0.0      # angular momentum parameter l_0
 formula_q     = 0.5      # angular momentum index
 formula_nup   = 2.3e11   # pivotal frequency nu_p in Hz
 formula_cn0   = 3.0e-18  # emissivity amplitude parameter C * n_0 in erg/cm^3.s.sr.Hz

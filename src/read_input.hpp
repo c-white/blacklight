@@ -34,6 +34,19 @@ struct InputReader
   std::optional<bool> output_params;
   std::optional<bool> output_camera;
 
+  // Data - formula parameters
+  std::optional<double> formula_mass;
+  std::optional<double> formula_spin;
+  std::optional<double> formula_r0;
+  std::optional<double> formula_h;
+  std::optional<double> formula_l0;
+  std::optional<double> formula_q;
+  std::optional<double> formula_nup;
+  std::optional<double> formula_cn0;
+  std::optional<double> formula_alpha;
+  std::optional<double> formula_a;
+  std::optional<double> formula_beta;
+
   // Data - simulation parameters
   std::optional<std::string> simulation_file;
   std::optional<double> simulation_m_msun;
@@ -49,19 +62,6 @@ struct InputReader
   std::optional<double> plasma_rat_high;
   std::optional<double> plasma_rat_low;
   std::optional<double> plasma_sigma_max;
-
-  // Data - formula parameters
-  std::optional<double> formula_mass;
-  std::optional<double> formula_spin;
-  std::optional<double> formula_r0;
-  std::optional<double> formula_h;
-  std::optional<double> formula_l0;
-  std::optional<double> formula_q;
-  std::optional<double> formula_nup;
-  std::optional<double> formula_cn0;
-  std::optional<double> formula_alpha;
-  std::optional<double> formula_a;
-  std::optional<double> formula_beta;
 
   // Data - fallback parameters
   std::optional<bool> fallback_nan;

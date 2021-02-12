@@ -1,5 +1,5 @@
 # General parameters
-model_type  = simulation  # type of model (simulation, formula)
+model_type  = simulation  # type of model (formula, simulation)
 num_threads = 4           # number of threads to use in parallel
 
 # Output parameters

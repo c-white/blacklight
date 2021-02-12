@@ -48,6 +48,21 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
     }
   }
 
+  // Copy formula parameters
+  if (model_type == ModelType::formula)
+  {
+    formula_mass = p_input_reader->formula_mass.value();
+    formula_r0 = p_input_reader->formula_r0.value();
+    formula_h = p_input_reader->formula_h.value();
+    formula_l0 = p_input_reader->formula_l0.value();
+    formula_q = p_input_reader->formula_q.value();
+    formula_nup = p_input_reader->formula_nup.value();
+    formula_cn0 = p_input_reader->formula_cn0.value();
+    formula_alpha = p_input_reader->formula_alpha.value();
+    formula_a = p_input_reader->formula_a.value();
+    formula_beta = p_input_reader->formula_beta.value();
+  }
+
   // Copy simulation parameters
   if (model_type == ModelType::simulation)
   {
@@ -67,21 +82,6 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
     plasma_rat_high = p_input_reader->plasma_rat_high.value();
     plasma_rat_low = p_input_reader->plasma_rat_low.value();
     plasma_sigma_max = p_input_reader->plasma_sigma_max.value();
-  }
-
-  // Copy formula parameters
-  if (model_type == ModelType::formula)
-  {
-    formula_mass = p_input_reader->formula_mass.value();
-    formula_r0 = p_input_reader->formula_r0.value();
-    formula_h = p_input_reader->formula_h.value();
-    formula_l0 = p_input_reader->formula_l0.value();
-    formula_q = p_input_reader->formula_q.value();
-    formula_nup = p_input_reader->formula_nup.value();
-    formula_cn0 = p_input_reader->formula_cn0.value();
-    formula_alpha = p_input_reader->formula_alpha.value();
-    formula_a = p_input_reader->formula_a.value();
-    formula_beta = p_input_reader->formula_beta.value();
   }
 
   // Copy fallback parameters
