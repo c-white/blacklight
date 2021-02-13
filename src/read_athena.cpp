@@ -381,10 +381,10 @@ void AthenaReader::VerifyVariables()
     throw BlacklightException("Magnetic field not found in data file.");
 
   // Check that primitives and magnetic field have expected sizes
-  if (num_variables(ind_prim) != 5)
+  if (num_variables(ind_prim) < 5)
     throw BlacklightException("Primitives from data file do not have 5 variables.");
-  if (num_variables(ind_bb) != 3)
-    throw BlacklightException("Magnetic field from data file do not have 3 variables.");
+  if (num_variables(ind_bb) < 3)
+    throw BlacklightException("Magnetic field from data file does not have 3 variables.");
 
   // Check that variables are in expected locations
   if (not variable_names[ind_rho].compare("rho"))
