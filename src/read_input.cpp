@@ -5,6 +5,7 @@
 #include <cctype>     // isspace
 #include <fstream>    // ifstream
 #include <optional>   // optional
+#include <sstream>    // ostringstream
 #include <string>     // getline, stod, stof, stoi, string
 
 // Blacklight headers
@@ -24,10 +25,12 @@ InputReader::InputReader(const std::string input_file_)
 
 // Input reader read and initialize function
 // Inputs: (none)
-// Outputs: (none)
+// Outputs:
+//   returned value: number of runs to perform based on inputs
 // Notes:
-//   Initializes all member objects.
-void InputReader::Read()
+//   Initializes all member objects that might be used except possibly simulation_file_formatted and
+//       output_file_formatted (both initialized no later than AdjustFileNames()).
+int InputReader::Read()
 {
   // Open input file
   std::ifstream input_stream(input_file);
@@ -66,7 +69,7 @@ void InputReader::Read()
     else if (key == "output_format")
       output_format = ReadOutputFormat(val);
     else if (key == "output_file")
-      output_file = val;
+      output_file_template = val;
     else if (key == "output_params")
       output_params = ReadBool(val);
     else if (key == "output_camera")
@@ -98,7 +101,13 @@ void InputReader::Read()
 
     // Store simulation parameters
     else if (key == "simulation_file")
-      simulation_file = val;
+      simulation_file_template = val;
+    else if (key == "simulation_multiple")
+      simulation_multiple = ReadBool(val);
+    else if (key == "simulation_start")
+      simulation_start = std::stoi(val);
+    else if (key == "simulation_end")
+      simulation_end = std::stoi(val);
     else if (key == "simulation_m_msun")
       simulation_m_msun = std::stod(val);
     else if (key == "simulation_a")
@@ -190,8 +199,107 @@ void InputReader::Read()
 
     // Handle unknown entry
     else
-      throw BlacklightException("Unknown key in input file.");
+    {
+      std::ostringstream message;
+      message << "Unknown key (" << val << ") in input file.";
+      throw BlacklightException(message.str().c_str());
+    }
   }
+
+  // Account for multiple runs
+  if (model_type == ModelType::simulation and simulation_multiple)
+  {
+    // Check number of runs
+    if (simulation_start.value() < 0)
+      throw BlacklightException("Must have nonnegative index simulation_start.");
+    num_runs = simulation_end.value() - simulation_start.value() + 1;
+    if (num_runs < 0)
+      throw BlacklightException("Must have simulation_end at least as large as simulation_start.");
+
+    // Parse simulation filename template
+    std::string file_template = simulation_file_template.value();
+    simulation_pos_open = file_template.find_first_of('{');
+    if (simulation_pos_open == std::string::npos)
+      throw BlacklightException("Invalid simulation_file for multiple runs.");
+    simulation_pos_close = file_template.find_first_of('}', simulation_pos_open);
+    if (simulation_pos_close == std::string::npos)
+      throw BlacklightException("Invalid simulation_file for multiple runs.");
+    if (file_template[simulation_pos_close-1] != 'd')
+      throw BlacklightException("Invalid simulation_file for multiple runs.");
+    simulation_field_length = 0;
+    if (simulation_pos_close - simulation_pos_open > 2)
+      simulation_field_length = std::stoi(file_template.substr(simulation_pos_open + 1,
+          simulation_pos_close - simulation_pos_open - 2));
+
+    // Parse output filename template
+    file_template = output_file_template.value();
+    output_pos_open = file_template.find_first_of('{');
+    if (output_pos_open == std::string::npos)
+      throw BlacklightException("Invalid output_file for multiple runs.");
+    output_pos_close = file_template.find_first_of('}', output_pos_open);
+    if (output_pos_close == std::string::npos)
+      throw BlacklightException("Invalid output_file for multiple runs.");
+    if (file_template[output_pos_close-1] != 'd')
+      throw BlacklightException("Invalid output_file for multiple runs.");
+    output_field_length = 0;
+    if (output_pos_close - output_pos_open > 2)
+      output_field_length = std::stoi(file_template.substr(output_pos_open + 1,
+          output_pos_close - output_pos_open - 2));
+  }
+
+  // Account for single run
+  else
+  {
+    num_runs = 0;
+    simulation_file_formatted = simulation_file_template.value();
+    output_file_formatted = output_file_template.value();
+  }
+  return num_runs;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for preparing file names with appropriate substitutions
+// Inputs:
+//   index: index of file number, starting at 0
+// Outputs: (none)
+void InputReader::AdjustFileNames(int index)
+{
+  // Do nothing for single run
+  if (num_runs == 0)
+    return;
+
+  // Calculate length of field to fill
+  int file_number = simulation_start.value() + index;
+  int file_number_length = std::snprintf(nullptr, 0, "%d", file_number);
+  if (file_number_length < 0)
+    throw BlacklightException("Could not format file name.");
+
+  // Set simulation filename
+  int num_zeros = 0;
+  if (file_number_length < simulation_field_length)
+    num_zeros = simulation_field_length - file_number_length;
+  std::string file_template = simulation_file_template.value();
+  std::ostringstream simulation_filename;
+  simulation_filename << file_template.substr(0, simulation_pos_open);
+  for (int n = 0; n < num_zeros; n++)
+    simulation_filename << "0";
+  simulation_filename << file_number;
+  simulation_filename << file_template.substr(simulation_pos_close + 1);
+  simulation_file_formatted = simulation_filename.str();
+
+  // Set output filename
+  num_zeros = 0;
+  if (file_number_length < output_field_length)
+    num_zeros = output_field_length - file_number_length;
+  file_template = output_file_template.value();
+  std::ostringstream output_filename;
+  output_filename << file_template.substr(0, output_pos_open);
+  for (int n = 0; n < num_zeros; n++)
+    output_filename << "0";
+  output_filename << file_number;
+  output_filename << file_template.substr(output_pos_close + 1);
+  output_file_formatted = output_filename.str();
   return;
 }
 

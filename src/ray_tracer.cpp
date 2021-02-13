@@ -6,7 +6,7 @@
                       // isfinite, pow, sin, sqrt
 #include <limits>     // numeric_limits
 #include <optional>   // optional
-#include <sstream>    // stringstream
+#include <sstream>    // ostringstream
 #include <string>     // string
 
 // Library headers
@@ -1013,7 +1013,7 @@ void RayTracer::IntegrateGeodesics()
   // Report improperly terminated geodesics
   if (num_bad_geodesics > 0)
   {
-    std::stringstream message;
+    std::ostringstream message;
     message << num_bad_geodesics << " out of " << image_resolution * image_resolution
         << " geodesics terminate unexpectedly.";
     BlacklightWarning(message.str().c_str());

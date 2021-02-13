@@ -30,7 +30,7 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader, const RayTracer *p
 {
   // Copy output parameters
   output_format = p_input_reader->output_format.value();
-  output_file = p_input_reader->output_file.value();
+  output_file = p_input_reader->output_file_formatted;
   if (output_format == OutputFormat::npz)
   {
     output_params = p_input_reader->output_params.value();

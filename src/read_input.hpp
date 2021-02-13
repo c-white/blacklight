@@ -30,7 +30,7 @@ struct InputReader
 
   // Data - output parameters
   std::optional<OutputFormat> output_format;
-  std::optional<std::string> output_file;
+  std::optional<std::string> output_file_template;
   std::optional<bool> output_params;
   std::optional<bool> output_camera;
 
@@ -48,7 +48,10 @@ struct InputReader
   std::optional<double> formula_beta;
 
   // Data - simulation parameters
-  std::optional<std::string> simulation_file;
+  std::optional<std::string> simulation_file_template;
+  std::optional<bool> simulation_multiple;
+  std::optional<int> simulation_start;
+  std::optional<int> simulation_end;
   std::optional<double> simulation_m_msun;
   std::optional<double> simulation_a;
   std::optional<double> simulation_rho_cgs;
@@ -99,8 +102,20 @@ struct InputReader
   std::optional<double> ray_min_factor;
   std::optional<double> ray_max_factor;
 
-  // External function
-  void Read();
+  // String substitution data
+  int num_runs;
+  std::string simulation_file_formatted;
+  std::string::size_type simulation_pos_open;
+  std::string::size_type simulation_pos_close;
+  int simulation_field_length;
+  std::string output_file_formatted;
+  std::string::size_type output_pos_open;
+  std::string::size_type output_pos_close;
+  int output_field_length;
+
+  // External functions
+  int Read();
+  void AdjustFileNames(int index);
 
   // Internal functions
   static bool RemoveableSpace(unsigned char c);

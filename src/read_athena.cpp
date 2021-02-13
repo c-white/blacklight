@@ -31,7 +31,7 @@ AthenaReader::AthenaReader(const InputReader *p_input_reader)
   if (model_type == ModelType::simulation)
   {
     // Copy simulation parameters
-    simulation_file = p_input_reader->simulation_file.value();
+    simulation_file = p_input_reader->simulation_file_formatted;
 
     // Open file
     data_stream = std::ifstream(simulation_file, std::ios_base::in | std::ios_base::binary);

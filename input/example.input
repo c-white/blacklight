@@ -23,6 +23,9 @@ formula_beta  = 2.5      # source index
 
 # Simulation parameters (only used if model_type == simulation)
 simulation_file         = data/example.athdf  # file containing Athena++ data dump if needed
+simulation_multiple     = false               # flag for processing multiple files
+simulation_start        = 0                   # first file number (simulation_multiple == true)
+simulation_end          = 0                   # last file number (simulation_multiple == true)
 simulation_m_msun       = 4.152e6             # black hole mass in solar masses
 simulation_a            = 0.9                 # dimensionless black hole spin
 simulation_rho_cgs      = 1.6e-16             # unit code density in g/cm^3

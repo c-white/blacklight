@@ -37,11 +37,12 @@ int main(int argc, char *argv[])
   const std::string input_file(argv[1]);
 
   // Read input file
+  int num_runs;
   InputReader *p_input_reader;
   try
   {
     p_input_reader = new InputReader(input_file);
-    p_input_reader->Read();
+    num_runs = p_input_reader->Read();
   }
   catch (const BlacklightException &exception)
   {
@@ -70,79 +71,88 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  // Read data file
-  AthenaReader *p_athena_reader;
-  try
+  // Go through runs
+  for (int n = 0; n < num_runs; n++)
   {
-    p_athena_reader = new AthenaReader(p_input_reader);
-    p_athena_reader->Read();
-  }
-  catch (const BlacklightException &exception)
-  {
-    std::cout << exception.what();
-    return 1;
-  }
-  catch (const std::bad_optional_access &exception)
-  {
-    std::cout << "Error: AthenaReader unable to find all needed values in input file.\n";
-    return 1;
-  }
-  catch (...)
-  {
-    std::cout << "Error: Could not read data file.\n";
-    return 1;
-  }
+    // Adjust file names
+    p_input_reader->AdjustFileNames(n);
 
-  // Process data
-  RayTracer *p_ray_tracer;
-  try
-  {
-    p_ray_tracer = new RayTracer(p_input_reader, p_athena_reader);
-    p_ray_tracer->MakeImage();
-  }
-  catch (const BlacklightException &exception)
-  {
-    std::cout << exception.what();
-    return 1;
-  }
-  catch (const std::bad_optional_access &exception)
-  {
-    std::cout << "Error: RayTracer unable to find all needed values in input file.\n";
-    return 1;
-  }
-  catch (...)
-  {
-    std::cout << "Error: Could not process data.\n";
-    return 1;
-  }
+    // Read data file
+    AthenaReader *p_athena_reader;
+    try
+    {
+      p_athena_reader = new AthenaReader(p_input_reader);
+      p_athena_reader->Read();
+    }
+    catch (const BlacklightException &exception)
+    {
+      std::cout << exception.what();
+      return 1;
+    }
+    catch (const std::bad_optional_access &exception)
+    {
+      std::cout << "Error: AthenaReader unable to find all needed values in input file.\n";
+      return 1;
+    }
+    catch (...)
+    {
+      std::cout << "Error: Could not read data file.\n";
+      return 1;
+    }
 
-  // Write output file
-  OutputWriter *p_output_writer;
-  try
-  {
-    p_output_writer = new OutputWriter(p_input_reader, p_ray_tracer);
-    p_output_writer->Write();
-  }
-  catch (const BlacklightException &exception)
-  {
-    std::cout << exception.what();
-    return 1;
-  }
-  catch (const std::bad_optional_access &exception)
-  {
-    std::cout << "Error: OutputWriter unable to find all needed values in input file.\n";
-    return 1;
-  }
-  catch (...)
-  {
-    std::cout << "Error: Could not write output file.\n";
-    return 1;
+    // Process data
+    RayTracer *p_ray_tracer;
+    try
+    {
+      p_ray_tracer = new RayTracer(p_input_reader, p_athena_reader);
+      p_ray_tracer->MakeImage();
+    }
+    catch (const BlacklightException &exception)
+    {
+      std::cout << exception.what();
+      return 1;
+    }
+    catch (const std::bad_optional_access &exception)
+    {
+      std::cout << "Error: RayTracer unable to find all needed values in input file.\n";
+      return 1;
+    }
+    catch (...)
+    {
+      std::cout << "Error: Could not process data.\n";
+      return 1;
+    }
+
+    // Write output file
+    OutputWriter *p_output_writer;
+    try
+    {
+      p_output_writer = new OutputWriter(p_input_reader, p_ray_tracer);
+      p_output_writer->Write();
+    }
+    catch (const BlacklightException &exception)
+    {
+      std::cout << exception.what();
+      return 1;
+    }
+    catch (const std::bad_optional_access &exception)
+    {
+      std::cout << "Error: OutputWriter unable to find all needed values in input file.\n";
+      return 1;
+    }
+    catch (...)
+    {
+      std::cout << "Error: Could not write output file.\n";
+      return 1;
+    }
+
+    // Free memory
+    delete p_output_writer;
+    delete p_ray_tracer;
+    delete p_athena_reader;
   }
 
   // Free memory
-  delete p_output_writer;
-  delete p_ray_tracer;
-  delete p_athena_reader;
   delete p_input_reader;
 
   // End program
