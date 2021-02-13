@@ -20,7 +20,7 @@ formula_a     = 0.0      # source amplitude parameter A in cm^2.s.sr.Hz/erg
 formula_beta  = 2.5      # source index
 
 # Fallback parameters
-fallback_nan  = true  # flag indicating any fallback should result in NaN for that ray
+fallback_nan = true  # flag indicating any fallback should result in NaN for that ray
 
 # Image parameters
 image_camera        = plane                 # type of camera (plane, pinhole)
