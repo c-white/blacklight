@@ -52,16 +52,18 @@ struct InputReader
   std::optional<bool> simulation_multiple;
   std::optional<int> simulation_start;
   std::optional<int> simulation_end;
+  std::optional<Coordinates> simulation_coord;
   std::optional<double> simulation_m_msun;
   std::optional<double> simulation_a;
   std::optional<double> simulation_rho_cgs;
-  std::optional<Coordinates> simulation_coord;
+  std::optional<std::string> simulation_kappa_name;
   std::optional<bool> simulation_interp;
   std::optional<bool> simulation_block_interp;
 
   // Data - plasma parameters
   std::optional<double> plasma_mu;
   std::optional<double> plasma_ne_ni;
+  std::optional<PlasmaModel> plasma_model;
   std::optional<double> plasma_rat_high;
   std::optional<double> plasma_rat_low;
   std::optional<double> plasma_sigma_max;
@@ -70,6 +72,7 @@ struct InputReader
   std::optional<bool> fallback_nan;
   std::optional<float> fallback_rho;
   std::optional<float> fallback_pgas;
+  std::optional<float> fallback_kappa;
 
   // Data - image parameters
   std::optional<Camera> image_camera;
@@ -103,6 +106,7 @@ struct InputReader
   std::optional<double> ray_max_factor;
 
   // String substitution data
+  bool multiple_runs;
   int num_runs;
   std::string simulation_file_formatted;
   std::string::size_type simulation_pos_open;
@@ -124,6 +128,7 @@ struct InputReader
   ModelType ReadModelType(const std::string &string);
   OutputFormat ReadOutputFormat(const std::string &string);
   Coordinates ReadCoordinates(const std::string &string);
+  PlasmaModel ReadPlasmaModel(const std::string &string);
   Camera ReadCamera(const std::string &string);
   FrequencyNormalization ReadFrequencyNormalization(const std::string &string);
   RayTerminate ReadRayTerminate(const std::string &string);

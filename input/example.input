@@ -26,24 +26,27 @@ simulation_file         = data/example.athdf  # file containing Athena++ data du
 simulation_multiple     = false               # flag for processing multiple files
 simulation_start        = 0                   # first file number (simulation_multiple == true)
 simulation_end          = 0                   # last file number (simulation_multiple == true)
+simulation_coord        = sph_ks              # simulation coordinates (sph_ks, cart_ks)
 simulation_m_msun       = 4.152e6             # black hole mass in solar masses
 simulation_a            = 0.9                 # dimensionless black hole spin
 simulation_rho_cgs      = 1.6e-16             # unit code density in g/cm^3
-simulation_coord        = sph_ks              # simulation coordinates (sph_ks, cart_ks)
+simulation_kappa_name   = r0                  # name of variable containing electron entropy
 simulation_interp       = false               # flag indicating interpolation should be used
 simulation_block_interp = false               # flag indicating interpolation should cross blocks
 
 # Plasma parameters (only used if model_type == simulation)
-plasma_mu        = 0.5   # molecular weight of fluid in proton masses
-plasma_ne_ni     = 1.0   # electrons per ion
-plasma_rat_high  = 10.0  # ion-electron temperature ratio at infinite plasma beta
-plasma_rat_low   = 1.0   # ion-electron temperature ratio at zero plasma beta
-plasma_sigma_max = 1.0   # if nonnegative, cutoff in sigma above which plasma is considered vacuum
+plasma_mu        = 0.5         # molecular weight of fluid in proton masses
+plasma_ne_ni     = 1.0         # electrons per ion
+plasma_model     = ti_te_beta  # electron temperature model (ti_te_beta, code_kappa)
+plasma_rat_low   = 1.0         # ion-electron temperature ratio at zero plasma beta
+plasma_rat_high  = 10.0        # ion-electron temperature ratio at infinite plasma beta
+plasma_sigma_max = 1.0         # if nonnegative, cutoff in sigma above which plasma is ignored
 
 # Fallback parameters
-fallback_nan  = true    # flag indicating any fallback should result in NaN for that ray
-fallback_rho  = 1.0e-6  # out-of-bounds density (model_type == simulation and not fallback_nan)
-fallback_pgas = 1.0e-8  # out-of-bounds pressure (model_type == simulation and not fallback_nan)
+fallback_nan   = true    # flag indicating any fallback should result in NaN for that ray
+fallback_rho   = 1.0e-6  # out-of-bounds density (model_type == simulation and not fallback_nan)
+fallback_pgas  = 1.0e-8  # out-of-bounds pressure (model_type == simulation and not fallback_nan)
+fallback_kappa = 1.0e-8  # out-of-bounds kappa (model_type == simulation and not fallback_nan)
 
 # Image parameters
 image_camera        = plane     # type of camera (plane, pinhole)

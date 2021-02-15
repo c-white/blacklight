@@ -66,9 +66,9 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   // Copy simulation parameters
   if (model_type == ModelType::simulation)
   {
+    simulation_coord = p_input_reader->simulation_coord.value();
     simulation_m_msun = p_input_reader->simulation_m_msun.value();
     simulation_rho_cgs = p_input_reader->simulation_rho_cgs.value();
-    simulation_coord = p_input_reader->simulation_coord.value();
     simulation_interp = p_input_reader->simulation_interp.value();
     if (simulation_interp)
       simulation_block_interp = p_input_reader->simulation_block_interp.value();
@@ -79,8 +79,12 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   {
     plasma_mu = p_input_reader->plasma_mu.value();
     plasma_ne_ni = p_input_reader->plasma_ne_ni.value();
-    plasma_rat_high = p_input_reader->plasma_rat_high.value();
-    plasma_rat_low = p_input_reader->plasma_rat_low.value();
+    plasma_model = p_input_reader->plasma_model.value();
+    if (plasma_model == PlasmaModel::ti_te_beta)
+    {
+      plasma_rat_high = p_input_reader->plasma_rat_high.value();
+      plasma_rat_low = p_input_reader->plasma_rat_low.value();
+    }
     plasma_sigma_max = p_input_reader->plasma_sigma_max.value();
   }
 
@@ -89,7 +93,10 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   if (model_type == ModelType::simulation and not fallback_nan)
   {
     fallback_rho = p_input_reader->fallback_rho.value();
-    fallback_pgas = p_input_reader->fallback_pgas.value();
+    if (plasma_model == PlasmaModel::ti_te_beta)
+      fallback_pgas = p_input_reader->fallback_pgas.value();
+    if (plasma_model == PlasmaModel::code_kappa)
+      fallback_kappa = p_input_reader->fallback_kappa.value();
   }
 
   // Copy image parameters
@@ -145,8 +152,16 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
     x3v = p_athena_reader->x3v;
     grid_rho = p_athena_reader->prim;
     grid_rho.Slice(5, p_athena_reader->ind_rho);
-    grid_pgas = p_athena_reader->prim;
-    grid_pgas.Slice(5, p_athena_reader->ind_pgas);
+    if (plasma_model == PlasmaModel::ti_te_beta)
+    {
+      grid_pgas = p_athena_reader->prim;
+      grid_pgas.Slice(5, p_athena_reader->ind_pgas);
+    }
+    if (plasma_model == PlasmaModel::code_kappa)
+    {
+      grid_kappa = p_athena_reader->prim;
+      grid_kappa.Slice(5, p_athena_reader->ind_kappa);
+    }
     grid_uu1 = p_athena_reader->prim;
     grid_uu1.Slice(5, p_athena_reader->ind_uu1);
     grid_uu2 = p_athena_reader->prim;
@@ -1181,8 +1196,8 @@ void RayTracer::TransformGeodesics()
 // Output: (none)
 // Notes:
 //   Assumes image_steps, sample_flags, sample_num, sample_pos, and sample_len have been set.
-//   Allocates and initializes sample_rho, sample_pgas, sample_uu1, sample_uu2, sample_uu3,
-//       sample_bb1, sample_bb2, and sample_bb3.
+//   Allocates and initializes sample_rho, sample_pgas or sample_kappa, sample_uu1, sample_uu2,
+//       sample_uu3, sample_bb1, sample_bb2, and sample_bb3.
 //   If simulation_interp == false, uses primitives from cell containing geodesic sample point.
 //   If simulation_interp == true and simulation_block_interp == false, performs trilinear
 //       interpolation to geodesic sample point from cell centers, using only data within the same
@@ -1194,7 +1209,10 @@ void RayTracer::SampleSimulationAlongGeodesics()
 {
   // Allocate resampling arrays
   sample_rho.Allocate(image_resolution, image_resolution, image_steps);
-  sample_pgas.Allocate(image_resolution, image_resolution, image_steps);
+  if (plasma_model == PlasmaModel::ti_te_beta)
+    sample_pgas.Allocate(image_resolution, image_resolution, image_steps);
+  if (plasma_model == PlasmaModel::code_kappa)
+    sample_kappa.Allocate(image_resolution, image_resolution, image_steps);
   sample_uu1.Allocate(image_resolution, image_resolution, image_steps);
   sample_uu2.Allocate(image_resolution, image_resolution, image_steps);
   sample_uu3.Allocate(image_resolution, image_resolution, image_steps);
@@ -1235,7 +1253,10 @@ void RayTracer::SampleSimulationAlongGeodesics()
           for (int n = 0; n < num_steps; n++)
           {
             sample_rho(m,l,n) = std::numeric_limits<float>::quiet_NaN();
-            sample_pgas(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+            if (plasma_model == PlasmaModel::ti_te_beta)
+              sample_pgas(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+            if (plasma_model == PlasmaModel::code_kappa)
+              sample_kappa(m,l,n) = std::numeric_limits<float>::quiet_NaN();
             sample_uu1(m,l,n) = std::numeric_limits<float>::quiet_NaN();
             sample_uu2(m,l,n) = std::numeric_limits<float>::quiet_NaN();
             sample_uu3(m,l,n) = std::numeric_limits<float>::quiet_NaN();
@@ -1285,7 +1306,10 @@ void RayTracer::SampleSimulationAlongGeodesics()
               if (fallback_nan)
               {
                 sample_rho(m,l,n) = std::numeric_limits<float>::quiet_NaN();
-                sample_pgas(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+                if (plasma_model == PlasmaModel::ti_te_beta)
+                  sample_pgas(m,l,n) = std::numeric_limits<float>::quiet_NaN();
+                if (plasma_model == PlasmaModel::code_kappa)
+                  sample_kappa(m,l,n) = std::numeric_limits<float>::quiet_NaN();
                 sample_uu1(m,l,n) = std::numeric_limits<float>::quiet_NaN();
                 sample_uu2(m,l,n) = std::numeric_limits<float>::quiet_NaN();
                 sample_uu3(m,l,n) = std::numeric_limits<float>::quiet_NaN();
@@ -1296,7 +1320,10 @@ void RayTracer::SampleSimulationAlongGeodesics()
               else
               {
                 sample_rho(m,l,n) = fallback_rho;
-                sample_pgas(m,l,n) = fallback_pgas;
+                if (plasma_model == PlasmaModel::ti_te_beta)
+                  sample_pgas(m,l,n) = fallback_pgas;
+                if (plasma_model == PlasmaModel::code_kappa)
+                  sample_kappa(m,l,n) = fallback_kappa;
                 sample_uu1(m,l,n) = fallback_uu1;
                 sample_uu2(m,l,n) = fallback_uu2;
                 sample_uu3(m,l,n) = fallback_uu3;
@@ -1332,7 +1359,10 @@ void RayTracer::SampleSimulationAlongGeodesics()
           if (not simulation_interp)
           {
             sample_rho(m,l,n) = grid_rho(b,k,j,i);
-            sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
+            if (plasma_model == PlasmaModel::ti_te_beta)
+              sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
+            if (plasma_model == PlasmaModel::code_kappa)
+              sample_kappa(m,l,n) = grid_kappa(b,k,j,i);
             sample_uu1(m,l,n) = grid_uu1(b,k,j,i);
             sample_uu2(m,l,n) = grid_uu2(b,k,j,i);
             sample_uu3(m,l,n) = grid_uu3(b,k,j,i);
@@ -1374,20 +1404,42 @@ void RayTracer::SampleSimulationAlongGeodesics()
                 + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
 
             // Interpolate gas pressure
-            val_mmm = static_cast<double>(grid_pgas(b,k_m,j_m,i_m));
-            val_mmp = static_cast<double>(grid_pgas(b,k_m,j_m,i_p));
-            val_mpm = static_cast<double>(grid_pgas(b,k_m,j_p,i_m));
-            val_mpp = static_cast<double>(grid_pgas(b,k_m,j_p,i_p));
-            val_pmm = static_cast<double>(grid_pgas(b,k_p,j_m,i_m));
-            val_pmp = static_cast<double>(grid_pgas(b,k_p,j_m,i_p));
-            val_ppm = static_cast<double>(grid_pgas(b,k_p,j_p,i_m));
-            val_ppp = static_cast<double>(grid_pgas(b,k_p,j_p,i_p));
-            sample_pgas(m,l,n) =
-                static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
-                + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp
-                + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm + (1.0 - f_k) * f_j * f_i * val_mpp
-                + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm + f_k * (1.0 - f_j) * f_i * val_pmp
-                + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
+            if (plasma_model == PlasmaModel::ti_te_beta)
+            {
+              val_mmm = static_cast<double>(grid_pgas(b,k_m,j_m,i_m));
+              val_mmp = static_cast<double>(grid_pgas(b,k_m,j_m,i_p));
+              val_mpm = static_cast<double>(grid_pgas(b,k_m,j_p,i_m));
+              val_mpp = static_cast<double>(grid_pgas(b,k_m,j_p,i_p));
+              val_pmm = static_cast<double>(grid_pgas(b,k_p,j_m,i_m));
+              val_pmp = static_cast<double>(grid_pgas(b,k_p,j_m,i_p));
+              val_ppm = static_cast<double>(grid_pgas(b,k_p,j_p,i_m));
+              val_ppp = static_cast<double>(grid_pgas(b,k_p,j_p,i_p));
+              sample_pgas(m,l,n) =
+                  static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
+                  + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp
+                  + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm + (1.0 - f_k) * f_j * f_i * val_mpp
+                  + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm + f_k * (1.0 - f_j) * f_i * val_pmp
+                  + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
+            }
+
+            // Interpolate electron entropy
+            if (plasma_model == PlasmaModel::code_kappa)
+            {
+              val_mmm = static_cast<double>(grid_kappa(b,k_m,j_m,i_m));
+              val_mmp = static_cast<double>(grid_kappa(b,k_m,j_m,i_p));
+              val_mpm = static_cast<double>(grid_kappa(b,k_m,j_p,i_m));
+              val_mpp = static_cast<double>(grid_kappa(b,k_m,j_p,i_p));
+              val_pmm = static_cast<double>(grid_kappa(b,k_p,j_m,i_m));
+              val_pmp = static_cast<double>(grid_kappa(b,k_p,j_m,i_p));
+              val_ppm = static_cast<double>(grid_kappa(b,k_p,j_p,i_m));
+              val_ppp = static_cast<double>(grid_kappa(b,k_p,j_p,i_p));
+              sample_kappa(m,l,n) =
+                  static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
+                  + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp
+                  + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm + (1.0 - f_k) * f_j * f_i * val_mpp
+                  + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm + f_k * (1.0 - f_j) * f_i * val_pmp
+                  + f_k * f_j * (1.0 - f_i) * val_ppm + f_k * f_j * f_i * val_ppp);
+            }
 
             // Interpolate x1-velocity
             val_mmm = static_cast<double>(grid_uu1(b,k_m,j_m,i_m));
@@ -1482,8 +1534,10 @@ void RayTracer::SampleSimulationAlongGeodesics()
             // Account for possible invalid values
             if (sample_rho(m,l,n) <= 0.0f)
               sample_rho(m,l,n) = grid_rho(b,k,j,i);
-            if (sample_pgas(m,l,n) <= 0.0f)
+            if (plasma_model == PlasmaModel::ti_te_beta and sample_pgas(m,l,n) <= 0.0f)
               sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
+            if (plasma_model == PlasmaModel::code_kappa and sample_kappa(m,l,n) <= 0.0f)
+              sample_kappa(m,l,n) = grid_kappa(b,k,j,i);
           }
 
           // Resample values with interblock interpolation
@@ -1534,14 +1588,24 @@ void RayTracer::SampleSimulationAlongGeodesics()
                 + f_k * (1.0 - f_j) * (1.0 - f_i) * vals[4][0]
                 + f_k * (1.0 - f_j) * f_i * vals[5][0]
                 + f_k * f_j * (1.0 - f_i) * vals[6][0] + f_k * f_j * f_i * vals[7][0]);
-            sample_pgas(m,l,n) =
-                static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * vals[0][1]
-                + (1.0 - f_k) * (1.0 - f_j) * f_i * vals[1][1]
-                + (1.0 - f_k) * f_j * (1.0 - f_i) * vals[2][1]
-                + (1.0 - f_k) * f_j * f_i * vals[3][1]
-                + f_k * (1.0 - f_j) * (1.0 - f_i) * vals[4][1]
-                + f_k * (1.0 - f_j) * f_i * vals[5][1]
-                + f_k * f_j * (1.0 - f_i) * vals[6][1] + f_k * f_j * f_i * vals[7][1]);
+            if (plasma_model == PlasmaModel::ti_te_beta)
+              sample_pgas(m,l,n) =
+                  static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * vals[0][1]
+                  + (1.0 - f_k) * (1.0 - f_j) * f_i * vals[1][1]
+                  + (1.0 - f_k) * f_j * (1.0 - f_i) * vals[2][1]
+                  + (1.0 - f_k) * f_j * f_i * vals[3][1]
+                  + f_k * (1.0 - f_j) * (1.0 - f_i) * vals[4][1]
+                  + f_k * (1.0 - f_j) * f_i * vals[5][1]
+                  + f_k * f_j * (1.0 - f_i) * vals[6][1] + f_k * f_j * f_i * vals[7][1]);
+            if (plasma_model == PlasmaModel::code_kappa)
+              sample_kappa(m,l,n) =
+                  static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * vals[0][1]
+                  + (1.0 - f_k) * (1.0 - f_j) * f_i * vals[1][1]
+                  + (1.0 - f_k) * f_j * (1.0 - f_i) * vals[2][1]
+                  + (1.0 - f_k) * f_j * f_i * vals[3][1]
+                  + f_k * (1.0 - f_j) * (1.0 - f_i) * vals[4][1]
+                  + f_k * (1.0 - f_j) * f_i * vals[5][1]
+                  + f_k * f_j * (1.0 - f_i) * vals[6][1] + f_k * f_j * f_i * vals[7][1]);
             sample_uu1(m,l,n) =
                 static_cast<float>((1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * vals[0][2]
                 + (1.0 - f_k) * (1.0 - f_j) * f_i * vals[1][2]
@@ -1594,8 +1658,10 @@ void RayTracer::SampleSimulationAlongGeodesics()
             // Account for possible invalid values
             if (sample_rho(m,l,n) <= 0.0f)
               sample_rho(m,l,n) = grid_rho(b,k,j,i);
-            if (sample_pgas(m,l,n) <= 0.0f)
+            if (plasma_model == PlasmaModel::ti_te_beta and sample_pgas(m,l,n) <= 0.0f)
               sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
+            if (plasma_model == PlasmaModel::code_kappa and sample_kappa(m,l,n) <= 0.0f)
+              sample_kappa(m,l,n) = grid_kappa(b,k,j,i);
           }
         }
       }
@@ -1609,10 +1675,12 @@ void RayTracer::SampleSimulationAlongGeodesics()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes sample_num, sample_dir, sample_len, sample_rho, sample_pgas, sample_uu1, sample_uu2,
-//       sample_uu3, sample_bb1, sample_bb2, and sample_bb3 have been set.
+//   Assumes sample_num, sample_dir, sample_len, sample_rho, sample_pgas or sample_kappa,
+//       sample_uu1, sample_uu2, sample_uu3, sample_bb1, sample_bb2, and sample_bb3 have been set.
 //   Allocates and initializes image.
 //   Assumes x^0 is ignorable.
+//   References beta-dependent temperature ratio electron model from 2016 AA 586 A38 (E1).
+//   References entropy-based electron model from 2017 MNRAS 466 705 (E2).
 //   References symphony paper 2016 ApJ 822 34 (S).
 void RayTracer::IntegrateSimulationRadiation()
 {
@@ -1651,7 +1719,12 @@ void RayTracer::IntegrateSimulationRadiation()
 
           // Extract model variables
           double rho = sample_rho(m,l,n);
-          double pgas = sample_pgas(m,l,n);
+          double pgas = 0.0;
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            pgas = sample_pgas(m,l,n);
+          double kappa = 0.0;
+          if (plasma_model == PlasmaModel::code_kappa)
+            kappa = sample_kappa(m,l,n);
           double uu1 = sample_uu1(m,l,n);
           double uu2 = sample_uu2(m,l,n);
           double uu3 = sample_uu3(m,l,n);
@@ -1746,15 +1819,32 @@ void RayTracer::IntegrateSimulationRadiation()
           double n_e_cgs = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
           double bb_cgs = std::sqrt(4.0 * math::pi * b_sq * e_unit);
           double nu_c_cgs = physics::e * bb_cgs / (2.0 * math::pi * physics::m_e * physics::c);
-          double beta_inv = b_sq / (2.0 * pgas);
-          double tt_rat = (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv)
-              / (1.0 + beta_inv * beta_inv);
-          double kb_tt_tot_cgs = plasma_mu * physics::m_p * physics::c * physics::c * pgas / rho;
-          double kb_tt_e_cgs = (plasma_ne_ni + 1.0) / (plasma_ne_ni + tt_rat) * kb_tt_tot_cgs;
-          double theta_e = kb_tt_e_cgs / (physics::m_e * physics::c * physics::c);
-          double nu_s_cgs = 2.0 / 9.0 * nu_c_cgs * theta_e * theta_e * sin_theta;
+
+          // Calculate electron temperature for model with T_i/T_e a function of beta (E1 1)
+          double kb_tt_e_cgs = 0.0;
+          double theta_e = 0.0;
+          if (plasma_model == PlasmaModel::ti_te_beta)
+          {
+            double beta_inv = b_sq / (2.0 * pgas);
+            double tt_rat = (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv)
+                / (1.0 + beta_inv * beta_inv);
+            double kb_tt_tot_cgs = plasma_mu * physics::m_p * physics::c * physics::c * pgas / rho;
+            kb_tt_e_cgs = (plasma_ne_ni + 1.0) / (plasma_ne_ni + tt_rat) * kb_tt_tot_cgs;
+            theta_e = kb_tt_e_cgs / (physics::m_e * physics::c * physics::c);
+          }
+
+          // Calculate electron temperature for given electron entropy (E2 13)
+          if (plasma_model == PlasmaModel::code_kappa)
+          {
+            double mu_e = plasma_mu * (1.0 + 1.0 / plasma_ne_ni);
+            double rho_e = rho * physics::m_e / (mu_e * physics::m_p);
+            double rho_kappa_e_cbrt = std::cbrt(rho_e * kappa);
+            theta_e = 1.0 / 5.0 * (std::sqrt(1.0 + 25.0 * rho_kappa_e_cbrt * rho_kappa_e_cbrt) - 1.0);
+            kb_tt_e_cgs = theta_e * physics::m_e * physics::c * physics::c;
+          }
 
           // Calculate emission coefficient in CGS units (S 24), skipping contribution if necessary
+          double nu_s_cgs = 2.0 / 9.0 * nu_c_cgs * theta_e * theta_e * sin_theta;
           if (nu_s_cgs == 0.0)
             continue;
           double k2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
@@ -2398,7 +2488,7 @@ void RayTracer::GeodesicSubstep(double y[9], double k[9], Array<double> &gcov, A
 //   b: block index
 //   k, j, i: cell indices for x^3, x^2, and x^1, possibly 1 beyond valid range
 // Outputs:
-//   vals: density, gas pressure, velocity, and magnetic field set
+//   vals: density, gas pressure or electron entropy, velocity, and magnetic field set
 // Notes:
 //   If requested cell is within block, values are copied from that cell.
 //   If requested cell is in an adjacent block, values are copied from appropriate cell(s) there:
@@ -2434,7 +2524,10 @@ void RayTracer::FindNearbyVals(int b, int k, int j, int i, double vals[8])
   if (i == i_safe and j == j_safe and k == k_safe)
   {
     vals[0] = grid_rho(b,k,j,i);
-    vals[1] = grid_pgas(b,k,j,i);
+    if (plasma_model == PlasmaModel::ti_te_beta)
+      vals[1] = grid_pgas(b,k,j,i);
+    if (plasma_model == PlasmaModel::code_kappa)
+      vals[1] = grid_kappa(b,k,j,i);
     vals[2] = grid_uu1(b,k,j,i);
     vals[3] = grid_uu2(b,k,j,i);
     vals[4] = grid_uu3(b,k,j,i);
@@ -2598,7 +2691,10 @@ void RayTracer::FindNearbyVals(int b, int k, int j, int i, double vals[8])
         and locations(b_alt,1) == location_j_sought and locations(b_alt,2) == location_k_sought)
     {
       vals[0] = grid_rho(b_alt,k_sought,j_sought,i_sought);
-      vals[1] = grid_pgas(b_alt,k_sought,j_sought,i_sought);
+      if (plasma_model == PlasmaModel::ti_te_beta)
+        vals[1] = grid_pgas(b_alt,k_sought,j_sought,i_sought);
+      if (plasma_model == PlasmaModel::code_kappa)
+        vals[1] = grid_kappa(b_alt,k_sought,j_sought,i_sought);
       vals[2] = grid_uu1(b_alt,k_sought,j_sought,i_sought);
       vals[3] = grid_uu2(b_alt,k_sought,j_sought,i_sought);
       vals[4] = grid_uu3(b_alt,k_sought,j_sought,i_sought);
@@ -2630,7 +2726,10 @@ void RayTracer::FindNearbyVals(int b, int k, int j, int i, double vals[8])
           and locations(b_alt,1) == location_j_sought and locations(b_alt,2) == location_k_sought)
       {
         vals[0] = grid_rho(b_alt,k_sought,j_sought,i_sought);
-        vals[1] = grid_pgas(b_alt,k_sought,j_sought,i_sought);
+        if (plasma_model == PlasmaModel::ti_te_beta)
+          vals[1] = grid_pgas(b_alt,k_sought,j_sought,i_sought);
+        if (plasma_model == PlasmaModel::code_kappa)
+          vals[1] = grid_kappa(b_alt,k_sought,j_sought,i_sought);
         vals[2] = grid_uu1(b_alt,k_sought,j_sought,i_sought);
         vals[3] = grid_uu2(b_alt,k_sought,j_sought,i_sought);
         vals[4] = grid_uu3(b_alt,k_sought,j_sought,i_sought);
@@ -2666,14 +2765,24 @@ void RayTracer::FindNearbyVals(int b, int k, int j, int i, double vals[8])
           + static_cast<double>(grid_rho(b_alt,k_sought+1,j_sought,i_sought+1))
           + static_cast<double>(grid_rho(b_alt,k_sought+1,j_sought+1,i_sought))
           + static_cast<double>(grid_rho(b_alt,k_sought+1,j_sought+1,i_sought+1))) / 8.0;
-      vals[1] = (static_cast<double>(grid_pgas(b_alt,k_sought,j_sought,i_sought))
-          + static_cast<double>(grid_pgas(b_alt,k_sought,j_sought,i_sought+1))
-          + static_cast<double>(grid_pgas(b_alt,k_sought,j_sought+1,i_sought))
-          + static_cast<double>(grid_pgas(b_alt,k_sought,j_sought+1,i_sought+1))
-          + static_cast<double>(grid_pgas(b_alt,k_sought+1,j_sought,i_sought))
-          + static_cast<double>(grid_pgas(b_alt,k_sought+1,j_sought,i_sought+1))
-          + static_cast<double>(grid_pgas(b_alt,k_sought+1,j_sought+1,i_sought))
-          + static_cast<double>(grid_pgas(b_alt,k_sought+1,j_sought+1,i_sought+1))) / 8.0;
+      if (plasma_model == PlasmaModel::ti_te_beta)
+        vals[1] = (static_cast<double>(grid_pgas(b_alt,k_sought,j_sought,i_sought))
+            + static_cast<double>(grid_pgas(b_alt,k_sought,j_sought,i_sought+1))
+            + static_cast<double>(grid_pgas(b_alt,k_sought,j_sought+1,i_sought))
+            + static_cast<double>(grid_pgas(b_alt,k_sought,j_sought+1,i_sought+1))
+            + static_cast<double>(grid_pgas(b_alt,k_sought+1,j_sought,i_sought))
+            + static_cast<double>(grid_pgas(b_alt,k_sought+1,j_sought,i_sought+1))
+            + static_cast<double>(grid_pgas(b_alt,k_sought+1,j_sought+1,i_sought))
+            + static_cast<double>(grid_pgas(b_alt,k_sought+1,j_sought+1,i_sought+1))) / 8.0;
+      if (plasma_model == PlasmaModel::code_kappa)
+        vals[1] = (static_cast<double>(grid_kappa(b_alt,k_sought,j_sought,i_sought))
+            + static_cast<double>(grid_kappa(b_alt,k_sought,j_sought,i_sought+1))
+            + static_cast<double>(grid_kappa(b_alt,k_sought,j_sought+1,i_sought))
+            + static_cast<double>(grid_kappa(b_alt,k_sought,j_sought+1,i_sought+1))
+            + static_cast<double>(grid_kappa(b_alt,k_sought+1,j_sought,i_sought))
+            + static_cast<double>(grid_kappa(b_alt,k_sought+1,j_sought,i_sought+1))
+            + static_cast<double>(grid_kappa(b_alt,k_sought+1,j_sought+1,i_sought))
+            + static_cast<double>(grid_kappa(b_alt,k_sought+1,j_sought+1,i_sought+1))) / 8.0;
       vals[2] = (static_cast<double>(grid_uu1(b_alt,k_sought,j_sought,i_sought))
           + static_cast<double>(grid_uu1(b_alt,k_sought,j_sought,i_sought+1))
           + static_cast<double>(grid_uu1(b_alt,k_sought,j_sought+1,i_sought))

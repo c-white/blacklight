@@ -26,8 +26,10 @@ struct AthenaReader
   // Input data - general
   ModelType model_type;
 
-  // Input data - simulation parameters
+  // Input data - simulation and plasma parameters
   std::string simulation_file;
+  std::string simulation_kappa_name;
+  PlasmaModel plasma_model;
 
   // Metadata
   std::ifstream data_stream;
@@ -42,16 +44,9 @@ struct AthenaReader
   Array<int> num_variables;
   unsigned long int *children_addresses;
   int num_children = 0;
-  const int ind_prim = 0;
-  const int ind_rho = 0;
-  const int ind_pgas = 1;
-  const int ind_uu1 = 2;
-  const int ind_uu2 = 3;
-  const int ind_uu3 = 4;
-  const int ind_bb = 1;
-  const int ind_bb1 = 0;
-  const int ind_bb2 = 1;
-  const int ind_bb3 = 2;
+  int ind_rho, ind_pgas, ind_kappa;
+  int ind_uu1, ind_uu2, ind_uu3;
+  int ind_bb1, ind_bb2, ind_bb3;
 
   // Data
   int n_3_root;

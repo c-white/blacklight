@@ -26,6 +26,7 @@ namespace physics
 enum struct ModelType {simulation, formula};
 enum struct OutputFormat {raw, npy, npz};
 enum struct Coordinates {sph_ks, cart_ks};
+enum struct PlasmaModel {ti_te_beta, code_kappa};
 enum struct Camera {plane, pinhole};
 enum struct FrequencyNormalization {camera, infinity};
 enum struct RayTerminate {photon, multiplicative, additive};

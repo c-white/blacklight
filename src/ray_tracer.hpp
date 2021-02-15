@@ -40,15 +40,16 @@ struct RayTracer
   double formula_beta;
 
   // Input data - simulation parameters
+  Coordinates simulation_coord;
   double simulation_m_msun;
   double simulation_rho_cgs;
-  Coordinates simulation_coord;
   bool simulation_interp;
   bool simulation_block_interp;
 
   // Input data - plasma parameters
   double plasma_mu;
   double plasma_ne_ni;
+  PlasmaModel plasma_model;
   double plasma_rat_high;
   double plasma_rat_low;
   double plasma_sigma_max;
@@ -57,6 +58,7 @@ struct RayTracer
   bool fallback_nan;
   float fallback_rho;
   float fallback_pgas;
+  float fallback_kappa;
 
   // Input data - image parameters
   Camera image_camera;
@@ -96,7 +98,7 @@ struct RayTracer
   Array<int> levels, locations;
   Array<float> x1f, x2f, x3f;
   Array<float> x1v, x2v, x3v;
-  Array<float> grid_rho, grid_pgas;
+  Array<float> grid_rho, grid_pgas, grid_kappa;
   Array<float> grid_uu1, grid_uu2, grid_uu3;
   Array<float> grid_bb1, grid_bb2, grid_bb3;
 
@@ -121,7 +123,7 @@ struct RayTracer
   Array<bool> sample_flags;
   Array<int> sample_num;
   Array<double> sample_pos, sample_dir, sample_len;
-  Array<float> sample_rho, sample_pgas;
+  Array<float> sample_rho, sample_pgas, sample_kappa;
   Array<float> sample_uu1, sample_uu2, sample_uu3;
   Array<float> sample_bb1, sample_bb2, sample_bb3;
   Array<double> image;

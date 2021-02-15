@@ -30,8 +30,11 @@ AthenaReader::AthenaReader(const InputReader *p_input_reader)
   // Proceed only if needed
   if (model_type == ModelType::simulation)
   {
-    // Copy simulation parameters
+    // Copy simulation and plasma parameters
     simulation_file = p_input_reader->simulation_file_formatted;
+    plasma_model = p_input_reader->plasma_model.value();
+    if (plasma_model == PlasmaModel::code_kappa)
+      simulation_kappa_name = p_input_reader->simulation_kappa_name.value();
 
     // Open file
     data_stream = std::ifstream(simulation_file, std::ios_base::in | std::ios_base::binary);
@@ -372,37 +375,83 @@ void AthenaReader::ReadHDF5RootObjectHeader()
 //   Assumes metadata set.
 void AthenaReader::VerifyVariables()
 {
-  // Check that primitives and magnetic field are present in expected order
-  if (num_dataset_names < 2)
-    throw BlacklightException("Insufficient datasets in data file.");
-  if (not dataset_names[ind_prim].compare("prim"))
-    throw BlacklightException("Primitives not found in data file.");
-  if (not dataset_names[ind_bb].compare("B"))
-    throw BlacklightException("Magnetic field not found in data file.");
+  // Check that array of all primitives is present
+  int ind_prim;
+  int prim_offset = 0;
+  for (ind_prim = 0; ind_prim < num_dataset_names; ind_prim++)
+    if (dataset_names[ind_prim] == "prim")
+      break;
+    else
+      prim_offset += num_variables(ind_prim);
+  if (ind_prim == num_dataset_names)
+    throw BlacklightException("Unable to locate array \"prim\" in data file.");
 
-  // Check that primitives and magnetic field have expected sizes
-  if (num_variables(ind_prim) < 5)
-    throw BlacklightException("Primitives from data file do not have 5 variables.");
-  if (num_variables(ind_bb) < 3)
-    throw BlacklightException("Magnetic field from data file does not have 3 variables.");
+  // Check that all necessary primitives are present
+  for (ind_rho = 0; ind_rho < num_variables(ind_prim); ind_rho++)
+    if (variable_names[prim_offset+ind_rho] == "rho")
+      break;
+  if (ind_rho == num_variables(ind_prim))
+    throw BlacklightException("Unable to locate \"rho\" slice of \"prim\" in data file.");
+  if (plasma_model == PlasmaModel::ti_te_beta)
+  {
+    for (ind_pgas = 0; ind_pgas < num_variables(ind_prim); ind_pgas++)
+      if (variable_names[prim_offset+ind_pgas] == "press")
+        break;
+    if (ind_pgas == num_variables(ind_prim))
+      throw BlacklightException("Unable to locate \"press\" slice of \"prim\" in data file.");
+  }
+  if (plasma_model == PlasmaModel::code_kappa)
+  {
+    for (ind_kappa = 0; ind_kappa < num_variables(ind_prim); ind_kappa++)
+      if (variable_names[prim_offset+ind_kappa] == simulation_kappa_name)
+        break;
+    if (ind_kappa == num_variables(ind_prim))
+      throw
+          BlacklightException("Unable to locate electron entropy slice of \"prim\" in data file.");
+  }
+  for (ind_uu1 = 0; ind_uu1 < num_variables(ind_prim); ind_uu1++)
+    if (variable_names[prim_offset+ind_uu1] == "vel1")
+      break;
+  if (ind_uu1 == num_variables(ind_prim))
+    throw BlacklightException("Unable to locate \"vel1\" slice of \"prim\" in data file.");
+  for (ind_uu2 = 0; ind_uu2 < num_variables(ind_prim); ind_uu2++)
+    if (variable_names[prim_offset+ind_uu2] == "vel2")
+      break;
+  if (ind_uu2 == num_variables(ind_prim))
+    throw BlacklightException("Unable to locate \"vel2\" slice of \"prim\" in data file.");
+  for (ind_uu3 = 0; ind_uu3 < num_variables(ind_prim); ind_uu3++)
+    if (variable_names[prim_offset+ind_uu3] == "vel3")
+      break;
+  if (ind_uu3 == num_variables(ind_prim))
+    throw BlacklightException("Unable to locate \"vel3\" slice of \"prim\" in data file.");
 
-  // Check that variables are in expected locations
-  if (not variable_names[ind_rho].compare("rho"))
-    throw BlacklightException("Density not found.");
-  if (not variable_names[ind_pgas].compare("press"))
-    throw BlacklightException("Gas pressure not found.");
-  if (not variable_names[ind_uu1].compare("vel1"))
-    throw BlacklightException("x1-velocity not found.");
-  if (not variable_names[ind_uu2].compare("vel2"))
-    throw BlacklightException("x2-velocity not found.");
-  if (not variable_names[ind_uu3].compare("vel3"))
-    throw BlacklightException("x3-velocity not found.");
-  if (not variable_names[5+ind_bb1].compare("Bcc1"))
-    throw BlacklightException("x1-field not found.");
-  if (not variable_names[5+ind_bb2].compare("Bcc2"))
-    throw BlacklightException("x2-field not found.");
-  if (not variable_names[5+ind_bb3].compare("Bcc3"))
-    throw BlacklightException("x3-field not found.");
+  // Check that array of all magnetic field components is present
+  int ind_bb;
+  int bb_offset = 0;
+  for (ind_bb = 0; ind_bb < num_dataset_names; ind_bb++)
+    if (dataset_names[ind_bb] == "B")
+      break;
+    else
+      bb_offset += num_variables(ind_bb);
+  if (ind_bb == num_dataset_names)
+    throw BlacklightException("Unable to locate array \"B\" in data file.");
+
+  // Check that all necessary magnetic field components are present
+  for (ind_bb1 = 0; ind_bb1 < num_variables(ind_bb); ind_bb1++)
+    if (variable_names[bb_offset+ind_bb1] == "Bcc1")
+      break;
+  if (ind_bb1 == num_variables(ind_bb))
+    throw BlacklightException("Unable to locate \"Bcc1\" slice of \"prim\" in data file.");
+  for (ind_bb2 = 0; ind_bb2 < num_variables(ind_bb); ind_bb2++)
+    if (variable_names[bb_offset+ind_bb2] == "Bcc2")
+      break;
+  if (ind_bb2 == num_variables(ind_bb))
+    throw BlacklightException("Unable to locate \"Bcc2\" slice of \"prim\" in data file.");
+  for (ind_bb3 = 0; ind_bb3 < num_variables(ind_bb); ind_bb3++)
+    if (variable_names[bb_offset+ind_bb3] == "Bcc3")
+      break;
+  if (ind_bb3 == num_variables(ind_bb))
+    throw BlacklightException("Unable to locate \"Bcc3\" slice of \"prim\" in data file.");
   return;
 }
 
@@ -755,7 +804,7 @@ void AthenaReader::SetHDF5StringArray(const unsigned char *datatype_raw,
   for (int n = 0; n < *p_array_length; n++)
   {
     std::memcpy(buffer, data_raw + size * static_cast<unsigned int>(n), size);
-    (*p_string_array)[n].assign(buffer, size);
+    (*p_string_array)[n] = buffer;
   }
   delete[] buffer;
 

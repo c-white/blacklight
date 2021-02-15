@@ -108,14 +108,16 @@ int InputReader::Read()
       simulation_start = std::stoi(val);
     else if (key == "simulation_end")
       simulation_end = std::stoi(val);
+    else if (key == "simulation_coord")
+      simulation_coord = ReadCoordinates(val);
     else if (key == "simulation_m_msun")
       simulation_m_msun = std::stod(val);
     else if (key == "simulation_a")
       simulation_a = std::stod(val);
     else if (key == "simulation_rho_cgs")
       simulation_rho_cgs = std::stod(val);
-    else if (key == "simulation_coord")
-      simulation_coord = ReadCoordinates(val);
+    else if (key == "simulation_kappa_name")
+      simulation_kappa_name = val;
     else if (key == "simulation_interp")
       simulation_interp = ReadBool(val);
     else if (key == "simulation_block_interp")
@@ -126,6 +128,8 @@ int InputReader::Read()
       plasma_mu = std::stod(val);
     else if (key == "plasma_ne_ni")
       plasma_ne_ni = std::stod(val);
+    else if (key == "plasma_model")
+      plasma_model = ReadPlasmaModel(val);
     else if (key == "plasma_rat_high")
       plasma_rat_high = std::stod(val);
     else if (key == "plasma_rat_low")
@@ -140,6 +144,8 @@ int InputReader::Read()
       fallback_rho = std::stof(val);
     else if (key == "fallback_pgas")
       fallback_pgas = std::stof(val);
+    else if (key == "fallback_kappa")
+      fallback_kappa = std::stof(val);
 
     // Store image parameters
     else if (key == "image_camera")
@@ -207,13 +213,14 @@ int InputReader::Read()
   }
 
   // Account for multiple runs
-  if (model_type == ModelType::simulation and simulation_multiple)
+  if (model_type.value() == ModelType::simulation and simulation_multiple.value())
   {
     // Check number of runs
+    multiple_runs = true;
     if (simulation_start.value() < 0)
       throw BlacklightException("Must have nonnegative index simulation_start.");
     num_runs = simulation_end.value() - simulation_start.value() + 1;
-    if (num_runs < 0)
+    if (num_runs <= 0)
       throw BlacklightException("Must have simulation_end at least as large as simulation_start.");
 
     // Parse simulation filename template
@@ -250,7 +257,8 @@ int InputReader::Read()
   // Account for single run
   else
   {
-    num_runs = 0;
+    multiple_runs = false;
+    num_runs = 1;
     simulation_file_formatted = simulation_file_template.value();
     output_file_formatted = output_file_template.value();
   }
@@ -266,7 +274,7 @@ int InputReader::Read()
 void InputReader::AdjustFileNames(int index)
 {
   // Do nothing for single run
-  if (num_runs == 0)
+  if (not multiple_runs)
     return;
 
   // Calculate length of field to fill
@@ -416,6 +424,27 @@ Coordinates InputReader::ReadCoordinates(const std::string &string)
     return Coordinates::cart_ks;
   else
     throw BlacklightException("Unknown string used for Coordinates value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as PlasmaModel enumerations
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid PlasmaModel
+// Notes:
+//   Valid options:
+//     "ti_te_beta": spherical Kerr-Schild
+//     "code_kappa": Cartesian Kerr-Schild
+PlasmaModel InputReader::ReadPlasmaModel(const std::string &string)
+{
+  if (string == "ti_te_beta")
+    return PlasmaModel::ti_te_beta;
+  else if (string == "code_kappa")
+    return PlasmaModel::code_kappa;
+  else
+    throw BlacklightException("Unknown string used for PlasmaModel value.");
 }
 
 //--------------------------------------------------------------------------------------------------
