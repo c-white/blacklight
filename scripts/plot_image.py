@@ -34,8 +34,7 @@ def main(**kwargs):
   cmap.set_bad(nan_color)
 
   # Prepare to read data
-  im_camera = None
-  im_width = None
+  image_width = None
   mass_msun = None
 
   # Read image data from .npy file
@@ -46,9 +45,9 @@ def main(**kwargs):
   elif kwargs['image_data_file'][-4:] == '.npz':
     data = np.load(kwargs['image_data_file'])
     image = data['image']
-    if 'im_width' in data.keys():
-      im_width = data['im_width'][0]
-    if 'im_pos' in data.keys():
+    if 'image_width' in data.keys():
+      image_width = data['image_width'][0]
+    if 'image_position' in data.keys():
       if 'mass_msun' in data.keys():
         mass_msun = data['mass_msun'][0]
 
@@ -81,8 +80,9 @@ def main(**kwargs):
 
   # Calculate grid
   extent = None
-  if im_width is not None:
-    extent = np.array((-im_width / 2.0, im_width / 2.0, -im_width / 2.0, im_width / 2.0))
+  if image_width is not None:
+    half_width = image_width / 2.0
+    extent = np.array((-half_width, half_width, -half_width, half_width))
     if mass_msun is not None and kwargs['distance'] is not None:
       r_g = gg_msun * mass_msun / c ** 2
       muas = np.pi / 180.0 / 60.0 / 60.0 / 1.0e6

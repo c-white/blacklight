@@ -33,8 +33,8 @@ def main(**kwargs):
   elif kwargs['image_data_file'][-4:] == '.npz':
     data = np.load(kwargs['image_data_file'])
     image = data['image']
-    if 'im_width' in data.keys():
-      width = data['im_width'][0]
+    if 'image_width' in data.keys():
+      width = data['image_width'][0]
     if 'mass_msun' in data.keys():
       mass = data['mass_msun'][0]
 
@@ -75,7 +75,7 @@ def main(**kwargs):
     width = kwargs['width']
   else:
     if not np.isclose(kwargs['width'], width, rtol=1.0e-5, atol=0.0):
-      print('Warning: Using "width" that does not match file "im_width".')
+      print('Warning: Using "width" that does not match file "image_width".')
     width = kwargs['width']
 
   # Calculate flux
