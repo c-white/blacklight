@@ -8,7 +8,7 @@
 #include <string>    // string
 
 // Blacklight headers
-#include "../blacklight.hpp"  // enumerations
+#include "../blacklight.hpp"  // enums
 
 //--------------------------------------------------------------------------------------------------
 

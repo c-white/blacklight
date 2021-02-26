@@ -8,7 +8,7 @@
 #include <string>   // string
 
 // Blacklight headers
-#include "../blacklight.hpp"                 // enumerations
+#include "../blacklight.hpp"                 // enums
 #include "../input_reader/input_reader.hpp"  // InputReader
 #include "../utils/array.hpp"                // Array
 
@@ -60,17 +60,19 @@ struct AthenaReader
   void Read();
 
   // Internal functions
+  void VerifyVariables();
   void ReadHDF5Superblock();
   void ReadHDF5RootGroupSymbolTableEntry();
   void ReadHDF5RootHeap();
   void ReadHDF5RootObjectHeader();
-  void VerifyVariables();
   void ReadHDF5Tree();
-  void ReadHDF5IntArray(const char *name, Array<int> &int_array);
-  void ReadHDF5FloatArray(const char *name, Array<float> &float_array);
   unsigned long int ReadHDF5DatasetHeaderAddress(const char *name);
   void ReadHDF5DataObjectHeader(unsigned long int data_object_header_address,
       unsigned char **p_datatype_raw, unsigned char **p_dataspace_raw, unsigned char **p_data_raw);
+  static void ReadHDF5DataspaceDims(const unsigned char *dataspace_raw, unsigned long int **p_dims,
+      int *p_num_dims);
+  void ReadHDF5IntArray(const char *name, Array<int> &int_array);
+  void ReadHDF5FloatArray(const char *name, Array<float> &float_array);
   static void SetHDF5StringArray(const unsigned char *datatype_raw,
       const unsigned char *dataspace_raw, const unsigned char *data_raw, std::string **string_array,
       int *p_array_length);
@@ -78,8 +80,6 @@ struct AthenaReader
       const unsigned char *data_raw, Array<int> &int_array);
   static void SetHDF5FloatArray(const unsigned char *datatype_raw,
       const unsigned char *dataspace_raw, const unsigned char *data_raw, Array<float> &float_array);
-  static void ReadHDF5DataspaceDims(const unsigned char *dataspace_raw, unsigned long int **p_dims,
-      int *p_num_dims);
 };
 
 #endif

@@ -4,7 +4,7 @@
 #define RAY_TRACER_H_
 
 // Blacklight headers
-#include "../blacklight.hpp"                   // enumerations
+#include "../blacklight.hpp"                   // enums
 #include "../athena_reader/athena_reader.hpp"  // AthenaReader
 #include "../input_reader/input_reader.hpp"    // InputReader
 #include "../utils/array.hpp"                  // Array
@@ -136,8 +136,11 @@ struct RayTracer
   void InitializeGeodesics();
   void IntegrateGeodesics();
   void TransformGeodesics();
+  void GeodesicSubstep(double y[9], double k[9], Array<double> &gcov, Array<double> &gcon,
+      Array<double> &dgcon);
   void SampleSimulationAlongGeodesics();
   void IntegrateSimulationRadiation();
+  void FindNearbyVals(int b, int k, int j, int i, double vals[8]);
   void IntegrateFormulaRadiation();
   double RadialGeodesicCoordinate(double x, double y, double z);
   void CovariantGeodesicMetric(double x, double y, double z, Array<double> &gcov);
@@ -145,9 +148,6 @@ struct RayTracer
   void ContravariantGeodesicMetricDerivative(double x, double y, double z, Array<double> &dgcon);
   void CovariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcov);
   void ContravariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcon);
-  void GeodesicSubstep(double y[9], double k[9], Array<double> &gcov, Array<double> &gcon,
-      Array<double> &dgcon);
-  void FindNearbyVals(int b, int k, int j, int i, double vals[8]);
 };
 
 #endif

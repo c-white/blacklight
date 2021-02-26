@@ -4,13 +4,13 @@
 #define OUTPUT_WRITER_H_
 
 // C++ headers
-#include <cstdint>  // uint8_t, uint16_t, uint32_t
+#include <cstdint>  // uint8_t, uint32_t
 #include <cstdio>   // size_t
 #include <fstream>  // ofstream
 #include <string>   // string
 
 // Blacklight headers
-#include "../blacklight.hpp"                 // enumerations
+#include "../blacklight.hpp"                 // enums
 #include "../input_reader/input_reader.hpp"  // InputReader
 #include "../ray_tracer/ray_tracer.hpp"      // RayTracer
 #include "../utils/array.hpp"                // Array
