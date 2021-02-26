@@ -1,7 +1,7 @@
 // Blacklight exceptions header
 
-#ifndef EXCEPTION_H_
-#define EXCEPTION_H_
+#ifndef EXCEPTIONS_H_
+#define EXCEPTIONS_H_
 
 // C++ headers
 #include <iostream>   // cerr

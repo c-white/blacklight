@@ -11,9 +11,9 @@
 #include <omp.h>  // pragmas
 
 // Blacklight headers
-#include "read_athena.hpp"
-#include "array.hpp"        // Array
-#include "exceptions.hpp"   // BlacklightException
+#include "athena_reader.hpp"
+#include "../utils/array.hpp"       // Array
+#include "../utils/exceptions.hpp"  // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
 

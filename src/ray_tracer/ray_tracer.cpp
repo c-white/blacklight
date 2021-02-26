@@ -14,11 +14,11 @@
 
 // Blacklight headers
 #include "ray_tracer.hpp"
-#include "array.hpp"        // Array
-#include "blacklight.hpp"   // math, physics, enumerations
-#include "exceptions.hpp"   // BlacklightWarning
-#include "read_athena.hpp"  // AthenaReader
-#include "read_input.hpp"   // InputReader
+#include "../blacklight.hpp"                   // math, physics, enumerations
+#include "../athena_reader/athena_reader.hpp"  // AthenaReader
+#include "../input_reader/input_reader.hpp"    // InputReader
+#include "../utils/array.hpp"                  // Array
+#include "../utils/exceptions.hpp"             // BlacklightWarning
 
 //--------------------------------------------------------------------------------------------------
 

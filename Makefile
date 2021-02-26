@@ -1,8 +1,8 @@
 # Executable and directory names
-EXE_NAME = blacklight
+BIN_NAME = blacklight
+BIN_DIR = bin
 SRC_DIR = src
 OBJ_DIR = obj
-BIN_DIR = bin
 SRC_EXT = cpp
 OBJ_EXT = o
 DEP_EXT = d
@@ -21,14 +21,14 @@ LDFLAGS :=
 LDLIBS :=
 
 # Lists of files to be considered
-VPATH := $(SRC_DIR)
-SRC_FILES := $(wildcard $(addsuffix /*.$(SRC_EXT),$(VPATH)))
+SRC_FILES := $(shell find $(SRC_DIR) -name "*.$(SRC_EXT)")
 OBJ_FILES := $(addprefix $(OBJ_DIR)/,$(notdir $(SRC_FILES:.$(SRC_EXT)=.$(OBJ_EXT))))
 DEP_FILES := $(OBJ_FILES:.$(OBJ_EXT)=.$(DEP_EXT))
+VPATH := $(sort $(dir $(SRC_FILES)))
 
 # Default target
 .PHONY : all
-all : $(BIN_DIR)/$(EXE_NAME)
+all : $(BIN_DIR)/$(BIN_NAME)
 
 # Include dependency lists
 -include $(DEP_FILES)
@@ -39,7 +39,7 @@ $(OBJ_DIR)/%.$(OBJ_EXT) : %.$(SRC_EXT)
 	@$(CC) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 # Link objects into executable
-$(BIN_DIR)/$(EXE_NAME) : $(OBJ_FILES)
+$(BIN_DIR)/$(BIN_NAME) : $(OBJ_FILES)
 	@echo linking $(basename $(notdir $@))
 	@$(CC) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $^ -o $@
 
@@ -48,4 +48,4 @@ $(BIN_DIR)/$(EXE_NAME) : $(OBJ_FILES)
 clean :
 	rm -f $(OBJ_DIR)/*.$(OBJ_EXT)
 	rm -f $(OBJ_DIR)/*.$(DEP_EXT)
-	rm -f $(BIN_DIR)/$(EXE_NAME)
+	rm -f $(BIN_DIR)/$(BIN_NAME)

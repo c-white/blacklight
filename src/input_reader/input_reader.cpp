@@ -9,9 +9,9 @@
 #include <string>     // getline, stod, stof, stoi, string
 
 // Blacklight headers
-#include "read_input.hpp"
-#include "blacklight.hpp"  // math, enumerations
-#include "exceptions.hpp"  // BlacklightException
+#include "input_reader.hpp"
+#include "../blacklight.hpp"        // math, enumerations
+#include "../utils/exceptions.hpp"  // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
 

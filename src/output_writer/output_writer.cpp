@@ -10,12 +10,12 @@
 #include <optional>  // optional
 
 // Blacklight headers
-#include "write_output.hpp"
-#include "array.hpp"         // Array
-#include "blacklight.hpp"    // enumerations
-#include "exceptions.hpp"    // BlacklightException
-#include "ray_tracer.hpp"    // RayTracer
-#include "read_input.hpp"    // InputReader
+#include "output_writer.hpp"
+#include "../blacklight.hpp"                 // enumerations
+#include "../input_reader/input_reader.hpp"  // InputReader
+#include "../ray_tracer/ray_tracer.hpp"      // RayTracer
+#include "../utils/array.hpp"                // Array
+#include "../utils/exceptions.hpp"           // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
 

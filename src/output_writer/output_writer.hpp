@@ -1,7 +1,7 @@
 // Blacklight output writer header
 
-#ifndef WRITE_OUTPUT_H_
-#define WRITE_OUTPUT_H_
+#ifndef OUTPUT_WRITER_H_
+#define OUTPUT_WRITER_H_
 
 // C++ headers
 #include <cstdint>  // uint8_t, uint16_t, uint32_t
@@ -10,10 +10,10 @@
 #include <string>   // string
 
 // Blacklight headers
-#include "array.hpp"       // Array
-#include "blacklight.hpp"  // enumerations
-#include "ray_tracer.hpp"  // RayTracer
-#include "read_input.hpp"  // InputReader
+#include "../blacklight.hpp"                 // enumerations
+#include "../input_reader/input_reader.hpp"  // InputReader
+#include "../ray_tracer/ray_tracer.hpp"      // RayTracer
+#include "../utils/array.hpp"                // Array
 
 //--------------------------------------------------------------------------------------------------
 

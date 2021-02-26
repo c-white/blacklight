@@ -1,14 +1,14 @@
 // Blacklight input reader header
 
-#ifndef READ_INPUT_H_
-#define READ_INPUT_H_
+#ifndef INPUT_READER_H_
+#define INPUT_READER_H_
 
 // C++ headers
 #include <optional>  // optional
 #include <string>    // string
 
 // Blacklight headers
-#include "blacklight.hpp"  // enumerations
+#include "../blacklight.hpp"  // enumerations
 
 //--------------------------------------------------------------------------------------------------
 

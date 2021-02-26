@@ -1,16 +1,16 @@
 // Blacklight Athena++ reader header
 
-#ifndef READ_ATHENA_H_
-#define READ_ATHENA_H_
+#ifndef ATHENA_READER_H_
+#define ATHENA_READER_H_
 
 // C++ headers
 #include <fstream>  // ifstream
 #include <string>   // string
 
 // Blacklight headers
-#include "array.hpp"       // Array
-#include "blacklight.hpp"  // enumerations
-#include "read_input.hpp"  // InputReader
+#include "../blacklight.hpp"                 // enumerations
+#include "../input_reader/input_reader.hpp"  // InputReader
+#include "../utils/array.hpp"                // Array
 
 //--------------------------------------------------------------------------------------------------
 

@@ -10,11 +10,11 @@
 
 // Blacklight headers
 #include "blacklight.hpp"
-#include "exceptions.hpp"    // BlacklightException
-#include "ray_tracer.hpp"    // RayTracer
-#include "read_athena.hpp"   // AthenaReader
-#include "read_input.hpp"    // InputReader
-#include "write_output.hpp"  // OutputReader
+#include "athena_reader/athena_reader.hpp"  // AthenaReader
+#include "input_reader/input_reader.hpp"    // InputReader
+#include "output_writer/output_writer.hpp"  // OutputWriter
+#include "ray_tracer/ray_tracer.hpp"        // RayTracer
+#include "utils/exceptions.hpp"             // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
 

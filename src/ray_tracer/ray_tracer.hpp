@@ -4,10 +4,10 @@
 #define RAY_TRACER_H_
 
 // Blacklight headers
-#include "array.hpp"        // Array
-#include "blacklight.hpp"   // enumerations
-#include "read_athena.hpp"  // AthenaReader
-#include "read_input.hpp"   // InputReader
+#include "../blacklight.hpp"                   // enumerations
+#include "../athena_reader/athena_reader.hpp"  // AthenaReader
+#include "../input_reader/input_reader.hpp"    // InputReader
+#include "../utils/array.hpp"                  // Array
 
 //--------------------------------------------------------------------------------------------------
 
