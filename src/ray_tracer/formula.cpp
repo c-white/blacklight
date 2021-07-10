@@ -63,7 +63,7 @@ void RayTracer::IntegrateFormulaRadiation()
           double rr = std::sqrt(r * r - z * z);
           double cth = z / r;
           double sth = std::sqrt(1.0 - cth * cth);
-          double ph = std::atan2(y, x) + std::atan(bh_a / r);
+          double ph = std::atan2(y, x) - std::atan(bh_a / r);
           double sph = std::sin(ph);
           double cph = std::cos(ph);
 
@@ -95,10 +95,10 @@ void RayTracer::IntegrateFormulaRadiation()
           double uth = uth_bl;
           double uph = uph_bl + bh_a / delta * ur_bl;
           double u0 = ut;
-          double u1 = sth * cph * ur + cth * (r * cph + bh_a * sph) * uth
-              + sth * (-r * sph + bh_a * cph) * uph;
-          double u2 = sth * sph * ur + cth * (r * sph - bh_a * cph) * uth
-              + sth * (r * cph + bh_a * sph) * uph;
+          double u1 = sth * cph * ur + cth * (r * cph - bh_a * sph) * uth
+              + sth * (-r * sph - bh_a * cph) * uph;
+          double u2 = sth * sph * ur + cth * (r * sph + bh_a * cph) * uth
+              + sth * (r * cph - bh_a * sph) * uph;
           double u3 = cth * ur - r * sth * uth;
 
           // Calculate fluid-frame number density (C 5)

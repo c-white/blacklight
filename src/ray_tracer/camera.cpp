@@ -36,8 +36,8 @@ void RayTracer::InitializeCamera()
 
   // Calculate camera position
   double t = 0.0;
-  double x = sth * (image_r * cph + bh_a * sph);
-  double y = sth * (image_r * sph - bh_a * cph);
+  double x = sth * (image_r * cph - bh_a * sph);
+  double y = sth * (image_r * sph + bh_a * cph);
   double z = image_r * cth;
   if (ray_flat)
   {
@@ -98,11 +98,11 @@ void RayTracer::InitializeCamera()
   double dx_dr = sth * cph;
   double dy_dr = sth * sph;
   double dz_dr = cth;
-  double dx_dth = cth * (image_r * cph + bh_a * sph);
-  double dy_dth = cth * (image_r * sph - bh_a * cph);
+  double dx_dth = cth * (image_r * cph - bh_a * sph);
+  double dy_dth = cth * (image_r * sph + bh_a * cph);
   double dz_dth = -image_r * sth;
-  double dx_dph = sth * (-image_r * sph + bh_a * cph);
-  double dy_dph = sth * (image_r * cph + bh_a * sph);
+  double dx_dph = sth * (-image_r * sph - bh_a * cph);
+  double dy_dph = sth * (image_r * cph - bh_a * sph);
   double dz_dph = 0.0;
   if (ray_flat)
   {
@@ -146,9 +146,9 @@ void RayTracer::InitializeCamera()
   double dth_dx = z * dr_dx / (r2 * sth);
   double dth_dy = z * dr_dy / (r2 * sth);
   double dth_dz = (z * dr_dz - image_r) / (r2 * sth);
-  double dph_dx = -y / (x * x + y * y) - bh_a / (r2 + a2) * dr_dx;
-  double dph_dy = x / (x * x + y * y) - bh_a / (r2 + a2) * dr_dy;
-  double dph_dz = -bh_a / (r2 + a2) * dr_dz;
+  double dph_dx = -y / (x * x + y * y) + bh_a / (r2 + a2) * dr_dx;
+  double dph_dy = x / (x * x + y * y) + bh_a / (r2 + a2) * dr_dy;
+  double dph_dz = bh_a / (r2 + a2) * dr_dz;
   if (ray_flat)
   {
     dr_dx = x / image_r;
@@ -293,7 +293,7 @@ void RayTracer::InitializeCamera()
   image_position.Allocate(image_resolution, image_resolution, 4);
   image_direction.Allocate(image_resolution, image_resolution, 4);
 
-  // Initialize arrays based on camera type
+  // Initialize position and direction based on camera type
   switch (image_camera)
   {
     // Plane with parallel rays

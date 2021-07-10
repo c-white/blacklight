@@ -408,7 +408,6 @@ void RayTracer::IntegrateGeodesics()
               temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
           for (int a = 1; a < 4; a++)
             geodesic_dir(m,l,n,a) *= factor;
-
         }
 
     // Calculate maximum number of steps actually taken
@@ -507,9 +506,9 @@ void RayTracer::TransformGeodesics()
                 double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
                 double r = std::sqrt(r2);
                 double th = std::acos(z / r);
-                double ph = std::atan2(y, x) + std::atan(bh_a / r);
+                double ph = std::atan2(y, x) - std::atan(bh_a / r);
                 ph += ph < 0.0 ? 2.0 * math::pi : 0.0;
-                ph -= ph > 2.0 * math::pi ? 2.0 * math::pi : 0.0;
+                ph -= ph >= 2.0 * math::pi ? 2.0 * math::pi : 0.0;
                 double sth = std::sin(th);
                 double cth = std::cos(th);
                 double sph = std::sin(ph);
@@ -519,11 +518,11 @@ void RayTracer::TransformGeodesics()
                 double dx_dr = sth * cph;
                 double dy_dr = sth * sph;
                 double dz_dr = cth;
-                double dx_dth = cth * (r * cph + bh_a * sph);
-                double dy_dth = cth * (r * sph - bh_a * cph);
+                double dx_dth = cth * (r * cph - bh_a * sph);
+                double dy_dth = cth * (r * sph + bh_a * cph);
                 double dz_dth = -r * sth;
-                double dx_dph = sth * (-r * sph + bh_a * cph);
-                double dy_dph = sth * (r * cph + bh_a * sph);
+                double dx_dph = sth * (-r * sph - bh_a * cph);
+                double dy_dph = sth * (r * cph - bh_a * sph);
                 double dz_dph = 0.0;
 
                 // Calculate spherical direction
@@ -593,7 +592,7 @@ void RayTracer::TransformGeodesics()
 
 // Function for taking single forward-Euler substep in time
 // Inputs:
-//   y: dependent variables (positions, momenta, proper distace)
+//   y: dependent variables (positions, momenta, proper distance)
 // Outputs:
 //   k: derivatives with respect to independent variable (affine parameter)
 //   gcov: components set
