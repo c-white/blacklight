@@ -1,6 +1,7 @@
 // Blacklight multidimensional array
 
 // C++ headers
+#include <complex>  // complex
 #include <cstddef>  // size_t
 #include <cstring>  // memcpy
 
@@ -478,28 +479,6 @@ type &Array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3,
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
       * (i3 + static_cast<unsigned int>(n3) * (i4 + static_cast<unsigned int>(n4) * i5)))];
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// Multidimensional array deep copying
-// Inputs:
-//   source: array to be copied
-// Outputs: (none)
-// Notes:
-//   New array must be allocated with the same total size as source.
-//   Array dimensions can differ between source and copy.
-template<typename type>
-void Array<type>::Copy(const Array<type> &source)
-{
-  // Check that array sizes match
-  data = source.data;
-  if (n_tot != source.n_tot)
-    throw BlacklightException("Attempting to copy array with incompatible size.");
-
-  // Copy data
-  std::memcpy(data, source.data, n_tot * sizeof(type));
-  return;
 }
 
 //--------------------------------------------------------------------------------------------------
