@@ -387,6 +387,32 @@ void RayTracer::IntegrateGeodesics()
         }
       }
 
+    // Truncate geodesics at boundaries
+    #pragma omp for schedule(static)
+    for (int m = 0; m < image_resolution; m++)
+      for (int l = 0; l < image_resolution; l++)
+      {
+        int num_samples = sample_num(m,l);
+        if (num_samples > 1)
+        {
+          double r_new = RadialGeodesicCoordinate(geodesic_pos(m,l,0,1), geodesic_pos(m,l,0,2),
+              geodesic_pos(m,l,0,3));
+          for (int n = 1; n < num_samples; n++)
+          {
+            double r_old = r_new;
+            r_new = RadialGeodesicCoordinate(geodesic_pos(m,l,n,1), geodesic_pos(m,l,n,2),
+                geodesic_pos(m,l,n,3));
+            bool terminate_outer = r_new > image_r and r_new > r_old;
+            bool terminate_inner = r_new < r_terminate;
+            if (terminate_outer or terminate_inner)
+            {
+              sample_num(m,l) = n;
+              break;
+            }
+          }
+        }
+      }
+
     // Renormalize momenta
     #pragma omp for schedule(static)
     for (int m = 0; m < image_resolution; m++)
