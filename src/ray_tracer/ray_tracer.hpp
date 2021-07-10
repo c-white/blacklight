@@ -76,6 +76,7 @@ struct RayTracer
   int image_resolution;
   double image_frequency;
   FrequencyNormalization image_normalization;
+  bool image_polarization;
   bool image_pole;
 
   // Input data - ray-tracing parameters
@@ -118,6 +119,7 @@ struct RayTracer
   double r_terminate;
   double momentum_factor;
   int image_steps;
+  double camera_ucon[4], camera_ucov[4], camera_up_con_c[4];
   Array<double> image_position, image_direction;
   Array<double> geodesic_pos, geodesic_dir, geodesic_len;
   Array<bool> sample_flags;
@@ -139,7 +141,8 @@ struct RayTracer
   void GeodesicSubstep(double y[9], double k[9], Array<double> &gcov, Array<double> &gcon,
       Array<double> &dgcon);
   void SampleSimulationAlongGeodesics();
-  void IntegrateSimulationRadiation();
+  void IntegrateSimulationUnpolarizedRadiation();
+  void IntegrateSimulationPolarizedRadiation();
   void FindNearbyVals(int b, int k, int j, int i, double vals[8]);
   void IntegrateFormulaRadiation();
   double RadialGeodesicCoordinate(double x, double y, double z);
@@ -148,6 +151,11 @@ struct RayTracer
   void ContravariantGeodesicMetricDerivative(double x, double y, double z, Array<double> &dgcon);
   void CovariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcov);
   void ContravariantCoordinateMetric(double x1, double x2, double x3, Array<double> &gcon);
+  void CoordinateConnection(double x1, double x2, double x3, Array<double> &connection);
+  void GeodesicCoordinateJacobian(double x, double y, double z, Array<double> &jacobian);
+  void Tetrad(const double ucon[4], const double ucov[4], const double kcon[4],
+      const double kcov[4], const double up_con[4], const Array<double> &gcov,
+      const Array<double> &gcon, Array<double> &tetrad);
 };
 
 #endif

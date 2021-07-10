@@ -90,6 +90,7 @@ struct InputReader
   std::optional<int> image_resolution;
   std::optional<double> image_frequency;
   std::optional<FrequencyNormalization> image_normalization;
+  std::optional<bool> image_polarization;
   std::optional<bool> image_pole;
 
   // Data - ray-tracing parameters

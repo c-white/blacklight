@@ -178,6 +178,8 @@ int InputReader::Read()
       image_frequency = std::stod(val);
     else if (key == "image_normalization")
       image_normalization = ReadFrequencyNormalization(val);
+    else if (key == "image_polarization")
+      image_polarization = ReadBool(val);
 
     // Store ray-tracing parameters
     else if (key == "ray_flat")

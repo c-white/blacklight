@@ -123,6 +123,16 @@ void RayTracer::InitializeCamera()
   double u_y = gcov(2,0) * ut + gcov(2,1) * ux + gcov(2,2) * uy + gcov(2,3) * uz;
   double u_z = gcov(3,0) * ut + gcov(3,1) * ux + gcov(3,2) * uy + gcov(3,3) * uz;
 
+  // Save camera velocity
+  camera_ucon[0] = ut;
+  camera_ucon[1] = ux;
+  camera_ucon[2] = uy;
+  camera_ucon[3] = uz;
+  camera_ucov[0] = u_t;
+  camera_ucov[1] = u_x;
+  camera_ucov[2] = u_y;
+  camera_ucov[3] = u_z;
+
   // Calculate photon momentum in spherical coordinates
   double gcon_rn_rn = (gcon_t_t * gcon_r_r - gcon_t_r * gcon_t_r) / gcon_t_t;
   double gcon_rn_thn = (gcon_t_t * gcon_r_th - gcon_t_r * gcon_t_th) / gcon_t_t;
@@ -288,6 +298,12 @@ void RayTracer::InitializeCamera()
   vert_con_xc = temp_vert_con_xc * crot + temp_hor_con_xc * srot;
   vert_con_yc = temp_vert_con_yc * crot + temp_hor_con_yc * srot;
   vert_con_zc = temp_vert_con_zc * crot + temp_hor_con_zc * srot;
+
+  // Save camera orientation
+  camera_up_con_c[0] = vert_con_tc;
+  camera_up_con_c[1] = vert_con_xc;
+  camera_up_con_c[2] = vert_con_yc;
+  camera_up_con_c[3] = vert_con_zc;
 
   // Allocate arrays
   image_position.Allocate(image_resolution, image_resolution, 4);

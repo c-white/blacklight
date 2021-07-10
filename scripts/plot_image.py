@@ -37,12 +37,8 @@ def main(**kwargs):
   image_width = None
   mass_msun = None
 
-  # Read image data from .npy file
-  if kwargs['image_data_file'][-4:] == '.npy':
-    image = np.load(kwargs['image_data_file'])
-
   # Read image data from .npz file
-  elif kwargs['image_data_file'][-4:] == '.npz':
+  if kwargs['image_data_file'][-4:] == '.npz':
     data = np.load(kwargs['image_data_file'])
     image = data['image']
     if 'image_width' in data.keys():
@@ -50,6 +46,14 @@ def main(**kwargs):
     if 'image_position' in data.keys():
       if 'mass_msun' in data.keys():
         mass_msun = data['mass_msun'][0]
+    if len(image.shape) == 3:
+      image = image[0,:,:]
+
+  # Read image data from .npy file
+  elif kwargs['image_data_file'][-4:] == '.npy':
+    image = np.load(kwargs['image_data_file'])
+    if len(image.shape) == 3:
+      image = image[0,:,:]
 
   # Read image data from raw file
   else:

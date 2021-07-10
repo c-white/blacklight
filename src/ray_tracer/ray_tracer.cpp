@@ -11,6 +11,7 @@
 #include "../athena_reader/athena_reader.hpp"  // AthenaReader
 #include "../input_reader/input_reader.hpp"    // InputReader
 #include "../utils/array.hpp"                  // Array
+#include "../utils/exceptions.hpp"             // BlacklightWarning
 
 //--------------------------------------------------------------------------------------------------
 
@@ -107,6 +108,11 @@ RayTracer::RayTracer(const InputReader *p_input_reader, const AthenaReader *p_at
   image_resolution = p_input_reader->image_resolution.value();
   image_frequency = p_input_reader->image_frequency.value();
   image_normalization = p_input_reader->image_normalization.value();
+  if (model_type == ModelType::simulation)
+    image_polarization = p_input_reader->image_polarization.value();
+  else if (p_input_reader->image_polarization.has_value()
+      and p_input_reader->image_polarization.value())
+    BlacklightWarning("Ignoring image_polarization selection.");
   image_pole = p_input_reader->image_pole.value();
 
   // Copy ray-tracing parameters
@@ -238,7 +244,10 @@ void RayTracer::MakeImage()
     case ModelType::simulation:
     {
       SampleSimulationAlongGeodesics();
-      IntegrateSimulationRadiation();
+      if (image_polarization)
+        IntegrateSimulationPolarizedRadiation();
+      else
+        IntegrateSimulationUnpolarizedRadiation();
       break;
     }
     case ModelType::formula:
