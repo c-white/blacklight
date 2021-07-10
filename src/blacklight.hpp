@@ -3,11 +3,15 @@
 #ifndef BLACKLIGHT_H_
 #define BLACKLIGHT_H_
 
+// C++ headers
+#include <complex>
+
 // Mathematical constants
 namespace math
 {
   constexpr double pi = 3.141592653589793;
   constexpr double sqrt2 = 1.4142135623730951;
+  constexpr std::complex<double> i(0.0, 1.0);
 }
 
 // Physical constants
