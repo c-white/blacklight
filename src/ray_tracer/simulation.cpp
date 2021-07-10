@@ -1198,7 +1198,7 @@ void RayTracer::IntegrateSimulationPolarizedRadiation()
 
           // Calculate coupling polynomial O (L 10)
           double exp, sin, cos, sinh, cosh;
-          double oo[4][4];
+          double oo[4][4] = {};
           if (full_couple and optically_thin)
           {
             exp = std::exp(-delta_tau);
@@ -1213,7 +1213,7 @@ void RayTracer::IntegrateSimulationPolarizedRadiation()
           }
 
           // Calculate coupling polynomial integral P (I 24)
-          double pp[4][4];
+          double pp[4][4] = {};
           if (full_couple)
           {
             double f_1 = 1.0 / (alpha_i * alpha_i - lambda_1 * lambda_1);
