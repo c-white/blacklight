@@ -199,6 +199,10 @@ std::size_t OutputWriter::GenerateNpyFromDoubleArray(const Array<double> &array,
     num_written = std::snprintf(buffer_address, header_length - length,
         "{'descr': '<f8', 'fortran_order': False, 'shape': (%d, %d, %d, %d)}", array.n4, array.n3,
         array.n2, array.n1);
+  else
+    num_written = std::snprintf(buffer_address, header_length - length,
+        "{'descr': '<f8', 'fortran_order': False, 'shape': (%d, %d, %d, %d, %d)}", array.n5,
+        array.n4, array.n3, array.n2, array.n1);
   if (num_written < 0 or num_written > static_cast<int>(header_length - length - 1))
     throw BlacklightException("Error converting data to .npy format.");
   std::size_t num_spaces =
