@@ -10,8 +10,8 @@
 #     CXX=g++: use GNU g++ (default)
 #     CXX=icpc: use Intel icpc
 #   Other options:
-#     -j: use as many cores as possible to work in parallel (recommended except on busy resources)
-#     -j <n>: use n cores to work in parallel
+#     -j: many processes to work in parallel (recommended except on busy resources)
+#     -j <n>: use n processes to work in parallel
 #     -j<n>: same as -j <n>
 
 # Set executable and directory names
