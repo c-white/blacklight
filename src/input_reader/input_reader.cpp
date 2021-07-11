@@ -261,7 +261,8 @@ int InputReader::Read()
   {
     multiple_runs = false;
     num_runs = 1;
-    simulation_file_formatted = simulation_file_template.value();
+    if (model_type.value() == ModelType::simulation)
+      simulation_file_formatted = simulation_file_template.value();
     output_file_formatted = output_file_template.value();
   }
   return num_runs;
