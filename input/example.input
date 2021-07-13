@@ -63,7 +63,7 @@ image_rotation      = 0.0       # rotation of camera in degrees (0/90 for north 
 image_width         = 24.0      # full width of image in gravitational units
 image_resolution    = 64        # number of pixels per side
 image_frequency     = 2.3e11    # frequency of observation in Hz
-image_normalization = infinity  # image_frequency location (camera [w/ velocity], infinity [rest])
+image_normalization = infinity  # image_frequency location (infinity [rest], camera [w/ velocity])
 image_polarization  = false     # flag indicating transport should be polarized
 
 # Ray-tracing parameters
