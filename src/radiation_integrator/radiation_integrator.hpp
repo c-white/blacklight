@@ -62,7 +62,6 @@ struct RadiationIntegrator
   float fallback_kappa;
 
   // Input data - image parameters
-  int image_resolution;
   double image_frequency;
   bool image_polarization;
 
@@ -91,10 +90,11 @@ struct RadiationIntegrator
   // Camera data
   double momentum_factor;
   double camera_ucon[4], camera_ucov[4], camera_up_con_c[4];
-  Array<double> image_position, image_direction;
+  int camera_num_pix;
+  Array<double> camera_pos, camera_dir;
 
   // Geodesic data
-  int image_steps;
+  int geodesic_num_steps;
   Array<bool> sample_flags;
   Array<int> sample_num;
   Array<double> sample_pos, sample_dir, sample_len;
@@ -136,7 +136,7 @@ struct RadiationIntegrator
       double x1, int inds[4]);
   float InterpolateSimple(const Array<float> &grid_vals, int b, int k, int j, int i, double f_k,
       double f_j, double f_i);
-  float InterpolateAdvanced(const Array<float> &grid_vals, int m, int l, int n);
+  float InterpolateAdvanced(const Array<float> &grid_vals, int m, int n);
 
   // Internal functions - simulation_coefficients.cpp
   void CalculateSimulationCoefficients();

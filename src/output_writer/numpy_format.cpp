@@ -67,10 +67,10 @@ void OutputWriter::WriteNpz()
   {
     if (image_camera == Camera::plane)
       data_lengths[camera_offset] =
-          GenerateNpyFromDoubleArray(image_position, &data_buffers[camera_offset]);
+          GenerateNpyFromDoubleArray(camera_pos, &data_buffers[camera_offset]);
     else if (image_camera == Camera::pinhole)
       data_lengths[camera_offset] =
-          GenerateNpyFromDoubleArray(image_direction, &data_buffers[camera_offset]);
+          GenerateNpyFromDoubleArray(camera_dir, &data_buffers[camera_offset]);
   }
 
   // Write local file headers to buffers
@@ -78,10 +78,10 @@ void OutputWriter::WriteNpz()
       &local_header_buffers[0]);
   if (output_params)
   {
-    local_header_lengths[1] = GenerateZIPLocalFileHeader(data_buffers[1], data_lengths[1],
-        "image_width", &local_header_buffers[1]);
+    local_header_lengths[1] = GenerateZIPLocalFileHeader(data_buffers[1], data_lengths[1], "width",
+        &local_header_buffers[1]);
     local_header_lengths[2] = GenerateZIPLocalFileHeader(data_buffers[2], data_lengths[2],
-        "image_frequency", &local_header_buffers[2]);
+        "frequency", &local_header_buffers[2]);
     local_header_lengths[3] = GenerateZIPLocalFileHeader(data_buffers[3], data_lengths[3],
         "mass_msun", &local_header_buffers[3]);
   }
@@ -89,10 +89,10 @@ void OutputWriter::WriteNpz()
   {
     if (image_camera == Camera::plane)
       local_header_lengths[camera_offset] = GenerateZIPLocalFileHeader(data_buffers[camera_offset],
-          data_lengths[camera_offset], "image_position", &local_header_buffers[camera_offset]);
+          data_lengths[camera_offset], "positions", &local_header_buffers[camera_offset]);
     else if (image_camera == Camera::pinhole)
       local_header_lengths[camera_offset] = GenerateZIPLocalFileHeader(data_buffers[camera_offset],
-          data_lengths[camera_offset], "image_direction", &local_header_buffers[camera_offset]);
+          data_lengths[camera_offset], "directions", &local_header_buffers[camera_offset]);
   }
 
   // Write central directory headers to buffers

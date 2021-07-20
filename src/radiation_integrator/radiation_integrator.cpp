@@ -96,7 +96,6 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   }
 
   // Copy image parameters
-  image_resolution = p_input_reader->image_resolution.value();
   image_frequency = p_input_reader->image_frequency.value();
   if (model_type == ModelType::simulation)
     image_polarization = p_input_reader->image_polarization.value();
@@ -115,13 +114,14 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     camera_ucov[mu] = p_geodesic_integrator->camera_ucov[mu];
     camera_up_con_c[mu] = p_geodesic_integrator->camera_up_con_c[mu];
   }
+  camera_num_pix = p_geodesic_integrator->camera_num_pix;
 
   // Make shallow copies of camera arrays
-  image_position = p_geodesic_integrator->image_position;
-  image_direction = p_geodesic_integrator->image_direction;
+  camera_pos = p_geodesic_integrator->camera_pos;
+  camera_dir = p_geodesic_integrator->camera_dir;
 
   // Copy geodesic data
-  image_steps = p_geodesic_integrator->image_steps;
+  geodesic_num_steps = p_geodesic_integrator->geodesic_num_steps;
 
   // Make shallow copies of geodesic arrays
   sample_flags = p_geodesic_integrator->sample_flags;

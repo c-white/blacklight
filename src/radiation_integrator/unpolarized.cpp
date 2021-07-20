@@ -22,7 +22,7 @@
 void RadiationIntegrator::IntegrateUnpolarizedRadiation()
 {
   // Allocate image array
-  image.Allocate(image_resolution, image_resolution);
+  image.Allocate(camera_num_pix);
   image.Zero();
 
   // Calculate unit
@@ -33,34 +33,32 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
   {
     // Go through pixels and samples
     #pragma omp for schedule(static)
-    for (int m = 0; m < image_resolution; m++)
-      for (int l = 0; l < image_resolution; l++)
+    for (int m = 0; m < camera_num_pix; m++)
+    {
+      int num_steps = sample_num(m);
+      for (int n = 0; n < num_steps; n++)
       {
-        int num_steps = sample_num(m,l);
-        for (int n = 0; n < num_steps; n++)
+        double delta_lambda = sample_len(m,n);
+        double delta_lambda_cgs = delta_lambda * x_unit / momentum_factor;
+        if (alpha_i(m,n) > 0.0)
         {
-          double delta_lambda = sample_len(m,l,n);
-          double delta_lambda_cgs = delta_lambda * x_unit / momentum_factor;
-          if (alpha_i(m,l,n) > 0.0)
-          {
-            double delta_tau_nu = alpha_i(m,l,n) * delta_lambda_cgs;
-            double ss = j_i(m,l,n) / alpha_i(m,l,n);
-            if (delta_tau_nu <= delta_tau_max)
-              image(m,l) = std::exp(-delta_tau_nu) * (image(m,l) + ss * std::expm1(delta_tau_nu));
-            else
-              image(m,l) = ss;
-          }
+          double delta_tau_nu = alpha_i(m,n) * delta_lambda_cgs;
+          double ss = j_i(m,n) / alpha_i(m,n);
+          if (delta_tau_nu <= delta_tau_max)
+            image(m) = std::exp(-delta_tau_nu) * (image(m) + ss * std::expm1(delta_tau_nu));
           else
-            image(m,l) += j_i(m,l,n) * delta_lambda_cgs;
+            image(m) = ss;
         }
+        else
+          image(m) += j_i(m,n) * delta_lambda_cgs;
       }
+    }
 
     // Transform I_nu/nu^3 to I_nu
     double image_frequency_cu = image_frequency * image_frequency * image_frequency;
     #pragma omp for schedule(static)
-    for (int m = 0; m < image_resolution; m++)
-      for (int l = 0; l < image_resolution; l++)
-        image(m,l) *= image_frequency_cu;
+    for (int m = 0; m < camera_num_pix; m++)
+      image(m) *= image_frequency_cu;
   }
   return;
 }

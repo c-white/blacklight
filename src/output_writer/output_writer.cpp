@@ -39,6 +39,7 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   }
 
   // Copy image parameters
+  image_resolution = p_input_reader->image_resolution.value();
   if (output_format == OutputFormat::npz and output_params)
   {
     image_width_array.Allocate(1);
@@ -49,14 +50,21 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
     mass_msun_array(0) = p_radiation_integrator->mass_msun;
   }
 
-  // Make local shallow copies of data
-  image = p_radiation_integrator->image;
+  // Make local shallow copies of data, reshaping the arrays
   if (output_format == OutputFormat::npz and output_camera)
     image_camera = p_input_reader->image_camera.value();
   if (output_format == OutputFormat::npz and output_camera and image_camera == Camera::plane)
-    image_position = p_geodesic_integrator->image_position;
+  {
+    camera_pos = p_geodesic_integrator->camera_pos;
+    camera_pos.n3 = image_resolution;
+    camera_pos.n2 = image_resolution;
+  }
   if (output_format == OutputFormat::npz and output_camera and image_camera == Camera::pinhole)
-    image_direction = p_geodesic_integrator->image_direction;
+  {
+    camera_dir = p_geodesic_integrator->camera_dir;
+    camera_dir.n3 = image_resolution;
+    camera_dir.n2 = image_resolution;
+  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -70,7 +78,12 @@ void OutputWriter::Write()
 {
   // Make shallow copy of image
   if (first_time)
+  {
     image = p_radiation_integrator->image;
+    image.n3 = image.n2;
+    image.n2 = image_resolution;
+    image.n1 = image_resolution;
+  }
 
   // Open output file
   output_file = p_input_reader->output_file_formatted;

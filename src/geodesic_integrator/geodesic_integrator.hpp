@@ -61,10 +61,11 @@ struct GeodesicIntegrator
   // Camera data
   double momentum_factor;
   double camera_ucon[4], camera_ucov[4], camera_up_con_c[4];
-  Array<double> image_position, image_direction;
+  int camera_num_pix;
+  Array<double> camera_pos, camera_dir;
 
   // Geodesic data
-  int image_steps;
+  int geodesic_num_steps;
   Array<double> geodesic_pos, geodesic_dir, geodesic_len;
   Array<bool> sample_flags;
   Array<int> sample_num;

@@ -17,8 +17,7 @@
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Allocates and initializes image_position and image_direction except for time components of
-//       image_direction.
+//   Allocates and initializes camera_pos and camera_dir except for time components of camera_dir.
 //   Neglects spacetime curvature at camera location.
 //   Symbols:
 //     n: unit outward normal
@@ -306,8 +305,8 @@ void GeodesicIntegrator::InitializeCamera()
   camera_up_con_c[3] = vert_con_zc;
 
   // Allocate arrays
-  image_position.Allocate(image_resolution, image_resolution, 4);
-  image_direction.Allocate(image_resolution, image_resolution, 4);
+  camera_pos.Allocate(camera_num_pix, 4);
+  camera_dir.Allocate(camera_num_pix, 4);
 
   // Initialize position and direction based on camera type
   switch (image_camera)
@@ -330,15 +329,15 @@ void GeodesicIntegrator::InitializeCamera()
           double dx = dxc + ux * dtc;
           double dy = dyc + uy * dtc;
           double dz = dzc + uz * dtc;
-          image_position(m,l,0) = t + dt;
-          image_position(m,l,1) = x + dx;
-          image_position(m,l,2) = y + dy;
-          image_position(m,l,3) = z + dz;
+          camera_pos(m*image_resolution+l,0) = t + dt;
+          camera_pos(m*image_resolution+l,1) = x + dx;
+          camera_pos(m*image_resolution+l,2) = y + dy;
+          camera_pos(m*image_resolution+l,3) = z + dz;
 
           // Set pixel direction
-          image_direction(m,l,1) = norm_con_x;
-          image_direction(m,l,2) = norm_con_y;
-          image_direction(m,l,3) = norm_con_z;
+          camera_dir(m*image_resolution+l,1) = norm_con_x;
+          camera_dir(m*image_resolution+l,2) = norm_con_y;
+          camera_dir(m*image_resolution+l,3) = norm_con_z;
         }
       break;
     }
@@ -351,10 +350,10 @@ void GeodesicIntegrator::InitializeCamera()
         for (int l = 0; l < image_resolution; l++)
         {
           // Set pixel position
-          image_position(m,l,0) = t;
-          image_position(m,l,1) = x;
-          image_position(m,l,2) = y;
-          image_position(m,l,3) = z;
+          camera_pos(m*image_resolution+l,0) = t;
+          camera_pos(m*image_resolution+l,1) = x;
+          camera_pos(m*image_resolution+l,2) = y;
+          camera_pos(m*image_resolution+l,3) = z;
 
           // Set pixel direction
           double u = (l - image_resolution / 2.0 + 0.5) * bh_m * image_width / image_resolution;
@@ -373,9 +372,9 @@ void GeodesicIntegrator::InitializeCamera()
           double dir_con_x = dir_con_xc + ux * dir_con_tc;
           double dir_con_y = dir_con_yc + uy * dir_con_tc;
           double dir_con_z = dir_con_zc + uz * dir_con_tc;
-          image_direction(m,l,1) = dir_con_x;
-          image_direction(m,l,2) = dir_con_y;
-          image_direction(m,l,3) = dir_con_z;
+          camera_dir(m*image_resolution+l,1) = dir_con_x;
+          camera_dir(m*image_resolution+l,2) = dir_con_y;
+          camera_dir(m*image_resolution+l,3) = dir_con_z;
         }
       break;
     }

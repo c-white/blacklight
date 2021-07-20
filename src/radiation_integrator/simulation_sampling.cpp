@@ -20,7 +20,7 @@
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes image_steps, sample_flags, sample_num, and sample_pos have been set.
+//   Assumes geodesic_num_steps, sample_flags, sample_num, and sample_pos have been set.
 //   Allocates and initializes sample_inds, sample_nan, and sample_fallback.
 //   Allocates and initializes sample_fracs if simulation_interp == true.
 //   If simulation_interp == false, locates cell containing geodesic sample point.
@@ -91,18 +91,18 @@ void RadiationIntegrator::CalculateSimulationSampling()
   // Allocate arrays
   if (simulation_interp and simulation_block_interp)
   {
-    sample_inds.Allocate(image_resolution, image_resolution, image_steps, 8, 4);
-    sample_fracs.Allocate(image_resolution, image_resolution, image_steps, 3);
+    sample_inds.Allocate(camera_num_pix, geodesic_num_steps, 8, 4);
+    sample_fracs.Allocate(camera_num_pix, geodesic_num_steps, 3);
   }
   else if (simulation_interp)
   {
-    sample_inds.Allocate(image_resolution, image_resolution, image_steps, 4);
-    sample_fracs.Allocate(image_resolution, image_resolution, image_steps, 3);
+    sample_inds.Allocate(camera_num_pix, geodesic_num_steps, 4);
+    sample_fracs.Allocate(camera_num_pix, geodesic_num_steps, 3);
   }
   else
-    sample_inds.Allocate(image_resolution, image_resolution, image_steps, 4);
-  sample_nan.Allocate(image_resolution, image_resolution, image_steps);
-  sample_fallback.Allocate(image_resolution, image_resolution, image_steps);
+    sample_inds.Allocate(camera_num_pix, geodesic_num_steps, 4);
+  sample_nan.Allocate(camera_num_pix, geodesic_num_steps);
+  sample_fallback.Allocate(camera_num_pix, geodesic_num_steps);
   sample_nan.Zero();
   sample_fallback.Zero();
 
@@ -127,167 +127,166 @@ void RadiationIntegrator::CalculateSimulationSampling()
 
     // Resample cell data onto geodesics
     #pragma omp for schedule(static)
-    for (int m = 0; m < image_resolution; m++)
-      for (int l = 0; l < image_resolution; l++)
-      {
-        // Extract number of steps along this geodesic
-        int num_steps = sample_num(m,l);
+    for (int m = 0; m < camera_num_pix; m++)
+    {
+      // Extract number of steps along this geodesic
+      int num_steps = sample_num(m);
 
-        // Set NaN fallback values if geodesic poorly terminated
-        if (fallback_nan and sample_flags(m,l))
+      // Set NaN fallback values if geodesic poorly terminated
+      if (fallback_nan and sample_flags(m))
+      {
+        for (int n = 0; n < num_steps; n++)
+          sample_nan(m,n) = true;
+        continue;
+      }
+
+      // Go along geodesic
+      for (int n = 0; n < num_steps; n++)
+      {
+        // Extract coordinates
+        double x1 = sample_pos(m,n,1);
+        double x2 = sample_pos(m,n,2);
+        double x3 = sample_pos(m,n,3);
+
+        // Convert coordinates
+        if (simulation_coord == Coordinates::sph_ks)
+          CKSToSKS(&x1, &x2, &x3);
+
+        // Determine block
+        if (x1 < x1_min_block or x1 > x1_max_block or x2 < x2_min_block or x2 > x2_max_block
+            or x3 < x3_min_block or x3 > x3_max_block)
         {
-          for (int n = 0; n < num_steps; n++)
-            sample_nan(m,l,n) = true;
-          continue;
+          // Check if block contains position
+          int b_new;
+          double x1_min_temp = x1_min_block;
+          double x1_max_temp = x1_max_block;
+          double x2_min_temp = x2_min_block;
+          double x2_max_temp = x2_max_block;
+          double x3_min_temp = x3_min_block;
+          double x3_max_temp = x3_max_block;
+          for (b_new = 0; b_new < n_b; b_new++)
+          {
+            x1_min_temp = x1f(b_new,0);
+            x1_max_temp = x1f(b_new,n_i);
+            x2_min_temp = x2f(b_new,0);
+            x2_max_temp = x2f(b_new,n_j);
+            x3_min_temp = x3f(b_new,0);
+            x3_max_temp = x3f(b_new,n_k);
+            if (x1 >= x1_min_temp and x1 <= x1_max_temp and x2 >= x2_min_temp and x2 <= x2_max_temp
+                and x3 >= x3_min_temp and x3 <= x3_max_temp)
+              break;
+          }
+
+          // Set fallback values if off grid
+          if (b_new == n_b)
+          {
+            if (fallback_nan)
+              sample_nan(m,n) = true;
+            else
+              sample_fallback(m,n) = true;
+            continue;
+          }
+
+          // Set newly found block as one to search
+          b = b_new;
+          x1_min_block = x1_min_temp;
+          x1_max_block = x1_max_temp;
+          x2_min_block = x2_min_temp;
+          x2_max_block = x2_max_temp;
+          x3_min_block = x3_min_temp;
+          x3_max_block = x3_max_temp;
         }
 
-        // Go along geodesic
-        for (int n = 0; n < num_steps; n++)
+        // Determine cell
+        for (i = 0; i < n_i; i++)
+          if (static_cast<double>(x1f(b,i+1)) >= x1)
+            break;
+        for (j = 0; j < n_j; j++)
+          if (static_cast<double>(x2f(b,j+1)) >= x2)
+            break;
+        for (k = 0; k < n_k; k++)
+          if (static_cast<double>(x3f(b,k+1)) >= x3)
+            break;
+
+        // Prepare to sample values without interpolation
+        if (not simulation_interp)
         {
-          // Extract coordinates
-          double x1 = sample_pos(m,l,n,1);
-          double x2 = sample_pos(m,l,n,2);
-          double x3 = sample_pos(m,l,n,3);
+          sample_inds(m,n,0) = b;
+          sample_inds(m,n,1) = k;
+          sample_inds(m,n,2) = j;
+          sample_inds(m,n,3) = i;
+        }
 
-          // Convert coordinates
-          if (simulation_coord == Coordinates::sph_ks)
-            CKSToSKS(&x1, &x2, &x3);
+        // Prepare to sample values with intrablock interpolation
+        if (simulation_interp and not simulation_block_interp)
+        {
+          int i_m = i == 0 or (i != n_i - 1 and x1 >= static_cast<double>(x1v(b,i))) ? i : i - 1;
+          int j_m = j == 0 or (j != n_j - 1 and x2 >= static_cast<double>(x2v(b,j))) ? j : j - 1;
+          int k_m = k == 0 or (k != n_k - 1 and x3 >= static_cast<double>(x3v(b,k))) ? k : k - 1;
+          double f_i = (x1 - static_cast<double>(x1v(b,i_m)))
+              / (static_cast<double>(x1v(b,i_m+1)) - static_cast<double>(x1v(b,i_m)));
+          double f_j = (x2 - static_cast<double>(x2v(b,j_m)))
+              / (static_cast<double>(x2v(b,j_m+1)) - static_cast<double>(x2v(b,j_m)));
+          double f_k = (x3 - static_cast<double>(x3v(b,k_m)))
+              / (static_cast<double>(x3v(b,k_m+1)) - static_cast<double>(x3v(b,k_m)));
+          sample_inds(m,n,0) = b;
+          sample_inds(m,n,1) = k_m;
+          sample_inds(m,n,2) = j_m;
+          sample_inds(m,n,3) = i_m;
+          sample_fracs(m,n,0) = f_k;
+          sample_fracs(m,n,1) = f_j;
+          sample_fracs(m,n,2) = f_i;
+        }
 
-          // Determine block
-          if (x1 < x1_min_block or x1 > x1_max_block or x2 < x2_min_block or x2 > x2_max_block
-              or x3 < x3_min_block or x3 > x3_max_block)
-          {
-            // Check if block contains position
-            int b_new;
-            double x1_min_temp = x1_min_block;
-            double x1_max_temp = x1_max_block;
-            double x2_min_temp = x2_min_block;
-            double x2_max_temp = x2_max_block;
-            double x3_min_temp = x3_min_block;
-            double x3_max_temp = x3_max_block;
-            for (b_new = 0; b_new < n_b; b_new++)
-            {
-              x1_min_temp = x1f(b_new,0);
-              x1_max_temp = x1f(b_new,n_i);
-              x2_min_temp = x2f(b_new,0);
-              x2_max_temp = x2f(b_new,n_j);
-              x3_min_temp = x3f(b_new,0);
-              x3_max_temp = x3f(b_new,n_k);
-              if (x1 >= x1_min_temp and x1 <= x1_max_temp and x2 >= x2_min_temp
-                  and x2 <= x2_max_temp and x3 >= x3_min_temp and x3 <= x3_max_temp)
-                break;
-            }
+        // Prepare to sample values with interblock interpolation
+        if (simulation_interp and simulation_block_interp)
+        {
+          // Determine indices to use for interpolation
+          int i_m = x1 >= static_cast<double>(x1v(b,i)) ? i : i - 1;
+          int j_m = x2 >= static_cast<double>(x2v(b,j)) ? j : j - 1;
+          int k_m = x3 >= static_cast<double>(x3v(b,k)) ? k : k - 1;
+          int i_p = i_m + 1;
+          int j_p = j_m + 1;
+          int k_p = k_m + 1;
 
-            // Set fallback values if off grid
-            if (b_new == n_b)
-            {
-              if (fallback_nan)
-                sample_nan(m,l,n) = true;
-              else
-                sample_fallback(m,l,n) = true;
-              continue;
-            }
+          // Calculate fractions to use in interpolation
+          double x1_m = i_m == -1 ? 2.0 * static_cast<double>(x1f(b,i))
+              - static_cast<double>(x1v(b,i)) : static_cast<double>(x1v(b,i_m));
+          double x2_m = j_m == -1 ? 2.0 * static_cast<double>(x2f(b,j))
+              - static_cast<double>(x2v(b,j)) : static_cast<double>(x2v(b,j_m));
+          double x3_m = k_m == -1 ? 2.0 * static_cast<double>(x3f(b,k))
+              - static_cast<double>(x3v(b,k)) : static_cast<double>(x3v(b,k_m));
+          double x1_p = i_p == n_i ? 2.0 * static_cast<double>(x1v(b,i+1))
+              - static_cast<double>(x1v(b,i)) : static_cast<double>(x1v(b,i_p));
+          double x2_p = j_p == n_j ? 2.0 * static_cast<double>(x2v(b,j+1))
+              - static_cast<double>(x2v(b,j)) : static_cast<double>(x2v(b,j_p));
+          double x3_p = k_p == n_k ? 2.0 * static_cast<double>(x3v(b,k+1))
+              - static_cast<double>(x3v(b,k)) : static_cast<double>(x3v(b,k_p));
+          double f_i = (x1 - x1_m) / (x1_p - x1_m);
+          double f_j = (x2 - x2_m) / (x2_p - x2_m);
+          double f_k = (x3 - x3_m) / (x3_p - x3_m);
 
-            // Set newly found block as one to search
-            b = b_new;
-            x1_min_block = x1_min_temp;
-            x1_max_block = x1_max_temp;
-            x2_min_block = x2_min_temp;
-            x2_max_block = x2_max_temp;
-            x3_min_block = x3_min_temp;
-            x3_max_block = x3_max_temp;
-          }
+          // Find interpolation anchors
+          int inds[8][4];
+          FindNearbyInds(b, k_m, j_m, i_m, k, j, i, x3, x2, x1, inds[0]);
+          FindNearbyInds(b, k_m, j_m, i_p, k, j, i, x3, x2, x1, inds[1]);
+          FindNearbyInds(b, k_m, j_p, i_m, k, j, i, x3, x2, x1, inds[2]);
+          FindNearbyInds(b, k_m, j_p, i_p, k, j, i, x3, x2, x1, inds[3]);
+          FindNearbyInds(b, k_p, j_m, i_m, k, j, i, x3, x2, x1, inds[4]);
+          FindNearbyInds(b, k_p, j_m, i_p, k, j, i, x3, x2, x1, inds[5]);
+          FindNearbyInds(b, k_p, j_p, i_m, k, j, i, x3, x2, x1, inds[6]);
+          FindNearbyInds(b, k_p, j_p, i_p, k, j, i, x3, x2, x1, inds[7]);
 
-          // Determine cell
-          for (i = 0; i < n_i; i++)
-            if (static_cast<double>(x1f(b,i+1)) >= x1)
-              break;
-          for (j = 0; j < n_j; j++)
-            if (static_cast<double>(x2f(b,j+1)) >= x2)
-              break;
-          for (k = 0; k < n_k; k++)
-            if (static_cast<double>(x3f(b,k+1)) >= x3)
-              break;
-
-          // Prepare to sample values without interpolation
-          if (not simulation_interp)
-          {
-            sample_inds(m,l,n,0) = b;
-            sample_inds(m,l,n,1) = k;
-            sample_inds(m,l,n,2) = j;
-            sample_inds(m,l,n,3) = i;
-          }
-
-          // Prepare to sample values with intrablock interpolation
-          if (simulation_interp and not simulation_block_interp)
-          {
-            int i_m = i == 0 or (i != n_i - 1 and x1 >= static_cast<double>(x1v(b,i))) ? i : i - 1;
-            int j_m = j == 0 or (j != n_j - 1 and x2 >= static_cast<double>(x2v(b,j))) ? j : j - 1;
-            int k_m = k == 0 or (k != n_k - 1 and x3 >= static_cast<double>(x3v(b,k))) ? k : k - 1;
-            double f_i = (x1 - static_cast<double>(x1v(b,i_m)))
-                / (static_cast<double>(x1v(b,i_m+1)) - static_cast<double>(x1v(b,i_m)));
-            double f_j = (x2 - static_cast<double>(x2v(b,j_m)))
-                / (static_cast<double>(x2v(b,j_m+1)) - static_cast<double>(x2v(b,j_m)));
-            double f_k = (x3 - static_cast<double>(x3v(b,k_m)))
-                / (static_cast<double>(x3v(b,k_m+1)) - static_cast<double>(x3v(b,k_m)));
-            sample_inds(m,l,n,0) = b;
-            sample_inds(m,l,n,1) = k_m;
-            sample_inds(m,l,n,2) = j_m;
-            sample_inds(m,l,n,3) = i_m;
-            sample_fracs(m,l,n,0) = f_k;
-            sample_fracs(m,l,n,1) = f_j;
-            sample_fracs(m,l,n,2) = f_i;
-          }
-
-          // Prepare to sample values with interblock interpolation
-          if (simulation_interp and simulation_block_interp)
-          {
-            // Determine indices to use for interpolation
-            int i_m = x1 >= static_cast<double>(x1v(b,i)) ? i : i - 1;
-            int j_m = x2 >= static_cast<double>(x2v(b,j)) ? j : j - 1;
-            int k_m = x3 >= static_cast<double>(x3v(b,k)) ? k : k - 1;
-            int i_p = i_m + 1;
-            int j_p = j_m + 1;
-            int k_p = k_m + 1;
-
-            // Calculate fractions to use in interpolation
-            double x1_m = i_m == -1 ? 2.0 * static_cast<double>(x1f(b,i))
-                - static_cast<double>(x1v(b,i)) : static_cast<double>(x1v(b,i_m));
-            double x2_m = j_m == -1 ? 2.0 * static_cast<double>(x2f(b,j))
-                - static_cast<double>(x2v(b,j)) : static_cast<double>(x2v(b,j_m));
-            double x3_m = k_m == -1 ? 2.0 * static_cast<double>(x3f(b,k))
-                - static_cast<double>(x3v(b,k)) : static_cast<double>(x3v(b,k_m));
-            double x1_p = i_p == n_i ? 2.0 * static_cast<double>(x1v(b,i+1))
-                - static_cast<double>(x1v(b,i)) : static_cast<double>(x1v(b,i_p));
-            double x2_p = j_p == n_j ? 2.0 * static_cast<double>(x2v(b,j+1))
-                - static_cast<double>(x2v(b,j)) : static_cast<double>(x2v(b,j_p));
-            double x3_p = k_p == n_k ? 2.0 * static_cast<double>(x3v(b,k+1))
-                - static_cast<double>(x3v(b,k)) : static_cast<double>(x3v(b,k_p));
-            double f_i = (x1 - x1_m) / (x1_p - x1_m);
-            double f_j = (x2 - x2_m) / (x2_p - x2_m);
-            double f_k = (x3 - x3_m) / (x3_p - x3_m);
-
-            // Find interpolation anchors
-            int inds[8][4];
-            FindNearbyInds(b, k_m, j_m, i_m, k, j, i, x3, x2, x1, inds[0]);
-            FindNearbyInds(b, k_m, j_m, i_p, k, j, i, x3, x2, x1, inds[1]);
-            FindNearbyInds(b, k_m, j_p, i_m, k, j, i, x3, x2, x1, inds[2]);
-            FindNearbyInds(b, k_m, j_p, i_p, k, j, i, x3, x2, x1, inds[3]);
-            FindNearbyInds(b, k_p, j_m, i_m, k, j, i, x3, x2, x1, inds[4]);
-            FindNearbyInds(b, k_p, j_m, i_p, k, j, i, x3, x2, x1, inds[5]);
-            FindNearbyInds(b, k_p, j_p, i_m, k, j, i, x3, x2, x1, inds[6]);
-            FindNearbyInds(b, k_p, j_p, i_p, k, j, i, x3, x2, x1, inds[7]);
-
-            // Store results
-            for (int p = 0; p < 8; p++)
-              for (int q = 0; q < 4; q++)
-                sample_inds(m,l,n,p,q) = inds[p][q];
-            sample_fracs(m,l,n,0) = f_k;
-            sample_fracs(m,l,n,1) = f_j;
-            sample_fracs(m,l,n,2) = f_i;
-          }
+          // Store results
+          for (int p = 0; p < 8; p++)
+            for (int q = 0; q < 4; q++)
+              sample_inds(m,n,p,q) = inds[p][q];
+          sample_fracs(m,n,0) = f_k;
+          sample_fracs(m,n,1) = f_j;
+          sample_fracs(m,n,2) = f_i;
         }
       }
+    }
   }
   return;
 }
@@ -298,7 +297,7 @@ void RadiationIntegrator::CalculateSimulationSampling()
 // Inputs: (none)
 // Output: (none)
 // Notes:
-//   Assumes image_steps, sample_inds, sample_nan, and sample_fallback have been set.
+//   Assumes geodesic_num_steps, sample_inds, sample_nan, and sample_fallback have been set.
 //   Assumes sample_fracs has been set if simulation_interp == true.
 //   Allocates and initializes sample_rho, sample_pgas or sample_kappa, sample_uu1, sample_uu2,
 //       sample_uu3, sample_bb1, sample_bb2, and sample_bb3.
@@ -307,146 +306,145 @@ void RadiationIntegrator::SampleSimulation()
   // Allocate arrays
   if (first_time)
   {
-    sample_rho.Allocate(image_resolution, image_resolution, image_steps);
+    sample_rho.Allocate(camera_num_pix, geodesic_num_steps);
     if (plasma_model == PlasmaModel::ti_te_beta)
-      sample_pgas.Allocate(image_resolution, image_resolution, image_steps);
+      sample_pgas.Allocate(camera_num_pix, geodesic_num_steps);
     if (plasma_model == PlasmaModel::code_kappa)
-      sample_kappa.Allocate(image_resolution, image_resolution, image_steps);
-    sample_uu1.Allocate(image_resolution, image_resolution, image_steps);
-    sample_uu2.Allocate(image_resolution, image_resolution, image_steps);
-    sample_uu3.Allocate(image_resolution, image_resolution, image_steps);
-    sample_bb1.Allocate(image_resolution, image_resolution, image_steps);
-    sample_bb2.Allocate(image_resolution, image_resolution, image_steps);
-    sample_bb3.Allocate(image_resolution, image_resolution, image_steps);
+      sample_kappa.Allocate(camera_num_pix, geodesic_num_steps);
+    sample_uu1.Allocate(camera_num_pix, geodesic_num_steps);
+    sample_uu2.Allocate(camera_num_pix, geodesic_num_steps);
+    sample_uu3.Allocate(camera_num_pix, geodesic_num_steps);
+    sample_bb1.Allocate(camera_num_pix, geodesic_num_steps);
+    sample_bb2.Allocate(camera_num_pix, geodesic_num_steps);
+    sample_bb3.Allocate(camera_num_pix, geodesic_num_steps);
   }
 
   // Resample cell data onto geodesics in parallel
   #pragma omp parallel for schedule(static)
-  for (int m = 0; m < image_resolution; m++)
-    for (int l = 0; l < image_resolution; l++)
+  for (int m = 0; m < camera_num_pix; m++)
+  {
+    // Extract number of steps along this geodesic
+    int num_steps = sample_num(m);
+
+    // Go along geodesic
+    for (int n = 0; n < num_steps; n++)
     {
-      // Extract number of steps along this geodesic
-      int num_steps = sample_num(m,l);
-
-      // Go along geodesic
-      for (int n = 0; n < num_steps; n++)
+      // Set NaN values
+      if (sample_nan(m,n))
       {
-        // Set NaN values
-        if (sample_nan(m,l,n))
-        {
-          sample_rho(m,l,n) = std::numeric_limits<float>::quiet_NaN();
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas(m,l,n) = std::numeric_limits<float>::quiet_NaN();
-          if (plasma_model == PlasmaModel::code_kappa)
-            sample_kappa(m,l,n) = std::numeric_limits<float>::quiet_NaN();
-          sample_uu1(m,l,n) = std::numeric_limits<float>::quiet_NaN();
-          sample_uu2(m,l,n) = std::numeric_limits<float>::quiet_NaN();
-          sample_uu3(m,l,n) = std::numeric_limits<float>::quiet_NaN();
-          sample_bb1(m,l,n) = std::numeric_limits<float>::quiet_NaN();
-          sample_bb2(m,l,n) = std::numeric_limits<float>::quiet_NaN();
-          sample_bb3(m,l,n) = std::numeric_limits<float>::quiet_NaN();
-        }
+        sample_rho(m,n) = std::numeric_limits<float>::quiet_NaN();
+        if (plasma_model == PlasmaModel::ti_te_beta)
+          sample_pgas(m,n) = std::numeric_limits<float>::quiet_NaN();
+        if (plasma_model == PlasmaModel::code_kappa)
+          sample_kappa(m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_uu1(m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_uu2(m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_uu3(m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_bb1(m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_bb2(m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_bb3(m,n) = std::numeric_limits<float>::quiet_NaN();
+      }
 
-        // Set fallback values
-        else if (sample_fallback(m,l,n))
-        {
-          sample_rho(m,l,n) = fallback_rho;
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas(m,l,n) = fallback_pgas;
-          if (plasma_model == PlasmaModel::code_kappa)
-            sample_kappa(m,l,n) = fallback_kappa;
-          sample_uu1(m,l,n) = fallback_uu1;
-          sample_uu2(m,l,n) = fallback_uu2;
-          sample_uu3(m,l,n) = fallback_uu3;
-          sample_bb1(m,l,n) = fallback_bb1;
-          sample_bb2(m,l,n) = fallback_bb2;
-          sample_bb3(m,l,n) = fallback_bb3;
-        }
+      // Set fallback values
+      else if (sample_fallback(m,n))
+      {
+        sample_rho(m,n) = fallback_rho;
+        if (plasma_model == PlasmaModel::ti_te_beta)
+          sample_pgas(m,n) = fallback_pgas;
+        if (plasma_model == PlasmaModel::code_kappa)
+          sample_kappa(m,n) = fallback_kappa;
+        sample_uu1(m,n) = fallback_uu1;
+        sample_uu2(m,n) = fallback_uu2;
+        sample_uu3(m,n) = fallback_uu3;
+        sample_bb1(m,n) = fallback_bb1;
+        sample_bb2(m,n) = fallback_bb2;
+        sample_bb3(m,n) = fallback_bb3;
+      }
 
-        // Set nearest values
-        else if (not simulation_interp)
-        {
-          int b = sample_inds(m,l,n,0);
-          int k = sample_inds(m,l,n,1);
-          int j = sample_inds(m,l,n,2);
-          int i = sample_inds(m,l,n,3);
-          sample_rho(m,l,n) = grid_rho(b,k,j,i);
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
-          if (plasma_model == PlasmaModel::code_kappa)
-            sample_kappa(m,l,n) = grid_kappa(b,k,j,i);
-          sample_uu1(m,l,n) = grid_uu1(b,k,j,i);
-          sample_uu2(m,l,n) = grid_uu2(b,k,j,i);
-          sample_uu3(m,l,n) = grid_uu3(b,k,j,i);
-          sample_bb1(m,l,n) = grid_bb1(b,k,j,i);
-          sample_bb2(m,l,n) = grid_bb2(b,k,j,i);
-          sample_bb3(m,l,n) = grid_bb3(b,k,j,i);
-        }
+      // Set nearest values
+      else if (not simulation_interp)
+      {
+        int b = sample_inds(m,n,0);
+        int k = sample_inds(m,n,1);
+        int j = sample_inds(m,n,2);
+        int i = sample_inds(m,n,3);
+        sample_rho(m,n) = grid_rho(b,k,j,i);
+        if (plasma_model == PlasmaModel::ti_te_beta)
+          sample_pgas(m,n) = grid_pgas(b,k,j,i);
+        if (plasma_model == PlasmaModel::code_kappa)
+          sample_kappa(m,n) = grid_kappa(b,k,j,i);
+        sample_uu1(m,n) = grid_uu1(b,k,j,i);
+        sample_uu2(m,n) = grid_uu2(b,k,j,i);
+        sample_uu3(m,n) = grid_uu3(b,k,j,i);
+        sample_bb1(m,n) = grid_bb1(b,k,j,i);
+        sample_bb2(m,n) = grid_bb2(b,k,j,i);
+        sample_bb3(m,n) = grid_bb3(b,k,j,i);
+      }
 
-        // Set intrablock interpolated values
-        else if (not simulation_block_interp)
-        {
-          // Extract indices and coefficients
-          int b = sample_inds(m,l,n,0);
-          int k = sample_inds(m,l,n,1);
-          int j = sample_inds(m,l,n,2);
-          int i = sample_inds(m,l,n,3);
-          double f_k = sample_fracs(m,l,n,0);
-          double f_j = sample_fracs(m,l,n,1);
-          double f_i = sample_fracs(m,l,n,2);
+      // Set intrablock interpolated values
+      else if (not simulation_block_interp)
+      {
+        // Extract indices and coefficients
+        int b = sample_inds(m,n,0);
+        int k = sample_inds(m,n,1);
+        int j = sample_inds(m,n,2);
+        int i = sample_inds(m,n,3);
+        double f_k = sample_fracs(m,n,0);
+        double f_j = sample_fracs(m,n,1);
+        double f_i = sample_fracs(m,n,2);
 
-          // Perform interpolation
-          sample_rho(m,l,n) = InterpolateSimple(grid_rho, b, k, j, i, f_k, f_j, f_i);
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas(m,l,n) = InterpolateSimple(grid_pgas, b, k, j, i, f_k, f_j, f_i);
-          if (plasma_model == PlasmaModel::code_kappa)
-            sample_kappa(m,l,n) = InterpolateSimple(grid_kappa, b, k, j, i, f_k, f_j, f_i);
-          sample_uu1(m,l,n) = InterpolateSimple(grid_uu1, b, k, j, i, f_k, f_j, f_i);
-          sample_uu2(m,l,n) = InterpolateSimple(grid_uu2, b, k, j, i, f_k, f_j, f_i);
-          sample_uu3(m,l,n) = InterpolateSimple(grid_uu3, b, k, j, i, f_k, f_j, f_i);
-          sample_bb1(m,l,n) = InterpolateSimple(grid_bb1, b, k, j, i, f_k, f_j, f_i);
-          sample_bb2(m,l,n) = InterpolateSimple(grid_bb2, b, k, j, i, f_k, f_j, f_i);
-          sample_bb3(m,l,n) = InterpolateSimple(grid_bb3, b, k, j, i, f_k, f_j, f_i);
+        // Perform interpolation
+        sample_rho(m,n) = InterpolateSimple(grid_rho, b, k, j, i, f_k, f_j, f_i);
+        if (plasma_model == PlasmaModel::ti_te_beta)
+          sample_pgas(m,n) = InterpolateSimple(grid_pgas, b, k, j, i, f_k, f_j, f_i);
+        if (plasma_model == PlasmaModel::code_kappa)
+          sample_kappa(m,n) = InterpolateSimple(grid_kappa, b, k, j, i, f_k, f_j, f_i);
+        sample_uu1(m,n) = InterpolateSimple(grid_uu1, b, k, j, i, f_k, f_j, f_i);
+        sample_uu2(m,n) = InterpolateSimple(grid_uu2, b, k, j, i, f_k, f_j, f_i);
+        sample_uu3(m,n) = InterpolateSimple(grid_uu3, b, k, j, i, f_k, f_j, f_i);
+        sample_bb1(m,n) = InterpolateSimple(grid_bb1, b, k, j, i, f_k, f_j, f_i);
+        sample_bb2(m,n) = InterpolateSimple(grid_bb2, b, k, j, i, f_k, f_j, f_i);
+        sample_bb3(m,n) = InterpolateSimple(grid_bb3, b, k, j, i, f_k, f_j, f_i);
 
-          // Account for possible invalid values
-          if (sample_rho(m,l,n) <= 0.0f)
-            sample_rho(m,l,n) = grid_rho(b,k,j,i);
-          if (plasma_model == PlasmaModel::ti_te_beta and sample_pgas(m,l,n) <= 0.0f)
-            sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
-          if (plasma_model == PlasmaModel::code_kappa and sample_kappa(m,l,n) <= 0.0f)
-            sample_kappa(m,l,n) = grid_kappa(b,k,j,i);
-        }
+        // Account for possible invalid values
+        if (sample_rho(m,n) <= 0.0f)
+          sample_rho(m,n) = grid_rho(b,k,j,i);
+        if (plasma_model == PlasmaModel::ti_te_beta and sample_pgas(m,n) <= 0.0f)
+          sample_pgas(m,n) = grid_pgas(b,k,j,i);
+        if (plasma_model == PlasmaModel::code_kappa and sample_kappa(m,n) <= 0.0f)
+          sample_kappa(m,n) = grid_kappa(b,k,j,i);
+      }
 
-        // Set interblock interpolated values
-        else
-        {
-          // Perform interpolation
-          sample_rho(m,l,n) = InterpolateAdvanced(grid_rho, m, l, n);
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas(m,l,n) = InterpolateAdvanced(grid_pgas, m, l, n);
-          if (plasma_model == PlasmaModel::code_kappa)
-            sample_kappa(m,l,n) = InterpolateAdvanced(grid_kappa, m, l, n);
-          sample_uu1(m,l,n) = InterpolateAdvanced(grid_uu1, m, l, n);
-          sample_uu2(m,l,n) = InterpolateAdvanced(grid_uu2, m, l, n);
-          sample_uu3(m,l,n) = InterpolateAdvanced(grid_uu3, m, l, n);
-          sample_bb1(m,l,n) = InterpolateAdvanced(grid_bb1, m, l, n);
-          sample_bb2(m,l,n) = InterpolateAdvanced(grid_bb2, m, l, n);
-          sample_bb3(m,l,n) = InterpolateAdvanced(grid_bb3, m, l, n);
+      // Set interblock interpolated values
+      else
+      {
+        // Perform interpolation
+        sample_rho(m,n) = InterpolateAdvanced(grid_rho, m, n);
+        if (plasma_model == PlasmaModel::ti_te_beta)
+          sample_pgas(m,n) = InterpolateAdvanced(grid_pgas, m, n);
+        if (plasma_model == PlasmaModel::code_kappa)
+          sample_kappa(m,n) = InterpolateAdvanced(grid_kappa, m, n);
+        sample_uu1(m,n) = InterpolateAdvanced(grid_uu1, m, n);
+        sample_uu2(m,n) = InterpolateAdvanced(grid_uu2, m, n);
+        sample_uu3(m,n) = InterpolateAdvanced(grid_uu3, m, n);
+        sample_bb1(m,n) = InterpolateAdvanced(grid_bb1, m, n);
+        sample_bb2(m,n) = InterpolateAdvanced(grid_bb2, m, n);
+        sample_bb3(m,n) = InterpolateAdvanced(grid_bb3, m, n);
 
-          // Account for possible invalid values
-          int b = sample_inds(m,l,n,0,0);
-          int k = sample_inds(m,l,n,0,1);
-          int j = sample_inds(m,l,n,0,2);
-          int i = sample_inds(m,l,n,0,3);
-          if (sample_rho(m,l,n) <= 0.0f)
-            sample_rho(m,l,n) = grid_rho(b,k,j,i);
-          if (plasma_model == PlasmaModel::ti_te_beta and sample_pgas(m,l,n) <= 0.0f)
-            sample_pgas(m,l,n) = grid_pgas(b,k,j,i);
-          if (plasma_model == PlasmaModel::code_kappa and sample_kappa(m,l,n) <= 0.0f)
-            sample_kappa(m,l,n) = grid_kappa(b,k,j,i);
-        }
+        // Account for possible invalid values
+        int b = sample_inds(m,n,0,0);
+        int k = sample_inds(m,n,0,1);
+        int j = sample_inds(m,n,0,2);
+        int i = sample_inds(m,n,0,3);
+        if (sample_rho(m,n) <= 0.0f)
+          sample_rho(m,n) = grid_rho(b,k,j,i);
+        if (plasma_model == PlasmaModel::ti_te_beta and sample_pgas(m,n) <= 0.0f)
+          sample_pgas(m,n) = grid_pgas(b,k,j,i);
+        if (plasma_model == PlasmaModel::code_kappa and sample_kappa(m,n) <= 0.0f)
+          sample_kappa(m,n) = grid_kappa(b,k,j,i);
       }
     }
+  }
   return;
 }
 
@@ -756,26 +754,26 @@ float RadiationIntegrator::InterpolateSimple(const Array<float> &grid_vals, int 
 // Function for performing advanced interpolation among 8 cells
 // Inputs:
 //   grid_vals: full array of values on grid
-//   m, l: ray indices
+//   m: ray index
 //   n: index along ray
 // Output:
 //   returned value: interpolated value from grid
 // Notes:
 //   Assumes sample_inds and sample_fracs have been set.
-float RadiationIntegrator::InterpolateAdvanced(const Array<float> &grid_vals, int m, int l, int n)
+float RadiationIntegrator::InterpolateAdvanced(const Array<float> &grid_vals, int m, int n)
 {
   double vals[8] = {};
   for (int p = 0; p < 8; p++)
   {
-    int b = sample_inds(m,l,n,p,0);
-    int k = sample_inds(m,l,n,p,1);
-    int j = sample_inds(m,l,n,p,2);
-    int i = sample_inds(m,l,n,p,3);
+    int b = sample_inds(m,n,p,0);
+    int k = sample_inds(m,n,p,1);
+    int j = sample_inds(m,n,p,2);
+    int i = sample_inds(m,n,p,3);
     vals[p] = static_cast<double>(grid_vals(b,k,j,i));
   }
-  double f_k = sample_fracs(m,l,n,0);
-  double f_j = sample_fracs(m,l,n,1);
-  double f_i = sample_fracs(m,l,n,2);
+  double f_k = sample_fracs(m,n,0);
+  double f_j = sample_fracs(m,n,1);
+  double f_i = sample_fracs(m,n,2);
   double val = (1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * vals[0]
       + (1.0 - f_k) * (1.0 - f_j) * f_i * vals[1] + (1.0 - f_k) * f_j * (1.0 - f_i) * vals[2]
       + (1.0 - f_k) * f_j * f_i * vals[3] + f_k * (1.0 - f_j) * (1.0 - f_i) * vals[4]

@@ -39,6 +39,7 @@ struct OutputWriter
   bool output_camera;
 
   // Input data - image parameters
+  int image_resolution;
   Camera image_camera;
 
   // Flag
@@ -49,8 +50,8 @@ struct OutputWriter
 
   // Image data
   Array<double> image;
-  Array<double> image_position;
-  Array<double> image_direction;
+  Array<double> camera_pos;
+  Array<double> camera_dir;
   Array<double> image_width_array;
   Array<double> image_frequency_array;
   Array<double> mass_msun_array;

@@ -87,6 +87,9 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
       break;
     }
   }
+
+  // Calculate number of pixels
+  camera_num_pix = image_resolution * image_resolution;
 }
 
 //--------------------------------------------------------------------------------------------------
