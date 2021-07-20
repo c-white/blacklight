@@ -122,10 +122,12 @@ struct InputReader
   int Read();
   void AdjustFileNames(int index);
 
-  // Internal functions
+  // Internal functions - input_reader.cpp
   static bool RemoveableSpace(unsigned char c);
   double ReadPole(const std::string &string, std::optional<bool> *p_pole_flag);
   bool ReadBool(const std::string &string);
+
+  // Internal functions - enum_readers.cpp
   ModelType ReadModelType(const std::string &string);
   OutputFormat ReadOutputFormat(const std::string &string);
   Coordinates ReadCoordinates(const std::string &string);

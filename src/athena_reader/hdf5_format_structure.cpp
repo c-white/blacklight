@@ -231,25 +231,26 @@ void AthenaReader::ReadHDF5RootObjectHeader()
       {
         root_grid_size_found = true;
         Array<int> root_grid_size;
-        SetHDF5IntArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_size);
+        SetHDF5IntArray(datatype_raw, dataspace_raw, message_data + offset, true, root_grid_size);
         n_3_root = root_grid_size(2);
       }
       else if (name == "DatasetNames")
       {
         dataset_names_found = true;
-        SetHDF5StringArray(datatype_raw, dataspace_raw, message_data + offset, &dataset_names,
-            &num_dataset_names);
+        SetHDF5StringArray(datatype_raw, dataspace_raw, message_data + offset, first_time,
+            &dataset_names, &num_dataset_names);
       }
       else if (name == "VariableNames")
       {
         variable_names_found = true;
-        SetHDF5StringArray(datatype_raw, dataspace_raw, message_data + offset, &variable_names,
-            &num_variable_names);
+        SetHDF5StringArray(datatype_raw, dataspace_raw, message_data + offset, first_time,
+            &variable_names, &num_variable_names);
       }
       else if (name == "NumVariables")
       {
         num_variables_found = true;
-        SetHDF5IntArray(datatype_raw, dataspace_raw, message_data + offset, num_variables);
+        SetHDF5IntArray(datatype_raw, dataspace_raw, message_data + offset, first_time,
+            num_variables);
       }
 
       // Free raw buffers
@@ -282,7 +283,6 @@ void AthenaReader::ReadHDF5RootObjectHeader()
 // Function to locate children of root node in HDF5 tree
 // Inputs: (none)
 // Outputs: (none)
-//   returned value: address within file of header
 // Notes:
 //   Allocates and sets children_addresses.
 //   Sets num_children.
@@ -310,13 +310,17 @@ void AthenaReader::ReadHDF5Tree()
   // Read number of children
   unsigned short int num_entries;
   data_stream.read(reinterpret_cast<char *>(&num_entries), 2);
-  num_children = num_entries;
+  if (first_time)
+    num_children = num_entries;
+  else if (num_children != num_entries)
+    throw BlacklightException("File layout mismatch upon subsequent read.");
 
   // Skip addresses of siblings
   data_stream.ignore(16);
 
   // Read addresses of children
-  children_addresses = new unsigned long int[num_children];
+  if (first_time)
+    children_addresses = new unsigned long int[num_children];
   for (int n = 0; n < num_children; n++)
   {
     data_stream.ignore(8);

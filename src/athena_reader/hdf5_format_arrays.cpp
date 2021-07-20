@@ -31,7 +31,7 @@ void AthenaReader::ReadHDF5IntArray(const char *name, Array<int> &int_array)
   ReadHDF5DataObjectHeader(header_address, &datatype_raw, &dataspace_raw, &data_raw);
 
   // Set array
-  SetHDF5IntArray(datatype_raw, dataspace_raw, data_raw, int_array);
+  SetHDF5IntArray(datatype_raw, dataspace_raw, data_raw, first_time, int_array);
   delete[] datatype_raw;
   delete[] dataspace_raw;
   delete[] data_raw;
@@ -44,7 +44,7 @@ void AthenaReader::ReadHDF5IntArray(const char *name, Array<int> &int_array)
 // Inputs:
 //   name: name of dataset
 // Outputs:
-//   int_array: array allocated and set (indirectly)
+//   float_array: array allocated and set (indirectly)
 // Notes:
 //   Changes stream pointer.
 void AthenaReader::ReadHDF5FloatArray(const char *name, Array<float> &float_array)
@@ -57,7 +57,7 @@ void AthenaReader::ReadHDF5FloatArray(const char *name, Array<float> &float_arra
   ReadHDF5DataObjectHeader(header_address, &datatype_raw, &dataspace_raw, &data_raw);
 
   // Set array
-  SetHDF5FloatArray(datatype_raw, dataspace_raw, data_raw, float_array);
+  SetHDF5FloatArray(datatype_raw, dataspace_raw, data_raw, first_time, float_array);
   delete[] datatype_raw;
   delete[] dataspace_raw;
   delete[] data_raw;
@@ -71,6 +71,7 @@ void AthenaReader::ReadHDF5FloatArray(const char *name, Array<float> &float_arra
 //   datatype_raw: raw datatype description
 //   dataspace_raw: raw dataspace description
 //   data_raw: raw data
+//   allocate: flag indicating new memory should be allocated
 // Outputs:
 //   *p_string_array: array allocated and set
 //   *p_array_length: number of allocated members
@@ -78,8 +79,8 @@ void AthenaReader::ReadHDF5FloatArray(const char *name, Array<float> &float_arra
 //   Must have datatype version 1.
 //   Must be a 1D array.
 void AthenaReader::SetHDF5StringArray(const unsigned char *datatype_raw,
-    const unsigned char *dataspace_raw, const unsigned char *data_raw, std::string **p_string_array,
-    int *p_array_length)
+    const unsigned char *dataspace_raw, const unsigned char *data_raw, bool allocate,
+    std::string **p_string_array, int *p_array_length)
 {
   // Check datatype version and class
   int offset = 0;
@@ -108,10 +109,14 @@ void AthenaReader::SetHDF5StringArray(const unsigned char *datatype_raw,
   ReadHDF5DataspaceDims(dataspace_raw, &dims, &num_dims);
   if (num_dims != 1)
     throw BlacklightException("Unexpected HDF5 string array size.");
-  *p_array_length = static_cast<int>(dims[0]);
+  if (allocate)
+    *p_array_length = static_cast<int>(dims[0]);
+  else if (*p_array_length != static_cast<int>(dims[0]))
+    throw BlacklightException("Array mismatch upon subsequent read.");
 
   // Allocate and initialize array
-  *p_string_array = new std::string[*p_array_length];
+  if (allocate)
+    *p_string_array = new std::string[*p_array_length];
   char *buffer = new char[size];
   for (int n = 0; n < *p_array_length; n++)
   {
@@ -132,6 +137,7 @@ void AthenaReader::SetHDF5StringArray(const unsigned char *datatype_raw,
 //   datatype_raw: raw datatype description
 //   dataspace_raw: raw dataspace description
 //   data_raw: raw data
+//   allocate: flag indicating new memory should be allocated
 // Outputs:
 //   int_array: array allocated and set
 // Notes:
@@ -142,7 +148,8 @@ void AthenaReader::SetHDF5StringArray(const unsigned char *datatype_raw,
 //   Must have no offset.
 //   Must be run on little-endian machine.
 void AthenaReader::SetHDF5IntArray(const unsigned char *datatype_raw,
-    const unsigned char *dataspace_raw, const unsigned char *data_raw, Array<int> &int_array)
+    const unsigned char *dataspace_raw, const unsigned char *data_raw, bool allocate,
+    Array<int> &int_array)
 {
   // Check datatype version and class
   int offset = 0;
@@ -186,9 +193,20 @@ void AthenaReader::SetHDF5IntArray(const unsigned char *datatype_raw,
 
   // Allocate array
   if (num_dims == 1)
-    int_array.Allocate(static_cast<int>(dims[0]));
+  {
+    if (allocate)
+      int_array.Allocate(static_cast<int>(dims[0]));
+    else if (dims[0] != static_cast<unsigned long int>(int_array.n1))
+      throw BlacklightException("Array mismatch upon subsequent read.");
+  }
   else if (num_dims == 2)
-    int_array.Allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]));
+  {
+    if (allocate)
+      int_array.Allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]));
+    else if (dims[0] != static_cast<unsigned long int>(int_array.n2)
+        or dims[1] != static_cast<unsigned long int>(int_array.n1))
+      throw BlacklightException("Array mismatch upon subsequent read.");
+  }
   else
     throw BlacklightException("Unexpected HDF5 fixed-point array size.");
   delete[] dims;
@@ -227,6 +245,7 @@ void AthenaReader::SetHDF5IntArray(const unsigned char *datatype_raw,
 //   datatype_raw: raw datatype description
 //   dataspace_raw: raw dataspace description
 //   data_raw: raw data
+//   allocate: flag indicating new memory should be allocated
 // Outputs:
 //   float_array: array allocated and set
 // Notes:
@@ -234,7 +253,8 @@ void AthenaReader::SetHDF5IntArray(const unsigned char *datatype_raw,
 //   Must be standard 4-byte floats.
 //   Must be run on little-endian machine.
 void AthenaReader::SetHDF5FloatArray(const unsigned char *datatype_raw,
-    const unsigned char *dataspace_raw, const unsigned char *data_raw, Array<float> &float_array)
+    const unsigned char *dataspace_raw, const unsigned char *data_raw, bool allocate,
+    Array<float> &float_array)
 {
   // Check datatype version and class
   int offset = 0;
@@ -293,12 +313,32 @@ void AthenaReader::SetHDF5FloatArray(const unsigned char *datatype_raw,
 
   // Allocate array
   if (num_dims == 1)
-    float_array.Allocate(static_cast<int>(dims[0]));
+  {
+    if (allocate)
+      float_array.Allocate(static_cast<int>(dims[0]));
+    else if (dims[0] != static_cast<unsigned long int>(float_array.n1))
+      throw BlacklightException("Array mismatch upon subsequent read.");
+  }
   else if (num_dims == 2)
-    float_array.Allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]));
+  {
+    if (allocate)
+      float_array.Allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]));
+    else if (dims[0] != static_cast<unsigned long int>(float_array.n2)
+        or dims[1] != static_cast<unsigned long int>(float_array.n1))
+      throw BlacklightException("Array mismatch upon subsequent read.");
+  }
   else if (num_dims == 5)
-    float_array.Allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]),
-        static_cast<int>(dims[2]), static_cast<int>(dims[3]), static_cast<int>(dims[4]));
+  {
+    if (allocate)
+      float_array.Allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]),
+          static_cast<int>(dims[2]), static_cast<int>(dims[3]), static_cast<int>(dims[4]));
+    else if (dims[0] != static_cast<unsigned long int>(float_array.n5)
+        or dims[1] != static_cast<unsigned long int>(float_array.n4)
+        or dims[2] != static_cast<unsigned long int>(float_array.n3)
+        or dims[3] != static_cast<unsigned long int>(float_array.n2)
+        or dims[4] != static_cast<unsigned long int>(float_array.n1))
+      throw BlacklightException("Array mismatch upon subsequent read.");
+  }
   else
     throw BlacklightException("Unexpected HDF5 floating-point array size.");
   delete[] dims;

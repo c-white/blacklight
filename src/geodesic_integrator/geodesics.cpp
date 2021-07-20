@@ -1,16 +1,15 @@
-// Blacklight ray tracer - geodesic integration
+// Blacklight geodesic integrator - geodesic integration
 
 // C++ headers
 #include <algorithm>  // max, min
-#include <cmath>      // abs, acos, atan, atan2, ceil, cos, hypot, isfinite, pow, sin, sqrt
+#include <cmath>      // abs, ceil, isfinite, pow, sqrt
 #include <sstream>    // ostringstream
 
 // Library headers
 #include <omp.h>  // pragmas
 
 // Blacklight headers
-#include "ray_tracer.hpp"
-#include "../blacklight.hpp"        // math, enums
+#include "geodesic_integrator.hpp"
 #include "../utils/array.hpp"       // Array
 #include "../utils/exceptions.hpp"  // BlacklightWarning
 
@@ -29,7 +28,7 @@
 //     On ergosphere, assuming g_{0i} p^i < 0: unique root, which will be positive
 //     Inside ergosphere, assuming g_{0i} p^i < 0: lesser positive root, which remains finite as
 //         ergosphere is approached.
-void RayTracer::InitializeGeodesics()
+void GeodesicIntegrator::InitializeGeodesics()
 {
   // Work in parallel
   #pragma omp parallel
@@ -66,7 +65,7 @@ void RayTracer::InitializeGeodesics()
           for (int b = 1; b < 4; b++)
             temp_c += gcov(a,b) * p[a] * p[b];
         double temp_d = std::sqrt(std::max(temp_b * temp_b - 4.0 * temp_a * temp_c, 0.0));
-        p[0] = temp_a == 0 ? -temp_c / (2.0 * temp_b) : (temp_b < 0.0 ?
+        p[0] = temp_a == 0.0 ? -temp_c / (2.0 * temp_b) : (temp_b < 0.0 ?
             2.0 * temp_c / (temp_d - temp_b) : -(temp_b + temp_d) / (2.0 * temp_a));
 
         // Lower momentum components
@@ -102,7 +101,7 @@ void RayTracer::InitializeGeodesics()
 //     All three references have different coefficients for the 4th-order step used in error
 //         estimation; the coefficients here follow the original paper.
 //     Interpolation is used to take steps small enough to satisfy user input ray_step.
-void RayTracer::IntegrateGeodesics()
+void GeodesicIntegrator::IntegrateGeodesics()
 {
   // Define coefficients
   double a_vals[7][6] = {};
@@ -463,19 +462,15 @@ void RayTracer::IntegrateGeodesics()
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for transforming geodesics from integrating metric to simulation/formula metric
+// Function for reversing geodesics
 // Inputs: (none)
 // Output: (none)
 // Notes:
 //   Assumes image_steps, geodesic_pos, geodesic_dir, geodesic_len, and sample_num have been set.
-//   Allocates and initializes sample_pos, sample_dir, and sample_len, except transformed from
-//       integrating metric to simulation/formula metric and reversed in the sampling dimension.
+//   Allocates and initializes sample_pos, sample_dir, and sample_len, except reversed in the
+//       sampling dimension.
 //   Deallocates geodesic_pos, geodesic_dir, and geodesic_len.
-//   Assumes integrating and formula metrics are Cartesian Kerr-Schild.
-//   Transformation of time components is trivial.
-//   Transformation of geodesic length is trivial.
-//   All transformations are trivial if both metrics are Cartesian Kerr-Schild.
-void RayTracer::TransformGeodesics()
+void GeodesicIntegrator::ReverseGeodesics()
 {
   // Allocate new arrays
   sample_pos.Allocate(image_resolution, image_resolution, image_steps, 4);
@@ -496,113 +491,15 @@ void RayTracer::TransformGeodesics()
         if (len == 0.0)
           break;
 
-        // Extract Cartesian position
-        double t = geodesic_pos(m,l,n,0);
-        double x = geodesic_pos(m,l,n,1);
-        double y = geodesic_pos(m,l,n,2);
-        double z = geodesic_pos(m,l,n,3);
-
-        // Extract Cartesian direction
-        double p_t = geodesic_dir(m,l,n,0);
-        double p_x = geodesic_dir(m,l,n,1);
-        double p_y = geodesic_dir(m,l,n,2);
-        double p_z = geodesic_dir(m,l,n,3);
-
-        // Prepare to find positions and momenta
-        double x1, x2, x3;
-        double p_1, p_2, p_3;
-
-        // Account for model
-        switch (model_type)
-        {
-          // Simulation output
-          case ModelType::simulation:
-          default:
-          {
-            // Account for simulation metric
-            switch (simulation_coord)
-            {
-              // Spherical Kerr-Schild
-              case Coordinates::sph_ks:
-              default:
-              {
-                // Calculate spherical position
-                double a2 = bh_a * bh_a;
-                double rr2 = x * x + y * y + z * z;
-                double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
-                double r = std::sqrt(r2);
-                double th = std::acos(z / r);
-                double ph = std::atan2(y, x) - std::atan(bh_a / r);
-                ph += ph < 0.0 ? 2.0 * math::pi : 0.0;
-                ph -= ph >= 2.0 * math::pi ? 2.0 * math::pi : 0.0;
-                double sth = std::sin(th);
-                double cth = std::cos(th);
-                double sph = std::sin(ph);
-                double cph = std::cos(ph);
-
-                // Calculate Jacobian of transformation
-                double dx_dr = sth * cph;
-                double dy_dr = sth * sph;
-                double dz_dr = cth;
-                double dx_dth = cth * (r * cph - bh_a * sph);
-                double dy_dth = cth * (r * sph + bh_a * cph);
-                double dz_dth = -r * sth;
-                double dx_dph = sth * (-r * sph - bh_a * cph);
-                double dy_dph = sth * (r * cph - bh_a * sph);
-                double dz_dph = 0.0;
-
-                // Calculate spherical direction
-                double p_r = dx_dr * p_x + dy_dr * p_y + dz_dr * p_z;
-                double p_th = dx_dth * p_x + dy_dth * p_y + dz_dth * p_z;
-                double p_ph = dx_dph * p_x + dy_dph * p_y + dz_dph * p_z;
-
-                // Assign position and direction
-                x1 = r;
-                x2 = th;
-                x3 = ph;
-                p_1 = p_r;
-                p_2 = p_th;
-                p_3 = p_ph;
-                break;
-              }
-
-              // Cartesian Kerr-Schild
-              case Coordinates::cart_ks:
-              {
-                x1 = x;
-                x2 = y;
-                x3 = z;
-                p_1 = p_x;
-                p_2 = p_y;
-                p_3 = p_z;
-                break;
-              }
-            }
-            break;
-          }
-
-          // Formula
-          case ModelType::formula:
-          {
-            x1 = x;
-            x2 = y;
-            x3 = z;
-            p_1 = p_x;
-            p_2 = p_y;
-            p_3 = p_z;
-            break;
-          }
-        }
-
         // Set new arrays in reverse order
-        sample_pos(m,l,num_steps-1-n,0) = t;
-        sample_pos(m,l,num_steps-1-n,1) = x1;
-        sample_pos(m,l,num_steps-1-n,2) = x2;
-        sample_pos(m,l,num_steps-1-n,3) = x3;
-        sample_dir(m,l,num_steps-1-n,0) = p_t;
-        sample_dir(m,l,num_steps-1-n,1) = p_1;
-        sample_dir(m,l,num_steps-1-n,2) = p_2;
-        sample_dir(m,l,num_steps-1-n,3) = p_3;
+        sample_pos(m,l,num_steps-1-n,0) = geodesic_pos(m,l,n,0);
+        sample_pos(m,l,num_steps-1-n,1) = geodesic_pos(m,l,n,1);
+        sample_pos(m,l,num_steps-1-n,2) = geodesic_pos(m,l,n,2);
+        sample_pos(m,l,num_steps-1-n,3) = geodesic_pos(m,l,n,3);
+        sample_dir(m,l,num_steps-1-n,0) = geodesic_dir(m,l,n,0);
+        sample_dir(m,l,num_steps-1-n,1) = geodesic_dir(m,l,n,1);
+        sample_dir(m,l,num_steps-1-n,2) = geodesic_dir(m,l,n,2);
+        sample_dir(m,l,num_steps-1-n,3) = geodesic_dir(m,l,n,3);
         sample_len(m,l,num_steps-1-n) = -len;
       }
     }
@@ -631,8 +528,8 @@ void RayTracer::TransformGeodesics()
 //     d(p_i) / d(lambda) = -1/2 * d(g^{mu nu}) / d(x^i) p_mu p_nu
 //     d(s) / d(lambda) = (g_{i j} g^{i mu} g^{j nu} p_mu p_nu)^(1/2)
 //   Assumes x^0 is ignorable.
-void RayTracer::GeodesicSubstep(double y[9], double k[9], Array<double> &gcov, Array<double> &gcon,
-    Array<double> &dgcon)
+void GeodesicIntegrator::GeodesicSubstep(double y[9], double k[9], Array<double> &gcov,
+    Array<double> &gcon, Array<double> &dgcon)
 {
   CovariantGeodesicMetric(y[1], y[2], y[3], gcov);
   ContravariantGeodesicMetric(y[1], y[2], y[3], gcon);

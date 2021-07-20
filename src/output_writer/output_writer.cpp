@@ -7,26 +7,31 @@
 
 // Blacklight headers
 #include "output_writer.hpp"
-#include "../blacklight.hpp"                 // enums
-#include "../input_reader/input_reader.hpp"  // InputReader
-#include "../ray_tracer/ray_tracer.hpp"      // RayTracer
-#include "../utils/array.hpp"                // Array
-#include "../utils/exceptions.hpp"           // BlacklightException
+#include "../blacklight.hpp"                                 // enums
+#include "../geodesic_integrator/geodesic_integrator.hpp"    // GeodesicIntegrator
+#include "../input_reader/input_reader.hpp"                  // InputReader
+#include "../radiation_integrator/radiation_integrator.hpp"  // RadiationIntegrator
+#include "../utils/array.hpp"                                // Array
+#include "../utils/exceptions.hpp"                           // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
 
 // Output writer constructor
 // Inputs:
 //   p_input_reader: pointer to object containing input parameters
-//   p_ray_tracer: pointer to object containing camera and processed image
+//   p_geodesic_integrator: pointer to object containing ray data
+//   p_radiation_integrator: pointer to object containing processed image
 // Notes:
 //   File is not opened for writing until Write() function is called, in order to not bother keeping
-//       an open file idle for the bulk of the computation.
-OutputWriter::OutputWriter(const InputReader *p_input_reader, const RayTracer *p_ray_tracer)
+//       an open file idle for the bulk of the computation, and because the file name might be
+//       reformatted after this constructor is called.
+OutputWriter::OutputWriter(const InputReader *p_input_reader_,
+    const GeodesicIntegrator *p_geodesic_integrator,
+    const RadiationIntegrator *p_radiation_integrator_)
+  : p_input_reader(p_input_reader_), p_radiation_integrator(p_radiation_integrator_)
 {
   // Copy output parameters
   output_format = p_input_reader->output_format.value();
-  output_file = p_input_reader->output_file_formatted;
   if (output_format == OutputFormat::npz)
   {
     output_params = p_input_reader->output_params.value();
@@ -41,17 +46,17 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader, const RayTracer *p
     mass_msun_array.Allocate(1);
     image_width_array(0) = p_input_reader->image_width.value();
     image_frequency_array(0) = p_input_reader->image_frequency.value();
-    mass_msun_array(0) = p_ray_tracer->mass_msun;
+    mass_msun_array(0) = p_radiation_integrator->mass_msun;
   }
 
   // Make local shallow copies of data
-  image = p_ray_tracer->image;
+  image = p_radiation_integrator->image;
   if (output_format == OutputFormat::npz and output_camera)
     image_camera = p_input_reader->image_camera.value();
   if (output_format == OutputFormat::npz and output_camera and image_camera == Camera::plane)
-    image_position = p_ray_tracer->image_position;
+    image_position = p_geodesic_integrator->image_position;
   if (output_format == OutputFormat::npz and output_camera and image_camera == Camera::pinhole)
-    image_direction = p_ray_tracer->image_direction;
+    image_direction = p_geodesic_integrator->image_direction;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -59,9 +64,16 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader, const RayTracer *p
 // Output writer write function
 // Inputs: (none)
 // Outputs: (none)
+// Notes:
+//   Opens and closes stream for reading.
 void OutputWriter::Write()
 {
+  // Make shallow copy of image
+  if (first_time)
+    image = p_radiation_integrator->image;
+
   // Open output file
+  output_file = p_input_reader->output_file_formatted;
   p_output_stream = new std::ofstream(output_file, std::ios_base::out | std::ios_base::binary);
   if (not p_output_stream->is_open())
     throw BlacklightException("Could not open output file.");
@@ -88,5 +100,8 @@ void OutputWriter::Write()
 
   // Close output file
   delete p_output_stream;
+
+  // Update first time flag
+  first_time = false;
   return;
 }

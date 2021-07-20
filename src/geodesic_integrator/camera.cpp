@@ -1,4 +1,4 @@
-// Blacklight ray tracer - camera definition
+// Blacklight geodesic integrator - camera definition
 
 // C++ headers
 #include <cmath>  // cos, hypot, sin, sqrt
@@ -7,9 +7,9 @@
 #include <omp.h>  // pragmas
 
 // Blacklight headers
-#include "ray_tracer.hpp"
-#include "../blacklight.hpp"   // enums
-#include "../utils/array.hpp"  // Array
+#include "geodesic_integrator.hpp"
+#include "../blacklight.hpp"        // enums
+#include "../utils/array.hpp"       // Array
 
 //--------------------------------------------------------------------------------------------------
 
@@ -24,7 +24,7 @@
 //     n: unit outward normal
 //     u: unit right vector
 //     v: unit up vector
-void RayTracer::InitializeCamera()
+void GeodesicIntegrator::InitializeCamera()
 {
   // Calculate trigonometric quantities
   double sth = std::sin(image_th);

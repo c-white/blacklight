@@ -10,11 +10,12 @@
 
 // Blacklight headers
 #include "blacklight.hpp"
-#include "athena_reader/athena_reader.hpp"  // AthenaReader
-#include "input_reader/input_reader.hpp"    // InputReader
-#include "output_writer/output_writer.hpp"  // OutputWriter
-#include "ray_tracer/ray_tracer.hpp"        // RayTracer
-#include "utils/exceptions.hpp"             // BlacklightException
+#include "athena_reader/athena_reader.hpp"                // AthenaReader
+#include "geodesic_integrator/geodesic_integrator.hpp"    // GeodesicIntegrator
+#include "input_reader/input_reader.hpp"                  // InputReader
+#include "output_writer/output_writer.hpp"                // OutputWriter
+#include "radiation_integrator/radiation_integrator.hpp"  // RadiationIntegrator
+#include "utils/exceptions.hpp"                           // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
 
@@ -28,7 +29,7 @@
 //     1: error
 int main(int argc, char *argv[])
 {
-  // Parse command line inputs
+  // Parse command-line inputs
   if (argc != 2)
   {
     std::cout << "Error: Must give a single input file.\n";
@@ -71,17 +72,106 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+  // Define camera and integrate geodesics
+  GeodesicIntegrator *p_geodesic_integrator;
+  try
+  {
+    p_geodesic_integrator = new GeodesicIntegrator(p_input_reader);
+    p_geodesic_integrator->Integrate();
+  }
+  catch (const BlacklightException &exception)
+  {
+    std::cout << exception.what();
+    return 1;
+  }
+  catch (const std::bad_optional_access &exception)
+  {
+    std::cout << "Error: GeodesicIntegrator unable to find all needed values in input file.\n";
+    return 1;
+  }
+  catch (...)
+  {
+    std::cout << "Error: Could not integrate geodesics.\n";
+    return 1;
+  }
+
+  // Set up Athena++ reader
+  AthenaReader *p_athena_reader;
+  try
+  {
+    p_athena_reader = new AthenaReader(p_input_reader);
+  }
+  catch (const BlacklightException &exception)
+  {
+    std::cout << exception.what();
+    return 1;
+  }
+  catch (const std::bad_optional_access &exception)
+  {
+    std::cout << "Error: AthenaReader unable to find all needed values in input file.\n";
+    return 1;
+  }
+  catch (...)
+  {
+    std::cout << "Error: Could not set up AthenaReader.\n";
+    return 1;
+  }
+
+  // Set up radiation integrator
+  RadiationIntegrator *p_radiation_integrator;
+  try
+  {
+    p_radiation_integrator =
+        new RadiationIntegrator(p_input_reader, p_geodesic_integrator, p_athena_reader);
+  }
+  catch (const BlacklightException &exception)
+  {
+    std::cout << exception.what();
+    return 1;
+  }
+  catch (const std::bad_optional_access &exception)
+  {
+    std::cout << "Error: RadiationIntegrator unable to find all needed values in input file.\n";
+    return 1;
+  }
+  catch (...)
+  {
+    std::cout << "Error: Could not set up RadiationIntegrator.\n";
+    return 1;
+  }
+
+  // Set up output writer
+  OutputWriter *p_output_writer;
+  try
+  {
+    p_output_writer =
+        new OutputWriter(p_input_reader, p_geodesic_integrator, p_radiation_integrator);
+  }
+  catch (const BlacklightException &exception)
+  {
+    std::cout << exception.what();
+    return 1;
+  }
+  catch (const std::bad_optional_access &exception)
+  {
+    std::cout << "Error: OutputWriter unable to find all needed values in input file.\n";
+    return 1;
+  }
+  catch (...)
+  {
+    std::cout << "Error: Could not set up OutputWriter.\n";
+    return 1;
+  }
+
   // Go through runs
   for (int n = 0; n < num_runs; n++)
   {
     // Adjust file names
     p_input_reader->AdjustFileNames(n);
 
-    // Read data file
-    AthenaReader *p_athena_reader;
+    // Read Athena++ file
     try
     {
-      p_athena_reader = new AthenaReader(p_input_reader);
       p_athena_reader->Read();
     }
     catch (const BlacklightException &exception)
@@ -96,16 +186,14 @@ int main(int argc, char *argv[])
     }
     catch (...)
     {
-      std::cout << "Error: Could not read data file.\n";
+      std::cout << "Error: Could not read Athena++ file.\n";
       return 1;
     }
 
-    // Process data
-    RayTracer *p_ray_tracer;
+    // Integrate radiation
     try
     {
-      p_ray_tracer = new RayTracer(p_input_reader, p_athena_reader);
-      p_ray_tracer->MakeImage();
+      p_radiation_integrator->Integrate();
     }
     catch (const BlacklightException &exception)
     {
@@ -114,20 +202,18 @@ int main(int argc, char *argv[])
     }
     catch (const std::bad_optional_access &exception)
     {
-      std::cout << "Error: RayTracer unable to find all needed values in input file.\n";
+      std::cout << "Error: RadiationIntegrator unable to find all needed values in input file.\n";
       return 1;
     }
     catch (...)
     {
-      std::cout << "Error: Could not process data.\n";
+      std::cout << "Error: Could not integrate radiation.\n";
       return 1;
     }
 
-    // Write output file
-    OutputWriter *p_output_writer;
+    // Write output
     try
     {
-      p_output_writer = new OutputWriter(p_input_reader, p_ray_tracer);
       p_output_writer->Write();
     }
     catch (const BlacklightException &exception)
@@ -145,14 +231,13 @@ int main(int argc, char *argv[])
       std::cout << "Error: Could not write output file.\n";
       return 1;
     }
-
-    // Free memory
-    delete p_output_writer;
-    delete p_ray_tracer;
-    delete p_athena_reader;
   }
 
   // Free memory
+  delete p_output_writer;
+  delete p_radiation_integrator;
+  delete p_athena_reader;
+  delete p_geodesic_integrator;
   delete p_input_reader;
 
   // End program

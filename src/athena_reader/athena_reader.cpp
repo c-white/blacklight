@@ -8,34 +8,31 @@
 
 // Blacklight headers
 #include "athena_reader.hpp"
-#include "../utils/array.hpp"       // Array
-#include "../utils/exceptions.hpp"  // BlacklightException
+#include "../blacklight.hpp"                 // enums
+#include "../input_reader/input_reader.hpp"  // InputReader
+#include "../utils/array.hpp"                // Array
+#include "../utils/exceptions.hpp"           // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
 
 // Athena++ reader constructor
 // Inputs:
-//   p_input_reader: pointer to object containing input parameters
+//   p_input_reader_: pointer to object containing input parameters
 // Notes:
-//   Opens stream for reading.
-AthenaReader::AthenaReader(const InputReader *p_input_reader)
+//   File is not opened for writing until Read() function is called because the file name might be
+//       reformatted after this constructor is called.
+AthenaReader::AthenaReader(const InputReader *p_input_reader_)
+  : p_input_reader(p_input_reader_)
 {
   // Copy general input data
   model_type = p_input_reader->model_type.value();
 
-  // Proceed only if needed
+  // Copy simulation and plasma parameters only if needed
   if (model_type == ModelType::simulation)
   {
-    // Copy simulation and plasma parameters
-    simulation_file = p_input_reader->simulation_file_formatted;
     plasma_model = p_input_reader->plasma_model.value();
     if (plasma_model == PlasmaModel::code_kappa)
       simulation_kappa_name = p_input_reader->simulation_kappa_name.value();
-
-    // Open file
-    data_stream = std::ifstream(simulation_file, std::ios_base::in | std::ios_base::binary);
-    if (not data_stream.is_open())
-      throw BlacklightException("Could not open data file.");
   }
 }
 
@@ -60,6 +57,7 @@ AthenaReader::~AthenaReader()
 // Outputs: (none)
 // Notes:
 //   Does nothing if model does not need to be read from file.
+//   Opens and closes stream for reading.
 //   Initializes all member objects.
 //   Implements a subset of the HDF5 standard:
 //       portal.hdfgroup.org/display/HDF5/File+Format+Specification
@@ -68,6 +66,12 @@ void AthenaReader::Read()
   // Only proceed if needed
   if (model_type != ModelType::simulation)
     return;
+
+  // Open input file
+  simulation_file = p_input_reader->simulation_file_formatted;
+  data_stream = std::ifstream(simulation_file, std::ios_base::in | std::ios_base::binary);
+  if (not data_stream.is_open())
+    throw BlacklightException("Could not open file for reading.");
 
   // Read basic data about file
   ReadHDF5Superblock();
@@ -91,8 +95,11 @@ void AthenaReader::Read()
   ReadHDF5FloatArray("prim", prim);
   ReadHDF5FloatArray("B", bb);
 
-  // Close data file
+  // Close input file
   data_stream.close();
+
+  // Update first time flag
+  first_time = false;
   return;
 }
 

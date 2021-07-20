@@ -3,7 +3,7 @@
 // C++ headers
 #include <cstdint>  // uint8_t, uint16_t, uint32_t
 #include <cstdio>   // size_t
-#include <cstring>  // memcpy
+#include <cstring>  // memcpy, strlen
 #include <ctime>    // localtime, time, time_t, tm
 
 // Blacklight headers

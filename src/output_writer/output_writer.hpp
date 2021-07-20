@@ -10,10 +10,11 @@
 #include <string>   // string
 
 // Blacklight headers
-#include "../blacklight.hpp"                 // enums
-#include "../input_reader/input_reader.hpp"  // InputReader
-#include "../ray_tracer/ray_tracer.hpp"      // RayTracer
-#include "../utils/array.hpp"                // Array
+#include "../blacklight.hpp"                                 // enums
+#include "../geodesic_integrator/geodesic_integrator.hpp"    // GeodesicIntegrator
+#include "../input_reader/input_reader.hpp"                  // InputReader
+#include "../radiation_integrator/radiation_integrator.hpp"  // RadiationIntegrator
+#include "../utils/array.hpp"                                // Array
 
 //--------------------------------------------------------------------------------------------------
 
@@ -21,10 +22,15 @@
 struct OutputWriter
 {
   // Constructors and destructor
-  OutputWriter(const InputReader *p_input_reader, const RayTracer *p_ray_tracer);
+  OutputWriter(const InputReader *p_input_reader_, const GeodesicIntegrator *p_geodesic_integrator,
+      const RadiationIntegrator *p_radiation_integrator_);
   OutputWriter(const OutputWriter &source) = delete;
   OutputWriter &operator=(const OutputWriter &source) = delete;
   ~OutputWriter() {}
+
+  // Pointers to other objects
+  const InputReader *p_input_reader;
+  const RadiationIntegrator *p_radiation_integrator;
 
   // Input data - output parameters
   OutputFormat output_format;
@@ -34,6 +40,9 @@ struct OutputWriter
 
   // Input data - image parameters
   Camera image_camera;
+
+  // Flag
+  bool first_time = true;
 
   // File data
   std::ofstream *p_output_stream;
@@ -49,11 +58,15 @@ struct OutputWriter
   // External function
   void Write();
 
-  // Internal functions
+  // Internal functions - raw_format.cpp
   void WriteRaw();
+
+  // Internal functions - numpy_format.cpp
   void WriteNpy();
   void WriteNpz();
   std::size_t GenerateNpyFromDoubleArray(const Array<double> &array, uint8_t **p_buffer);
+
+  // Internal functions - zip_format.cpp
   std::size_t GenerateZIPLocalFileHeader(const uint8_t *record, std::size_t record_length,
       const char *record_name, uint8_t **p_buffer);
   std::size_t GenerateZIPCentralDirectoryHeader(const uint8_t *local_header,
