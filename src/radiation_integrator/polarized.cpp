@@ -16,7 +16,7 @@
 
 // Function for integrating polarized radiative transfer equation
 // Inputs: (none)
-// Output: (none)
+// Outputs: (none)
 // Notes:
 //   Assumes sample_num, sample_len, j_i, j_q, j_v, alpha_i, alpha_q, alpha_v, rho_q, and rho_v have
 //       been set.

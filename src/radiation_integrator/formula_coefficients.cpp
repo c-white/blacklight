@@ -15,7 +15,7 @@
 
 // Function for integrating radiative transfer equation based on formula
 // Inputs: (none)
-// Output: (none)
+// Outputs: (none)
 // Notes:
 //   Assumes sample_num, sample_pos, and sample_dir have been set.
 //   Allocates and initializes j_i and alpha_i.

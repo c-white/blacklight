@@ -17,7 +17,7 @@
 
 // Function for calculating radiative transfer coefficients along rays sampled from simulation
 // Inputs: (none)
-// Output: (none)
+// Outputs: (none)
 // Notes:
 //   Assumes sample_num, sample_pos, sample_dir, sample_rho, sample_pgas or sample_kappa,
 //       sample_uu1, sample_uu2, sample_uu3, sample_bb1, sample_bb2, and sample_bb3 have been set.

@@ -33,7 +33,8 @@ int main(int argc, char *argv[])
   // Prepare timers
   double time_start = omp_get_wtime();
   double time_geodesic = 0.0;
-  double time_athena = 0.0;
+  double time_read = 0.0;
+  double time_sample = 0.0;
   double time_radiation = 0.0;
 
   // Parse command-line inputs
@@ -179,7 +180,7 @@ int main(int argc, char *argv[])
     // Read Athena++ file
     try
     {
-      time_athena += p_athena_reader->Read();
+      time_read += p_athena_reader->Read();
     }
     catch (const BlacklightException &exception)
     {
@@ -200,7 +201,7 @@ int main(int argc, char *argv[])
     // Integrate radiation
     try
     {
-      time_radiation += p_radiation_integrator->Integrate();
+      p_radiation_integrator->Integrate(&time_sample, &time_radiation);
     }
     catch (const BlacklightException &exception)
     {
@@ -253,7 +254,8 @@ int main(int argc, char *argv[])
   std::cout << "\nCalculation completed.";
   std::cout << "\nElapsed time:            " << time_full << " s";
   std::cout << "\n  Integrating geodesics: " << time_geodesic << " s";
-  std::cout << "\n  Reading simulation:    " << time_athena << " s";
+  std::cout << "\n  Reading simulation:    " << time_read << " s";
+  std::cout << "\n  Sampling simulation:   " << time_sample << " s";
   std::cout << "\n  Integrating radiation: " << time_radiation << " s";
   std::cout << "\n\n";
 

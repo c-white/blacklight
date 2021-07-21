@@ -12,7 +12,7 @@
 // Function for calculating radial coordinate given location in coordinates used for geodesics
 // Inputs:
 //   x, y, z: coordinates
-// Output:
+// Outputs:
 //   returned value: radial coordinate
 // Notes:
 //   Assumes Cartesian Kerr-Schild coordinates.
@@ -30,7 +30,7 @@ double GeodesicIntegrator::RadialGeodesicCoordinate(double x, double y, double z
 // Function for calculating covariant metric components for integrating geodesics
 // Inputs:
 //   x, y, z: coordinates
-// Output:
+// Outputs:
 //   gcov: components set
 // Notes:
 //   Assumes gcov is allocated to be 4*4.
@@ -86,7 +86,7 @@ void GeodesicIntegrator::CovariantGeodesicMetric(double x, double y, double z, A
 // Function for calculating contravariant metric components for integrating geodesics
 // Inputs:
 //   x, y, z: coordinates
-// Output:
+// Outputs:
 //   gcon: components set
 // Notes:
 //   Assumes gcon is allocated to be 4*4.
@@ -143,7 +143,7 @@ void GeodesicIntegrator::ContravariantGeodesicMetric(double x, double y, double 
 // Function for calculating derivatives of contravariant metric components for integrating geodesics
 // Inputs:
 //   x, y, z: coordinates
-// Output:
+// Outputs:
 //   dgcon: components set
 // Notes:
 //   Assumes dgcon is allocated to be 3*4*4.

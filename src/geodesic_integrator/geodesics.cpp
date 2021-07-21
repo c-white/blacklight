@@ -17,7 +17,7 @@
 
 // Function for setting up initial conditions for integrating geodesics
 // Inputs: (none)
-// Output: (none)
+// Outputs: (none)
 // Notes:
 //   Assumes camera_pos and camera_dir have been set except for the time components of camera_dir.
 //   Initializes time components of camera_dir.
@@ -82,7 +82,7 @@ void GeodesicIntegrator::InitializeGeodesics()
 
 // Function for calculating ray positions and directions through space
 // Inputs: (none)
-// Output: (none)
+// Outputs: (none)
 // Notes:
 //   Assumes camera_pos and camera_dir have been set.
 //   Initializes geodesic_num_steps.
@@ -457,7 +457,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
 
 // Function for reversing geodesics
 // Inputs: (none)
-// Output: (none)
+// Outputs: (none)
 // Notes:
 //   Assumes geodesic_num_steps, geodesic_pos, geodesic_dir, geodesic_len, and sample_num have been
 //       set.

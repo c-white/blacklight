@@ -15,7 +15,7 @@
 
 // Function for integrating unpolarized radiative transfer equation
 // Inputs: (none)
-// Output: (none)
+// Outputs: (none)
 // Notes:
 //   Assumes sample_num, sample_len, j_i, and alpha_i have been set.
 //   Allocates and initializes image.

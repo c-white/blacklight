@@ -57,7 +57,7 @@ AthenaReader::~AthenaReader()
 
 // Athena++ reader read and initialize function
 // Inputs: (none)
-// Output:
+// Outputs:
 //   returned value: execution time in seconds
 // Notes:
 //   Does nothing if model does not need to be read from file.

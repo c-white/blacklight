@@ -13,7 +13,7 @@
 // Function for calculating radial coordinate given location in coordinates used for geodesics
 // Inputs:
 //   x, y, z: Cartesian Kerr-Schild coordinates
-// Output:
+// Outputs:
 //   returned value: radial spherical Kerr-Schild coordinate
 double RadiationIntegrator::RadialGeodesicCoordinate(double x, double y, double z)
 {
@@ -29,7 +29,7 @@ double RadiationIntegrator::RadialGeodesicCoordinate(double x, double y, double 
 // Function for converting coordinates from Cartesian Kerr-Schild to spherical Kerr-Schild
 // Inputs:
 //   *p_x1, *p_x2, *p_x3: Cartesian Kerr-Schild coordinates
-// Output:
+// Outputs:
 //   *p_x1, *p_x2, *p_x3: spherical Kerr-Schild coordinates
 void RadiationIntegrator::CKSToSKS(double *p_x1, double *p_x2, double *p_x3)
 {
@@ -55,7 +55,7 @@ void RadiationIntegrator::CKSToSKS(double *p_x1, double *p_x2, double *p_x3)
 // Function for calculating Jacobian of transformation between geodesic and simulation coordinates
 // Inputs:
 //   x, y, z: Cartesian Kerr-Schild coordinates
-// Output:
+// Outputs:
 //   jacobian: components set
 // Notes:
 //   Assumes jacobian is allocated to be 4*4.
@@ -118,7 +118,7 @@ void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, Array
 // Function for calculating covariant metric components in geodesic coordinates
 // Inputs:
 //   x, y, z: Cartesian Kerr-Schild coordinates
-// Output:
+// Outputs:
 //   gcov: components set
 // Notes:
 //   Assumes gcov is allocated to be 4*4.
@@ -174,7 +174,7 @@ void RadiationIntegrator::CovariantGeodesicMetric(double x, double y, double z, 
 // Function for calculating contravariant metric components in geodesic coordinates
 // Inputs:
 //   x, y, z: Cartesian Kerr-Schild coordinates
-// Output:
+// Outputs:
 //   gcon: components set
 // Notes:
 //   Assumes gcon is allocated to be 4*4.
@@ -231,7 +231,7 @@ void RadiationIntegrator::ContravariantGeodesicMetric(double x, double y, double
 // Function for calculating Christoffel connection components in geodesic coordinates
 // Inputs:
 //   x, y, z: Cartesian Kerr-Schild coordinates
-// Output:
+// Outputs:
 //   connection: components set
 // Notes:
 //   Assumes connection is allocated to be 4*4*4.
@@ -374,7 +374,7 @@ void RadiationIntegrator::GeodesicConnection(double x, double y, double z,
 // Function for calculating covariant metric components in simulation coordinates
 // Inputs:
 //   x, y, z: Cartesian Kerr-Schild coordinates
-// Output:
+// Outputs:
 //   gcov: components set
 // Notes:
 //   Assumes gcov is allocated to be 4*4.
@@ -461,7 +461,7 @@ void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z
 // Function for calculating contravariant metric components in simulation coordinates
 // Inputs:
 //   x, y, z: Cartesian Kerr-Schild coordinates
-// Output:
+// Outputs:
 //   gcon: components set
 // Notes:
 //   Assumes gcon is allocated to be 4*4.
@@ -555,7 +555,7 @@ void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, doub
 //   up_con: contravariant components of up direction (usually magnetic field)
 //   gcov: contravariant metric components
 //   gcon: contravariant metric components
-// Output:
+// Outputs:
 //   tetrad: components set
 // Notes:
 //   Assumes tetrad is allocated to be 4*4.

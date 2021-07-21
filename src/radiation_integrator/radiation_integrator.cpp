@@ -152,35 +152,56 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
 //--------------------------------------------------------------------------------------------------
 
 // Top-level function for processing raw data into image
-// Inputs: (none)
-// Output:
-//   returned value: execution time in seconds
+// Inputs:
+//   *p_time_sample: amount of time already taken for sampling
+//   *p_time_integrate: amount of time already taken for integrating
+// Outputs:
+//   *p_time_sample: incremented by additional time taken for sampling
+//   *p_time_integrate: incremented by additional time taken for integrating
 // Notes:
 //   Assumes all data arrays have been set.
-double RadiationIntegrator::Integrate()
+void RadiationIntegrator::Integrate(double *p_time_sample, double *p_time_integrate)
 {
-  double time_start = omp_get_wtime();
+  // Prepare timers
+  double time_sample_start = 0.0;
+  double time_sample_end = 0.0;
+  double time_integrate_start = 0.0;
+  double time_integrate_end = 0.0;
+
+  // Calculate coefficients and integrate
   switch (model_type)
   {
     case ModelType::simulation:
     {
+      time_sample_start = omp_get_wtime();
       if (first_time)
         CalculateSimulationSampling();
       SampleSimulation();
+      time_sample_end = omp_get_wtime();
+      time_integrate_start = time_sample_end;
       CalculateSimulationCoefficients();
       if (image_polarization)
         IntegratePolarizedRadiation();
       else
         IntegrateUnpolarizedRadiation();
+      time_integrate_end = omp_get_wtime();
       break;
     }
     case ModelType::formula:
     {
+      time_integrate_start = omp_get_wtime();
       CalculateFormulaCoefficients();
       IntegrateUnpolarizedRadiation();
+      time_integrate_end = omp_get_wtime();
       break;
     }
   }
+
+  // Update first time flag
   first_time = false;
-  return omp_get_wtime() - time_start;
+
+  // Calculate elapsed time
+  *p_time_sample += time_sample_end - time_sample_start;
+  *p_time_integrate += time_integrate_end - time_integrate_start;
+  return;
 }

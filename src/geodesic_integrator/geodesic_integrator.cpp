@@ -99,7 +99,7 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
 
 // Top-level function for integrating geodesics
 // Inputs: (none)
-// Output:
+// Outputs:
 //   returned value: execution time in seconds
 // Notes:
 //   Assumes all data arrays have been set.

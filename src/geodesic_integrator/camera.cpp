@@ -15,7 +15,7 @@
 
 // Function for setting up camera pixels and initial ray directions
 // Inputs: (none)
-// Output: (none)
+// Outputs: (none)
 // Notes:
 //   Allocates and initializes camera_pos and camera_dir except for time components of camera_dir.
 //   Neglects spacetime curvature at camera location.

@@ -18,7 +18,7 @@
 
 // Function for determining how to sample cell data onto rays.
 // Inputs: (none)
-// Output: (none)
+// Outputs: (none)
 // Notes:
 //   Assumes geodesic_num_steps, sample_flags, sample_num, and sample_pos have been set.
 //   Allocates and initializes sample_inds, sample_nan, and sample_fallback.
@@ -295,7 +295,7 @@ void RadiationIntegrator::CalculateSimulationSampling()
 
 // Function for resampling simulation cell data onto rays.
 // Inputs: (none)
-// Output: (none)
+// Outputs: (none)
 // Notes:
 //   Assumes geodesic_num_steps, sample_inds, sample_nan, and sample_fallback have been set.
 //   Assumes sample_fracs has been set if simulation_interp == true.
@@ -728,7 +728,7 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
 //   b: block index
 //   k, j, i: cell indices
 //   f_k, f_j, f_i: interpolation fractions
-// Output:
+// Outputs:
 //   returned value: interpolated value from grid
 float RadiationIntegrator::InterpolateSimple(const Array<float> &grid_vals, int b, int k, int j,
     int i, double f_k, double f_j, double f_i)
@@ -756,7 +756,7 @@ float RadiationIntegrator::InterpolateSimple(const Array<float> &grid_vals, int 
 //   grid_vals: full array of values on grid
 //   m: ray index
 //   n: index along ray
-// Output:
+// Outputs:
 //   returned value: interpolated value from grid
 // Notes:
 //   Assumes sample_inds and sample_fracs have been set.
