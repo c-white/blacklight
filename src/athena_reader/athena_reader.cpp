@@ -6,6 +6,9 @@
 #include <optional>  // optional
 #include <string>    // string
 
+// Library headers
+#include <omp.h>  // omp_get_wtime
+
 // Blacklight headers
 #include "athena_reader.hpp"
 #include "../blacklight.hpp"                 // enums
@@ -54,18 +57,20 @@ AthenaReader::~AthenaReader()
 
 // Athena++ reader read and initialize function
 // Inputs: (none)
-// Outputs: (none)
+// Output:
+//   returned value: execution time in seconds
 // Notes:
 //   Does nothing if model does not need to be read from file.
 //   Opens and closes stream for reading.
 //   Initializes all member objects.
 //   Implements a subset of the HDF5 standard:
 //       portal.hdfgroup.org/display/HDF5/File+Format+Specification
-void AthenaReader::Read()
+double AthenaReader::Read()
 {
   // Only proceed if needed
   if (model_type != ModelType::simulation)
-    return;
+    return 0.0;
+  double time_start = omp_get_wtime();
 
   // Open input file
   simulation_file = p_input_reader->simulation_file_formatted;
@@ -100,7 +105,9 @@ void AthenaReader::Read()
 
   // Update first time flag
   first_time = false;
-  return;
+
+  // Calculate elapsed time
+  return omp_get_wtime() - time_start;
 }
 
 //--------------------------------------------------------------------------------------------------

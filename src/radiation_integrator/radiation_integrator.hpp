@@ -127,7 +127,7 @@ struct RadiationIntegrator
   Array<double> image;
 
   // External function
-  void Integrate();
+  double Integrate();
 
   // Internal functions - simulation_sampling.cpp
   void CalculateSimulationSampling();

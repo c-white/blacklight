@@ -72,7 +72,7 @@ struct GeodesicIntegrator
   Array<double> sample_pos, sample_dir, sample_len;
 
   // External function
-  void Integrate();
+  double Integrate();
 
   // Internal functions - camera.cpp
   void InitializeCamera();

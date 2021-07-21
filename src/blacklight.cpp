@@ -1,12 +1,13 @@
 // Blacklight main file
 
 // C++ headers
+#include <iomanip>   // setprecision
 #include <iostream>  // cout
 #include <optional>  // bad_optional_access, optional
 #include <string>    // string
 
 // Library headers
-#include <omp.h>  // omp_set_num_threads
+#include <omp.h>  // omp_get_wtime, omp_set_num_threads
 
 // Blacklight headers
 #include "blacklight.hpp"
@@ -29,6 +30,12 @@
 //     1: error
 int main(int argc, char *argv[])
 {
+  // Prepare timers
+  double time_start = omp_get_wtime();
+  double time_geodesic = 0.0;
+  double time_athena = 0.0;
+  double time_radiation = 0.0;
+
   // Parse command-line inputs
   if (argc != 2)
   {
@@ -77,7 +84,7 @@ int main(int argc, char *argv[])
   try
   {
     p_geodesic_integrator = new GeodesicIntegrator(p_input_reader);
-    p_geodesic_integrator->Integrate();
+    time_geodesic += p_geodesic_integrator->Integrate();
   }
   catch (const BlacklightException &exception)
   {
@@ -172,7 +179,7 @@ int main(int argc, char *argv[])
     // Read Athena++ file
     try
     {
-      p_athena_reader->Read();
+      time_athena += p_athena_reader->Read();
     }
     catch (const BlacklightException &exception)
     {
@@ -193,7 +200,7 @@ int main(int argc, char *argv[])
     // Integrate radiation
     try
     {
-      p_radiation_integrator->Integrate();
+      time_radiation += p_radiation_integrator->Integrate();
     }
     catch (const BlacklightException &exception)
     {
@@ -239,6 +246,16 @@ int main(int argc, char *argv[])
   delete p_athena_reader;
   delete p_geodesic_integrator;
   delete p_input_reader;
+
+  // Report timings
+  double time_full = omp_get_wtime() - time_start;
+  std::cout << std::setprecision(7);
+  std::cout << "\nCalculation completed.";
+  std::cout << "\nElapsed time:            " << time_full << " s";
+  std::cout << "\n  Integrating geodesics: " << time_geodesic << " s";
+  std::cout << "\n  Reading simulation:    " << time_athena << " s";
+  std::cout << "\n  Integrating radiation: " << time_radiation << " s";
+  std::cout << "\n\n";
 
   // End program
   return 0;

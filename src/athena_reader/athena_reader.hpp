@@ -63,7 +63,7 @@ struct AthenaReader
   Array<float> prim, bb;
 
   // External function
-  void Read();
+  double Read();
 
   // Internal functions - athena_reader.cpp
   void VerifyVariables();

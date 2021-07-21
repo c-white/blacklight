@@ -4,6 +4,9 @@
 #include <algorithm>  // max
 #include <optional>   // optional
 
+// Library headers
+#include <omp.h>  // omp_get_wtime
+
 // Blacklight headers
 #include "radiation_integrator.hpp"
 #include "../blacklight.hpp"                               // physics, enums
@@ -150,12 +153,13 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
 
 // Top-level function for processing raw data into image
 // Inputs: (none)
-// Output: (none)
+// Output:
+//   returned value: execution time in seconds
 // Notes:
 //   Assumes all data arrays have been set.
-void RadiationIntegrator::Integrate()
+double RadiationIntegrator::Integrate()
 {
-  // Calculate coefficients and integrate
+  double time_start = omp_get_wtime();
   switch (model_type)
   {
     case ModelType::simulation:
@@ -177,8 +181,6 @@ void RadiationIntegrator::Integrate()
       break;
     }
   }
-
-  // Update first time flag
   first_time = false;
-  return;
+  return omp_get_wtime() - time_start;
 }

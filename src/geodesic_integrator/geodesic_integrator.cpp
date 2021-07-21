@@ -4,6 +4,9 @@
 #include <cmath>     // abs, acos, cos, sqrt
 #include <optional>  // optional
 
+// Library headers
+#include <omp.h>  // omp_get_wtime
+
 // Blacklight headers
 #include "geodesic_integrator.hpp"
 #include "../input_reader/input_reader.hpp"  // InputReader
@@ -96,14 +99,16 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
 
 // Top-level function for integrating geodesics
 // Inputs: (none)
-// Output: (none)
+// Output:
+//   returned value: execution time in seconds
 // Notes:
 //   Assumes all data arrays have been set.
-void GeodesicIntegrator::Integrate()
+double GeodesicIntegrator::Integrate()
 {
+  double time_start = omp_get_wtime();
   InitializeCamera();
   InitializeGeodesics();
   IntegrateGeodesics();
   ReverseGeodesics();
-  return;
+  return omp_get_wtime() - time_start;
 }
