@@ -7,9 +7,8 @@ output_format = npy                       # format of output file (raw, npy, npz
 output_file   = output/quick_formula.npy  # file to be (over)written with image data
 
 # Checkpoint parameters
-checkpoint_geodesic_save = false                 # flag indicating geodesics should be saved
-checkpoint_geodesic_load = false                 # flag indicating geodesics should be loaded
-checkpoint_geodesic_file = output/geodesics.dat  # name of geodesic checkpoint file
+checkpoint_geodesic_save = false  # flag indicating geodesics should be saved
+checkpoint_geodesic_load = false  # flag indicating geodesics should be loaded
 
 # Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
 formula_mass  = 6.0e11   # black hole mass in cm
