@@ -4,8 +4,8 @@
 #define OUTPUT_WRITER_H_
 
 // C++ headers
+#include <cstddef>  // size_t
 #include <cstdint>  // uint8_t, uint32_t
-#include <cstdio>   // size_t
 #include <fstream>  // ofstream
 #include <string>   // string
 

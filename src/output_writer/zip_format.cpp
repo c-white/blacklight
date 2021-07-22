@@ -1,8 +1,8 @@
 // Blacklight output writer - ZIP output format
 
 // C++ headers
+#include <cstddef>  // size_t
 #include <cstdint>  // uint8_t, uint16_t, uint32_t
-#include <cstdio>   // size_t
 #include <cstring>  // memcpy, strlen
 #include <ctime>    // localtime, time, time_t, tm
 

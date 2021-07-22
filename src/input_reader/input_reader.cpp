@@ -75,6 +75,14 @@ int InputReader::Read()
     else if (key == "output_camera")
       output_camera = ReadBool(val);
 
+    // Store checkpoint parameters
+    else if (key == "checkpoint_geodesic_save")
+      checkpoint_geodesic_save = ReadBool(val);
+    else if (key == "checkpoint_geodesic_load")
+      checkpoint_geodesic_load = ReadBool(val);
+    else if (key == "checkpoint_geodesic_file")
+      checkpoint_geodesic_file = val;
+
     // Store formula parameters
     else if (key == "formula_mass")
       formula_mass = std::stod(val);

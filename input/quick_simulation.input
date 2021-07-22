@@ -6,6 +6,11 @@ num_threads = 4           # number of threads to use in parallel
 output_format = npy                          # format of output file (raw, npy, npz)
 output_file   = output/quick_simulation.npy  # file to be (over)written with image data
 
+# Checkpoint parameters
+checkpoint_geodesic_save = false                 # flag indicating geodesics should be saved
+checkpoint_geodesic_load = false                 # flag indicating geodesics should be loaded
+checkpoint_geodesic_file = output/geodesics.dat  # name of geodesic checkpoint file
+
 # Simulation parameters (only used if model_type == simulation)
 simulation_file         = data/simulation.athdf  # file containing Athena++ data dump if needed
 simulation_multiple     = false                  # flag for processing multiple files

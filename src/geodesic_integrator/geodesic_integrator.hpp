@@ -3,6 +3,9 @@
 #ifndef GEODESIC_INTEGRATOR_H_
 #define GEODESIC_INTEGRATOR_H_
 
+// C++ headers
+#include <string>  // string
+
 // Blacklight headers
 #include "../blacklight.hpp"                 // enums
 #include "../input_reader/input_reader.hpp"  // InputReader
@@ -21,6 +24,11 @@ struct GeodesicIntegrator
 
   // Input data - general
   ModelType model_type;
+
+  // Input data - checkpoints
+  bool checkpoint_geodesic_save;
+  bool checkpoint_geodesic_load;
+  std::string checkpoint_geodesic_file;
 
   // Input data - image parameters
   Camera image_camera;
@@ -73,6 +81,10 @@ struct GeodesicIntegrator
 
   // External function
   double Integrate();
+
+  // Internal functions - geodesic_checkpoint.cpp
+  void SaveGeodesics();
+  void LoadGeodesics();
 
   // Internal functions - camera.cpp
   void InitializeCamera();

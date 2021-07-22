@@ -3,6 +3,7 @@
 // C++ headers
 #include <cmath>     // abs, acos, cos, sqrt
 #include <optional>  // optional
+#include <string>    // string
 
 // Library headers
 #include <omp.h>  // omp_get_wtime
@@ -10,6 +11,7 @@
 // Blacklight headers
 #include "geodesic_integrator.hpp"
 #include "../input_reader/input_reader.hpp"  // InputReader
+#include "../utils/exceptions.hpp"           // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
 
@@ -37,6 +39,14 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
       break;
     }
   }
+
+  // Copy checkpoint parameters
+  checkpoint_geodesic_save = p_input_reader->checkpoint_geodesic_save.value();
+  checkpoint_geodesic_load = p_input_reader->checkpoint_geodesic_load.value();
+  if (checkpoint_geodesic_save and checkpoint_geodesic_load)
+    throw BlacklightException("Cannot both save and load a geodesic checkpoint.");
+  if (checkpoint_geodesic_save or checkpoint_geodesic_load)
+    checkpoint_geodesic_file = p_input_reader->checkpoint_geodesic_file.value();
 
   // Copy image parameters
   image_camera = p_input_reader->image_camera.value();
@@ -101,14 +111,28 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
 // Inputs: (none)
 // Outputs:
 //   returned value: execution time in seconds
-// Notes:
-//   Assumes all data arrays have been set.
 double GeodesicIntegrator::Integrate()
 {
+  // Prepare timer
   double time_start = omp_get_wtime();
-  InitializeCamera();
-  InitializeGeodesics();
-  IntegrateGeodesics();
-  ReverseGeodesics();
+
+  // Load data from checkpoint
+  if (checkpoint_geodesic_load)
+    LoadGeodesics();
+
+  // Calculate geodesics
+  if (not checkpoint_geodesic_load)
+  {
+    InitializeCamera();
+    InitializeGeodesics();
+    IntegrateGeodesics();
+    ReverseGeodesics();
+  }
+
+  // Save data to checkpoint
+  if (checkpoint_geodesic_save)
+    SaveGeodesics();
+
+  // Calculate elapsed time
   return omp_get_wtime() - time_start;
 }

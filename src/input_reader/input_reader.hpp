@@ -34,6 +34,11 @@ struct InputReader
   std::optional<bool> output_params;
   std::optional<bool> output_camera;
 
+  // Data - checkpoint parameters
+  std::optional<bool> checkpoint_geodesic_save;
+  std::optional<bool> checkpoint_geodesic_load;
+  std::optional<std::string> checkpoint_geodesic_file;
+
   // Data - formula parameters
   std::optional<double> formula_mass;
   std::optional<double> formula_spin;
