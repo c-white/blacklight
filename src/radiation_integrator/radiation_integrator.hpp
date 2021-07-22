@@ -28,6 +28,11 @@ struct RadiationIntegrator
   // Input data - general
   ModelType model_type;
 
+  // Input data - checkpoints
+  bool checkpoint_sample_save;
+  bool checkpoint_sample_load;
+  std::string checkpoint_sample_file;
+
   // Input data - formula parameters
   double formula_mass;
   double formula_r0;
@@ -129,7 +134,12 @@ struct RadiationIntegrator
   // External function
   void Integrate(double *p_time_sample, double *p_time_integrate);
 
+  // Internal functions - sample_checkpoint.cpp
+  void SaveSampling();
+  void LoadSampling();
+
   // Internal functions - simulation_sampling.cpp
+  void ObtainGridData();
   void CalculateSimulationSampling();
   void SampleSimulation();
   void FindNearbyInds(int b, int k, int j, int i, int k_c, int j_c, int i_c, double x3, double x2,

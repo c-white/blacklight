@@ -8,7 +8,7 @@
 #include "geodesic_integrator.hpp"
 #include "../utils/array.hpp"       // Array
 #include "../utils/exceptions.hpp"  // BlacklightException
-#include "../utils/file_io.hpp"     // WriteBinary
+#include "../utils/file_io.hpp"     // ReadBinary, WriteBinary
 
 //--------------------------------------------------------------------------------------------------
 

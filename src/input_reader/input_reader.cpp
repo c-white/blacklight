@@ -82,6 +82,12 @@ int InputReader::Read()
       checkpoint_geodesic_load = ReadBool(val);
     else if (key == "checkpoint_geodesic_file")
       checkpoint_geodesic_file = val;
+    else if (key == "checkpoint_sample_save")
+      checkpoint_sample_save = ReadBool(val);
+    else if (key == "checkpoint_sample_load")
+      checkpoint_sample_load = ReadBool(val);
+    else if (key == "checkpoint_sample_file")
+      checkpoint_sample_file = val;
 
     // Store formula parameters
     else if (key == "formula_mass")

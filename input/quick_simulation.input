@@ -9,6 +9,8 @@ output_file   = output/quick_simulation.npy  # file to be (over)written with ima
 # Checkpoint parameters
 checkpoint_geodesic_save = false  # flag indicating geodesics should be saved
 checkpoint_geodesic_load = false  # flag indicating geodesics should be loaded
+checkpoint_sample_save = false    # flag indicating simulation sampling should be saved
+checkpoint_sample_load = false    # flag indicating simulation sampling should be loaded
 
 # Simulation parameters (only used if model_type == simulation)
 simulation_file         = data/simulation.athdf  # file containing Athena++ data dump if needed

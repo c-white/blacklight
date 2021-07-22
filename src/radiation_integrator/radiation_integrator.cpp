@@ -47,6 +47,26 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     }
   }
 
+  // Copy checkpoint parameters
+  if (model_type == ModelType::simulation)
+  {
+    checkpoint_sample_save = p_input_reader->checkpoint_sample_save.value();
+    checkpoint_sample_load = p_input_reader->checkpoint_sample_load.value();
+    if (checkpoint_sample_save and checkpoint_sample_load)
+      throw BlacklightException("Cannot both save and load a sample checkpoint.");
+    if (checkpoint_sample_save or checkpoint_sample_load)
+      checkpoint_sample_file = p_input_reader->checkpoint_sample_file.value();
+  }
+  else
+  {
+    if (p_input_reader->checkpoint_sample_save.has_value()
+        and p_input_reader->checkpoint_sample_save.value())
+      BlacklightWarning("Ignoring checkpoint_sample_save selection.");
+    if (p_input_reader->checkpoint_sample_load.has_value()
+        and p_input_reader->checkpoint_sample_load.value())
+      BlacklightWarning("Ignoring checkpoint_sample_load selection.");
+  }
+
   // Copy formula parameters
   if (model_type == ModelType::formula)
   {
@@ -175,7 +195,15 @@ void RadiationIntegrator::Integrate(double *p_time_sample, double *p_time_integr
     {
       time_sample_start = omp_get_wtime();
       if (first_time)
-        CalculateSimulationSampling();
+      {
+        ObtainGridData();
+        if (checkpoint_sample_load)
+          LoadSampling();
+        else
+          CalculateSimulationSampling();
+        if (checkpoint_sample_save)
+          SaveSampling();
+      }
       SampleSimulation();
       time_sample_end = omp_get_wtime();
       time_integrate_start = time_sample_end;

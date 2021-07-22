@@ -16,39 +16,28 @@
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for determining how to sample cell data onto rays.
+// Function for making shallow copies of arrays containing simulation data.
 // Inputs: (none)
 // Outputs: (none)
-// Notes:
-//   Assumes geodesic_num_steps, sample_flags, sample_num, and sample_pos have been set.
-//   Allocates and initializes sample_inds, sample_nan, and sample_fallback.
-//   Allocates and initializes sample_fracs if simulation_interp == true.
-//   If simulation_interp == false, locates cell containing geodesic sample point.
-//   If simulation_interp == true and simulation_block_interp == false, prepares trilinear
-//       interpolation to geodesic sample point from cell centers, using only data within the same
-//       block of cells (i.e. sometimes using extrapolation near block edges).
-//   If simulation_interp == true and simulation_block_interp == true, prepares trilinear
-//       interpolation after obtaining anchor points possibly from neighboring blocks, even at
-//       different refinement levels, or across the periodic boundary in spherical coordinates.
 //   Acquires values from AthenaReader that were not available at construction.
-void RadiationIntegrator::CalculateSimulationSampling()
+void RadiationIntegrator::ObtainGridData()
 {
-  // Copy grid data scalars
-  if (simulation_coord == Coordinates::sph_ks and simulation_interp and simulation_block_interp)
-    n_3_root = p_athena_reader->n_3_root;
-
-  // Make shallow copies of grid data arrays
+  // Copy grid layout
   if (simulation_interp and simulation_block_interp)
   {
     levels = p_athena_reader->levels;
     locations = p_athena_reader->locations;
   }
+
+  // Copy coordinates
   x1f = p_athena_reader->x1f;
   x2f = p_athena_reader->x2f;
   x3f = p_athena_reader->x3f;
   x1v = p_athena_reader->x1v;
   x2v = p_athena_reader->x2v;
   x3v = p_athena_reader->x3v;
+
+  // Copy cell values
   grid_rho = p_athena_reader->prim;
   grid_rho.Slice(5, p_athena_reader->ind_rho);
   if (plasma_model == PlasmaModel::ti_te_beta)
@@ -73,6 +62,31 @@ void RadiationIntegrator::CalculateSimulationSampling()
   grid_bb2.Slice(5, p_athena_reader->ind_bb2);
   grid_bb3 = p_athena_reader->bb;
   grid_bb3.Slice(5, p_athena_reader->ind_bb3);
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for determining how to sample cell data onto rays.
+// Inputs: (none)
+// Outputs: (none)
+// Notes:
+//   Assumes geodesic_num_steps, sample_flags, sample_num, and sample_pos have been set.
+//   Allocates and initializes sample_inds, sample_nan, and sample_fallback.
+//   Allocates and initializes sample_fracs if simulation_interp == true.
+//   If simulation_interp == false, locates cell containing geodesic sample point.
+//   If simulation_interp == true and simulation_block_interp == false, prepares trilinear
+//       interpolation to geodesic sample point from cell centers, using only data within the same
+//       block of cells (i.e. sometimes using extrapolation near block edges).
+//   If simulation_interp == true and simulation_block_interp == true, prepares trilinear
+//       interpolation after obtaining anchor points possibly from neighboring blocks, even at
+//       different refinement levels, or across the periodic boundary in spherical coordinates.
+//   Acquires values from AthenaReader that were not available at construction.
+void RadiationIntegrator::CalculateSimulationSampling()
+{
+  // Copy grid data scalars
+  if (simulation_coord == Coordinates::sph_ks and simulation_interp and simulation_block_interp)
+    n_3_root = p_athena_reader->n_3_root;
 
   // Calculate maximum refinement level and number of blocks in x^3-direction at each level
   if (simulation_coord == Coordinates::sph_ks and simulation_interp and simulation_block_interp)
