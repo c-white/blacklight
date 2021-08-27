@@ -120,6 +120,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   }
 
   // Copy image parameters
+  image_r = p_input_reader->image_r.value();
   image_resolution = p_input_reader->image_resolution.value();
   image_frequency = p_input_reader->image_frequency.value();
   if (model_type == ModelType::simulation)

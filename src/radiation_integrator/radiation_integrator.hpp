@@ -68,6 +68,7 @@ struct RadiationIntegrator
   float fallback_kappa;
 
   // Input data - image parameters
+  double image_r;
   int image_resolution;
   double image_frequency;
   bool image_polarization;

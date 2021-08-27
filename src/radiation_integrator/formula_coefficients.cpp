@@ -94,8 +94,10 @@ void RadiationIntegrator::CalculateFormulaCoefficients()
       double k_2 = sample_dir_local(m,n,2);
       double k_3 = sample_dir_local(m,n,3);
 
-      // Calculate coordinates
+      // Calculate coordinates and skip coupling if outside camera radius
       double r = RadialGeodesicCoordinate(x, y, z);
+      if (r > image_r)
+        continue;
       double rr = std::sqrt(r * r - z * z);
       double cth = z / r;
       double sth = std::sqrt(1.0 - cth * cth);

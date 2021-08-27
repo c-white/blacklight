@@ -178,6 +178,11 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         kcov[2] = sample_dir_local(m,n,2);
         kcov[3] = sample_dir_local(m,n,3);
 
+        // Skip coupling if outside camera radius
+        double r = RadialGeodesicCoordinate(x1, x2, x3);
+        if (r > image_r)
+          continue;
+
         // Extract model variables
         double rho = sample_rho_local(m,n);
         double pgas = 0.0;
