@@ -20,13 +20,14 @@ struct RadiationIntegrator
       const GeodesicIntegrator *p_geodesic_integrator, const AthenaReader *p_athena_reader_);
   RadiationIntegrator(const RadiationIntegrator &source) = delete;
   RadiationIntegrator &operator=(const RadiationIntegrator &source) = delete;
-  ~RadiationIntegrator() {}
+  ~RadiationIntegrator();
 
   // Pointers to other objects
   const AthenaReader *p_athena_reader;
 
   // Input data - general
   ModelType model_type;
+  int num_threads;
 
   // Input data - checkpoints
   bool checkpoint_sample_save;
@@ -67,11 +68,27 @@ struct RadiationIntegrator
   float fallback_kappa;
 
   // Input data - image parameters
+  int image_resolution;
   double image_frequency;
   bool image_polarization;
 
   // Input data - ray-tracing parameters
   bool ray_flat;
+
+  // Input data - adaptive parameters
+  bool adaptive_on;
+  int adaptive_block_size;
+  int adaptive_max_level;
+  double adaptive_val_cut;
+  double adaptive_val_frac;
+  double adaptive_abs_grad_cut;
+  double adaptive_abs_grad_frac;
+  double adaptive_rel_grad_cut;
+  double adaptive_rel_grad_frac;
+  double adaptive_abs_lapl_cut;
+  double adaptive_abs_lapl_frac;
+  double adaptive_rel_lapl_cut;
+  double adaptive_rel_lapl_frac;
 
   // Flag
   bool first_time = true;
@@ -94,7 +111,8 @@ struct RadiationIntegrator
 
   // Camera data
   double momentum_factor;
-  double camera_ucon[4], camera_ucov[4], camera_up_con_c[4];
+  double camera_u_con[4], camera_u_cov[4];
+  double camera_vert_con_c[4];
   int camera_num_pix;
   Array<double> camera_pos, camera_dir;
 
@@ -131,8 +149,35 @@ struct RadiationIntegrator
   // Image data
   Array<double> image;
 
+  // Adaptive data
+  int adaptive_current_level = 0;
+  int adaptive_num_levels;
+  int linear_root_blocks;
+  int block_num_pix;
+  int *block_counts;
+  Array<bool> *refinement_flags;
+  Array<double> *camera_pos_adaptive;
+  Array<double> *camera_dir_adaptive;
+  int *geodesic_num_steps_adaptive;
+  Array<bool> *sample_flags_adaptive;
+  Array<int> *sample_num_adaptive;
+  Array<double> *sample_pos_adaptive;
+  Array<double> *sample_dir_adaptive;
+  Array<double> *sample_len_adaptive;
+  Array<int> sample_inds_adaptive;
+  Array<double> sample_fracs_adaptive;
+  Array<bool> sample_nan_adaptive, sample_fallback_adaptive;
+  Array<float> sample_rho_adaptive, sample_pgas_adaptive, sample_kappa_adaptive;
+  Array<float> sample_uu1_adaptive, sample_uu2_adaptive, sample_uu3_adaptive;
+  Array<float> sample_bb1_adaptive, sample_bb2_adaptive, sample_bb3_adaptive;
+  Array<double> j_i_adaptive, j_q_adaptive, j_v_adaptive;
+  Array<double> alpha_i_adaptive, alpha_q_adaptive, alpha_v_adaptive;
+  Array<double> rho_q_adaptive, rho_v_adaptive;
+  Array<double> *image_adaptive;
+  Array<double> *image_blocks;
+
   // External function
-  void Integrate(double *p_time_sample, double *p_time_integrate);
+  bool Integrate(double *p_time_sample, double *p_time_integrate);
 
   // Internal functions - sample_checkpoint.cpp
   void SaveSampling();
@@ -159,6 +204,10 @@ struct RadiationIntegrator
 
   // Internal functions - polarized.cpp
   void IntegratePolarizedRadiation();
+
+  // Internal functions - radiation_adaptive.cpp
+  bool CheckAdaptiveRefinement();
+  bool EvaluateBlock(int thread);
 
   // Internal functions - radiation_geometry.cpp
   double RadialGeodesicCoordinate(double x, double y, double z);

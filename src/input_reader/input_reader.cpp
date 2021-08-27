@@ -219,6 +219,34 @@ int InputReader::Read()
     else if (key == "ray_max_factor")
       ray_max_factor = std::stod(val);
 
+    // Store adaptive parameters
+    else if (key == "adaptive_on")
+      adaptive_on = ReadBool(val);
+    else if (key == "adaptive_block_size")
+      adaptive_block_size = std::stoi(val);
+    else if (key == "adaptive_max_level")
+      adaptive_max_level = std::stoi(val);
+    else if (key == "adaptive_val_cut")
+      adaptive_val_cut = std::stod(val);
+    else if (key == "adaptive_val_frac")
+      adaptive_val_frac = std::stod(val);
+    else if (key == "adaptive_abs_grad_cut")
+      adaptive_abs_grad_cut = std::stod(val);
+    else if (key == "adaptive_abs_grad_frac")
+      adaptive_abs_grad_frac = std::stod(val);
+    else if (key == "adaptive_rel_grad_cut")
+      adaptive_rel_grad_cut = std::stod(val);
+    else if (key == "adaptive_rel_grad_frac")
+      adaptive_rel_grad_frac = std::stod(val);
+    else if (key == "adaptive_abs_lapl_cut")
+      adaptive_abs_lapl_cut = std::stod(val);
+    else if (key == "adaptive_abs_lapl_frac")
+      adaptive_abs_lapl_frac = std::stod(val);
+    else if (key == "adaptive_rel_lapl_cut")
+      adaptive_rel_lapl_cut = std::stod(val);
+    else if (key == "adaptive_rel_lapl_frac")
+      adaptive_rel_lapl_frac = std::stod(val);
+
     // Handle unknown entry
     else
     {

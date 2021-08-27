@@ -18,18 +18,19 @@
 
 //--------------------------------------------------------------------------------------------------
 
-// Input reader
+// Output reader
 struct OutputWriter
 {
   // Constructors and destructor
-  OutputWriter(const InputReader *p_input_reader_, const GeodesicIntegrator *p_geodesic_integrator,
+  OutputWriter(const InputReader *p_input_reader_, const GeodesicIntegrator *p_geodesic_integrator_,
       const RadiationIntegrator *p_radiation_integrator_);
   OutputWriter(const OutputWriter &source) = delete;
   OutputWriter &operator=(const OutputWriter &source) = delete;
-  ~OutputWriter() {}
+  ~OutputWriter();
 
   // Pointers to other objects
   const InputReader *p_input_reader;
+  const GeodesicIntegrator *p_geodesic_integrator;
   const RadiationIntegrator *p_radiation_integrator;
 
   // Input data - output parameters
@@ -39,8 +40,14 @@ struct OutputWriter
   bool output_camera;
 
   // Input data - image parameters
-  int image_resolution;
   Camera image_camera;
+  int image_resolution;
+  bool image_polarization;
+
+  // Input data - adaptive parameters
+  bool adaptive_on;
+  int adaptive_block_size;
+  int adaptive_max_level;
 
   // Flag
   bool first_time = true;
@@ -56,6 +63,14 @@ struct OutputWriter
   Array<double> image_frequency_array;
   Array<double> mass_msun_array;
 
+  // Adaptive data
+  Array<int> adaptive_num_levels_array;
+  Array<int> block_counts_array;
+  Array<double> *image_adaptive;
+  Array<int> *camera_loc_adaptive;
+  Array<double> *camera_pos_adaptive;
+  Array<double> *camera_dir_adaptive;
+
   // External function
   void Write();
 
@@ -65,7 +80,8 @@ struct OutputWriter
   // Internal functions - numpy_format.cpp
   void WriteNpy();
   void WriteNpz();
-  std::size_t GenerateNpyFromDoubleArray(const Array<double> &array, uint8_t **p_buffer);
+  std::size_t GenerateNpyFromArray(const Array<double> &array, int num_dims, uint8_t **p_buffer);
+  std::size_t GenerateNpyFromArray(const Array<int> &array, int num_dims, uint8_t **p_buffer);
 
   // Internal functions - zip_format.cpp
   std::size_t GenerateZIPLocalFileHeader(const uint8_t *record, std::size_t record_length,

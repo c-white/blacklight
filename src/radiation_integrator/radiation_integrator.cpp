@@ -29,6 +29,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
 {
   // Copy general input data
   model_type = p_input_reader->model_type.value();
+  num_threads = p_input_reader->num_threads.value();
 
   // Set parameters
   switch (model_type)
@@ -119,6 +120,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   }
 
   // Copy image parameters
+  image_resolution = p_input_reader->image_resolution.value();
   image_frequency = p_input_reader->image_frequency.value();
   if (model_type == ModelType::simulation)
     image_polarization = p_input_reader->image_polarization.value();
@@ -129,13 +131,42 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   // Copy ray-tracing parameters
   ray_flat = p_input_reader->ray_flat.value();
 
+  // Copy adaptive parameters
+  adaptive_on = p_input_reader->adaptive_on.value();
+  if (adaptive_on)
+  {
+    adaptive_block_size = p_input_reader->adaptive_block_size.value();
+    if (adaptive_block_size <= 0)
+      throw BlacklightException("Must have positive adaptive_block_size.");
+    if (image_resolution % adaptive_block_size != 0)
+      throw BlacklightException("Must have adaptive_block_size divide image_resolution.");
+    adaptive_max_level = p_input_reader->adaptive_max_level.value();
+    if (adaptive_max_level < 1)
+      throw BlacklightException("Must have at least one allowed refinement level.");
+    adaptive_val_frac = p_input_reader->adaptive_val_frac.value();
+    if (adaptive_val_frac >= 0.0)
+      adaptive_val_cut = p_input_reader->adaptive_val_cut.value();
+    adaptive_abs_grad_frac = p_input_reader->adaptive_abs_grad_frac.value();
+    if (adaptive_abs_grad_frac >= 0.0)
+      adaptive_abs_grad_cut = p_input_reader->adaptive_abs_grad_cut.value();
+    adaptive_rel_grad_frac = p_input_reader->adaptive_rel_grad_frac.value();
+    if (adaptive_rel_grad_frac >= 0.0)
+      adaptive_rel_grad_cut = p_input_reader->adaptive_rel_grad_cut.value();
+    adaptive_abs_lapl_frac = p_input_reader->adaptive_abs_lapl_frac.value();
+    if (adaptive_abs_lapl_frac >= 0.0)
+      adaptive_abs_lapl_cut = p_input_reader->adaptive_abs_lapl_cut.value();
+    adaptive_rel_lapl_frac = p_input_reader->adaptive_rel_lapl_frac.value();
+    if (adaptive_rel_lapl_frac >= 0.0)
+      adaptive_rel_lapl_cut = p_input_reader->adaptive_rel_lapl_cut.value();
+  }
+
   // Copy camera data
   momentum_factor = p_geodesic_integrator->momentum_factor;
   for (int mu = 0; mu < 4; mu++)
   {
-    camera_ucon[mu] = p_geodesic_integrator->camera_ucon[mu];
-    camera_ucov[mu] = p_geodesic_integrator->camera_ucov[mu];
-    camera_up_con_c[mu] = p_geodesic_integrator->camera_up_con_c[mu];
+    camera_u_con[mu] = p_geodesic_integrator->u_con[mu];
+    camera_u_cov[mu] = p_geodesic_integrator->u_cov[mu];
+    camera_vert_con_c[mu] = p_geodesic_integrator->vert_con_c[mu];
   }
   camera_num_pix = p_geodesic_integrator->camera_num_pix;
 
@@ -153,6 +184,22 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   sample_dir = p_geodesic_integrator->sample_dir;
   sample_len = p_geodesic_integrator->sample_len;
 
+  // Copy adaptive geodesic data
+  if (adaptive_on)
+  {
+    if (image_polarization)
+    {
+      camera_pos_adaptive = p_geodesic_integrator->camera_pos_adaptive;
+      camera_dir_adaptive = p_geodesic_integrator->camera_dir_adaptive;
+    }
+    geodesic_num_steps_adaptive = p_geodesic_integrator->geodesic_num_steps_adaptive;
+    sample_flags_adaptive = p_geodesic_integrator->sample_flags_adaptive;
+    sample_num_adaptive = p_geodesic_integrator->sample_num_adaptive;
+    sample_pos_adaptive = p_geodesic_integrator->sample_pos_adaptive;
+    sample_dir_adaptive = p_geodesic_integrator->sample_dir_adaptive;
+    sample_len_adaptive = p_geodesic_integrator->sample_len_adaptive;
+  }
+
   // Calculate black hole mass
   switch (model_type)
   {
@@ -167,6 +214,45 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       break;
     }
   }
+
+  // Allocate space for calculating adaptive refinement
+  if (adaptive_on)
+  {
+    linear_root_blocks = image_resolution / adaptive_block_size;
+    block_num_pix = adaptive_block_size * adaptive_block_size;
+    block_counts = new int[adaptive_max_level+1];
+    block_counts[0] = linear_root_blocks * linear_root_blocks;
+    refinement_flags = new Array<bool>[adaptive_max_level+1];
+    refinement_flags[0].Allocate(block_counts[0]);
+    image_adaptive = new Array<double>[adaptive_max_level+1];
+    image_blocks = new Array<double>[num_threads];
+    for (int thread = 0; thread < num_threads; thread++)
+      if (model_type == ModelType::simulation and image_polarization)
+        image_blocks[thread].Allocate(4, adaptive_block_size, adaptive_block_size);
+      else
+        image_blocks[thread].Allocate(adaptive_block_size, adaptive_block_size);
+  }
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Radiation integrator destructor
+RadiationIntegrator::~RadiationIntegrator()
+{
+  if (adaptive_on)
+  {
+    for (int level = 0; level <= adaptive_max_level; level++)
+    {
+      refinement_flags[level].Deallocate();
+      image_adaptive[level].Deallocate();
+    }
+    for (int thread = 0; thread < num_threads; thread++)
+      image_blocks[thread].Deallocate();
+    delete[] block_counts;
+    delete[] refinement_flags;
+    delete[] image_adaptive;
+    delete[] image_blocks;
+  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -178,9 +264,10 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
 // Outputs:
 //   *p_time_sample: incremented by additional time taken for sampling
 //   *p_time_integrate: incremented by additional time taken for integrating
+//   returned value: flag indicating no additional geodesics need to be run for this snapshot
 // Notes:
 //   Assumes all data arrays have been set.
-void RadiationIntegrator::Integrate(double *p_time_sample, double *p_time_integrate)
+bool RadiationIntegrator::Integrate(double *p_time_sample, double *p_time_integrate)
 {
   // Prepare timers
   double time_sample_start = 0.0;
@@ -188,42 +275,58 @@ void RadiationIntegrator::Integrate(double *p_time_sample, double *p_time_integr
   double time_integrate_start = 0.0;
   double time_integrate_end = 0.0;
 
-  // Calculate coefficients and integrate
-  switch (model_type)
+  // Sample simulation data
+  if (model_type == ModelType::simulation)
   {
-    case ModelType::simulation:
+    time_sample_start = omp_get_wtime();
+    if (first_time)
+      ObtainGridData();
+    if (adaptive_on and adaptive_current_level > 0)
+      CalculateSimulationSampling();
+    else if (first_time)
     {
-      time_sample_start = omp_get_wtime();
-      if (first_time)
-      {
-        ObtainGridData();
-        if (checkpoint_sample_load)
-          LoadSampling();
-        else
-          CalculateSimulationSampling();
-        if (checkpoint_sample_save)
-          SaveSampling();
-      }
-      SampleSimulation();
-      time_sample_end = omp_get_wtime();
-      time_integrate_start = time_sample_end;
-      CalculateSimulationCoefficients();
-      if (image_polarization)
-        IntegratePolarizedRadiation();
+      if (checkpoint_sample_load)
+        LoadSampling();
       else
-        IntegrateUnpolarizedRadiation();
-      time_integrate_end = omp_get_wtime();
-      break;
+        CalculateSimulationSampling();
+      if (checkpoint_sample_save)
+        SaveSampling();
     }
-    case ModelType::formula:
-    {
-      time_integrate_start = omp_get_wtime();
-      CalculateFormulaCoefficients();
-      IntegrateUnpolarizedRadiation();
-      time_integrate_end = omp_get_wtime();
-      break;
-    }
+    SampleSimulation();
+    time_sample_end = omp_get_wtime();
   }
+
+  // Integrate according to simulation data
+  if (model_type == ModelType::simulation)
+  {
+    time_integrate_start = time_sample_end;
+    CalculateSimulationCoefficients();
+    if (image_polarization)
+      IntegratePolarizedRadiation();
+    else
+      IntegrateUnpolarizedRadiation();
+  }
+
+  // Integrate according to formula
+  if (model_type == ModelType::formula)
+  {
+    time_integrate_start = omp_get_wtime();
+    CalculateFormulaCoefficients();
+    IntegrateUnpolarizedRadiation();
+  }
+
+  // Check for adaptive refinement
+  bool adaptive_complete = true;
+  if (adaptive_on)
+    adaptive_complete = CheckAdaptiveRefinement();
+  if (adaptive_complete)
+  {
+    adaptive_num_levels = adaptive_current_level;
+    adaptive_current_level = 0;
+  }
+  else
+    adaptive_current_level++;
+  time_integrate_end = omp_get_wtime();
 
   // Update first time flag
   first_time = false;
@@ -231,5 +334,5 @@ void RadiationIntegrator::Integrate(double *p_time_sample, double *p_time_integr
   // Calculate elapsed time
   *p_time_sample += time_sample_end - time_sample_start;
   *p_time_integrate += time_integrate_end - time_integrate_start;
-  return;
+  return adaptive_complete;
 }

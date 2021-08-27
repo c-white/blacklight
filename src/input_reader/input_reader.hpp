@@ -114,6 +114,21 @@ struct InputReader
   std::optional<double> ray_min_factor;
   std::optional<double> ray_max_factor;
 
+  // Data - adaptive parameters
+  std::optional<bool> adaptive_on;
+  std::optional<int> adaptive_block_size;
+  std::optional<int> adaptive_max_level;
+  std::optional<double> adaptive_val_cut;
+  std::optional<double> adaptive_val_frac;
+  std::optional<double> adaptive_abs_grad_cut;
+  std::optional<double> adaptive_abs_grad_frac;
+  std::optional<double> adaptive_rel_grad_cut;
+  std::optional<double> adaptive_rel_grad_frac;
+  std::optional<double> adaptive_abs_lapl_cut;
+  std::optional<double> adaptive_abs_lapl_frac;
+  std::optional<double> adaptive_rel_lapl_cut;
+  std::optional<double> adaptive_rel_lapl_frac;
+
   // String substitution data
   bool multiple_runs;
   int num_runs;

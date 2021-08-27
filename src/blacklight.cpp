@@ -45,9 +45,15 @@ int main(int argc, char *argv[])
   }
   const std::string input_file(argv[1]);
 
+  // Prepare pointers to objects
+  InputReader *p_input_reader;
+  GeodesicIntegrator *p_geodesic_integrator;
+  AthenaReader *p_athena_reader;
+  RadiationIntegrator *p_radiation_integrator;
+  OutputWriter *p_output_writer;
+
   // Read input file
   int num_runs;
-  InputReader *p_input_reader;
   try
   {
     p_input_reader = new InputReader(input_file);
@@ -81,7 +87,6 @@ int main(int argc, char *argv[])
   }
 
   // Define camera and integrate geodesics
-  GeodesicIntegrator *p_geodesic_integrator;
   try
   {
     p_geodesic_integrator = new GeodesicIntegrator(p_input_reader);
@@ -104,7 +109,6 @@ int main(int argc, char *argv[])
   }
 
   // Set up Athena++ reader
-  AthenaReader *p_athena_reader;
   try
   {
     p_athena_reader = new AthenaReader(p_input_reader);
@@ -126,7 +130,6 @@ int main(int argc, char *argv[])
   }
 
   // Set up radiation integrator
-  RadiationIntegrator *p_radiation_integrator;
   try
   {
     p_radiation_integrator =
@@ -149,7 +152,6 @@ int main(int argc, char *argv[])
   }
 
   // Set up output writer
-  OutputWriter *p_output_writer;
   try
   {
     p_output_writer =
@@ -187,36 +189,48 @@ int main(int argc, char *argv[])
       std::cout << exception.what();
       return 1;
     }
-    catch (const std::bad_optional_access &exception)
-    {
-      std::cout << "Error: AthenaReader unable to find all needed values in input file.\n";
-      return 1;
-    }
     catch (...)
     {
       std::cout << "Error: Could not read Athena++ file.\n";
       return 1;
     }
 
-    // Integrate radiation
-    try
+    // Iterate with adaptive refinement
+    bool adaptive_complete = false;
+    while (not adaptive_complete)
     {
-      p_radiation_integrator->Integrate(&time_sample, &time_radiation);
-    }
-    catch (const BlacklightException &exception)
-    {
-      std::cout << exception.what();
-      return 1;
-    }
-    catch (const std::bad_optional_access &exception)
-    {
-      std::cout << "Error: RadiationIntegrator unable to find all needed values in input file.\n";
-      return 1;
-    }
-    catch (...)
-    {
-      std::cout << "Error: Could not integrate radiation.\n";
-      return 1;
+      // Integrate radiation
+      try
+      {
+        adaptive_complete = p_radiation_integrator->Integrate(&time_sample, &time_radiation);
+      }
+      catch (const BlacklightException &exception)
+      {
+        std::cout << exception.what();
+        return 1;
+      }
+      catch (...)
+      {
+        std::cout << "Error: Could not integrate radiation.\n";
+        return 1;
+      }
+
+      // Sample additional geodesics
+      if (not adaptive_complete)
+        try
+        {
+          time_geodesic += p_geodesic_integrator->AddGeodesics(p_radiation_integrator);
+        }
+        catch (const BlacklightException &exception)
+        {
+          std::cout << exception.what();
+          return 1;
+        }
+        catch (...)
+        {
+          std::cout << "Error: Could not integrate geodesics.\n";
+          return 1;
+        }
     }
 
     // Write output
@@ -227,11 +241,6 @@ int main(int argc, char *argv[])
     catch (const BlacklightException &exception)
     {
       std::cout << exception.what();
-      return 1;
-    }
-    catch (const std::bad_optional_access &exception)
-    {
-      std::cout << "Error: OutputWriter unable to find all needed values in input file.\n";
       return 1;
     }
     catch (...)

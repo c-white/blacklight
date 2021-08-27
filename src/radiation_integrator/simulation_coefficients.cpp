@@ -19,11 +19,18 @@
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Assumes sample_num, sample_pos, sample_dir, sample_rho, sample_pgas or sample_kappa,
-//       sample_uu1, sample_uu2, sample_uu3, sample_bb1, sample_bb2, and sample_bb3 have been set.
-//   Allocates and initializes j_i and alpha_i.
-//   Allocates and initializes j_q, j_v, alpha_q, alpha_v, rho_q, and rho_v if
-//       image_polarization == true.
+//   Works on arrays appropriate for root level or adaptively refined regions.
+//   Assumes geodesic_num_steps, sample_num (or sample_num_adaptive[adaptive_current_level]),
+//       sample_pos (or sample_pos_adaptive[adaptive_current_level]), sample_dir (or
+//       sample_dir_adaptive[adaptive_current_level]), sample_rho (or sample_rho_adaptive),
+//       sample_pgas (or sample_pgas_adaptive) or sample_kappa (or sample_kappa_adaptive),
+//       sample_uu1 (or sample_uu1_adaptive), sample_uu2 (or sample_uu2_adaptive), sample_uu3 (or
+//       sample_uu3_adaptive), sample_bb1 (or sample_bb1_adaptive), sample_bb2 (or
+//       sample_bb2_adaptive), and sample_bb3 (or sample_bb3_adaptive) have been set.
+//   Allocates and initializes j_i (or j_i_adaptive) and alpha_i (or alpha_i_adaptive).
+//   Allocates and initializes j_q (or j_q_adaptive), j_v (or j_v_adaptive), alpha_q (or
+//       alpha_q_adaptive), alpha_v (or alpha_v_adaptive), rho_q (or rho_q_adaptive), and rho_v (or
+//       rho_v_adaptive) if image_polarization == true.
 //   References beta-dependent temperature ratio electron model from 2016 AA 586 A38 (E1).
 //   References entropy-based electron model from 2017 MNRAS 466 705 (E2).
 //   References symphony paper 2016 ApJ 822 34 (S).
@@ -35,23 +42,52 @@
 //   Uses the definitions of nu_c and nu_s from (S); nu_{s,alt} is what (G) calls nu_c, and nu_c is
 //       what (G) calls nu_B.
 //   Tetrad is chosen such that j_U, alpha_U, rho_U = 0.
+//   Deallocates sample_rho_adaptive, sample_pgas_adaptive, and sample_kappa_adaptive.
+//   Dealllocates sample_uu1_adaptive, sample_uu2_adaptive, sample_uu3_adaptive,
+//       sample_bb1_adaptive, sample_bb2_adaptive, and sample_bb3_adaptive if
+//       image_polarization == false.
 void RadiationIntegrator::CalculateSimulationCoefficients()
 {
-  // Allocate coefficient arrays
-  if (first_time)
+  // Allocate arrays
+  int num_pix = camera_num_pix;
+  if (adaptive_on and adaptive_current_level > 0)
   {
-    j_i.Allocate(camera_num_pix, geodesic_num_steps);
-    alpha_i.Allocate(camera_num_pix, geodesic_num_steps);
+    num_pix = block_counts[adaptive_current_level] * block_num_pix;
+    int geodesic_num_steps_local = geodesic_num_steps_adaptive[adaptive_current_level];
+    j_i_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+    alpha_i_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+    j_i_adaptive.Zero();
+    alpha_i_adaptive.Zero();
+    if (image_polarization)
+    {
+      j_q_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+      j_v_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+      alpha_q_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+      alpha_v_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+      rho_q_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+      rho_v_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+      j_q_adaptive.Zero();
+      j_v_adaptive.Zero();
+      alpha_q_adaptive.Zero();
+      alpha_v_adaptive.Zero();
+      rho_q_adaptive.Zero();
+      rho_v_adaptive.Zero();
+    }
+  }
+  else if (first_time)
+  {
+    j_i.Allocate(num_pix, geodesic_num_steps);
+    alpha_i.Allocate(num_pix, geodesic_num_steps);
     j_i.Zero();
     alpha_i.Zero();
     if (image_polarization)
     {
-      j_q.Allocate(camera_num_pix, geodesic_num_steps);
-      j_v.Allocate(camera_num_pix, geodesic_num_steps);
-      alpha_q.Allocate(camera_num_pix, geodesic_num_steps);
-      alpha_v.Allocate(camera_num_pix, geodesic_num_steps);
-      rho_q.Allocate(camera_num_pix, geodesic_num_steps);
-      rho_v.Allocate(camera_num_pix, geodesic_num_steps);
+      j_q.Allocate(num_pix, geodesic_num_steps);
+      j_v.Allocate(num_pix, geodesic_num_steps);
+      alpha_q.Allocate(num_pix, geodesic_num_steps);
+      alpha_v.Allocate(num_pix, geodesic_num_steps);
+      rho_q.Allocate(num_pix, geodesic_num_steps);
+      rho_v.Allocate(num_pix, geodesic_num_steps);
       j_q.Zero();
       j_v.Zero();
       alpha_q.Zero();
@@ -59,6 +95,51 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
       rho_q.Zero();
       rho_v.Zero();
     }
+  }
+
+  // Alias arrays
+  Array<int> sample_num_local = sample_num;
+  Array<double> sample_pos_local = sample_pos;
+  Array<double> sample_dir_local = sample_dir;
+  Array<float> sample_rho_local = sample_rho;
+  Array<float> sample_pgas_local = sample_pgas;
+  Array<float> sample_kappa_local = sample_kappa;
+  Array<float> sample_uu1_local = sample_uu1;
+  Array<float> sample_uu2_local = sample_uu2;
+  Array<float> sample_uu3_local = sample_uu3;
+  Array<float> sample_bb1_local = sample_bb1;
+  Array<float> sample_bb2_local = sample_bb2;
+  Array<float> sample_bb3_local = sample_bb3;
+  Array<double> j_i_local = j_i;
+  Array<double> j_q_local = j_q;
+  Array<double> j_v_local = j_v;
+  Array<double> alpha_i_local = alpha_i;
+  Array<double> alpha_q_local = alpha_q;
+  Array<double> alpha_v_local = alpha_v;
+  Array<double> rho_q_local = rho_q;
+  Array<double> rho_v_local = rho_v;
+  if (adaptive_on and adaptive_current_level > 0)
+  {
+    sample_num_local = sample_num_adaptive[adaptive_current_level];
+    sample_pos_local = sample_pos_adaptive[adaptive_current_level];
+    sample_dir_local = sample_dir_adaptive[adaptive_current_level];
+    sample_rho_local = sample_rho_adaptive;
+    sample_pgas_local = sample_pgas_adaptive;
+    sample_kappa_local = sample_kappa_adaptive;
+    sample_uu1_local = sample_uu1_adaptive;
+    sample_uu2_local = sample_uu2_adaptive;
+    sample_uu3_local = sample_uu3_adaptive;
+    sample_bb1_local = sample_bb1_adaptive;
+    sample_bb2_local = sample_bb2_adaptive;
+    sample_bb3_local = sample_bb3_adaptive;
+    j_i_local = j_i_adaptive;
+    j_q_local = j_q_adaptive;
+    j_v_local = j_v_adaptive;
+    alpha_i_local = alpha_i_adaptive;
+    alpha_q_local = alpha_q_adaptive;
+    alpha_v_local = alpha_v_adaptive;
+    rho_q_local = rho_q_adaptive;
+    rho_v_local = rho_v_adaptive;
   }
 
   // Calculate unit
@@ -77,10 +158,10 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
 
     // Go through rays
     #pragma omp for schedule(static)
-    for (int m = 0; m < camera_num_pix; m++)
+    for (int m = 0; m < num_pix; m++)
     {
       // Check number of steps
-      int num_steps = sample_num(m);
+      int num_steps = sample_num_local(m);
       if (num_steps <= 0)
         continue;
 
@@ -88,29 +169,29 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
       for (int n = 0; n < num_steps; n++)
       {
         // Extract geodesic position and covariant momentum
-        double x1 = sample_pos(m,n,1);
-        double x2 = sample_pos(m,n,2);
-        double x3 = sample_pos(m,n,3);
+        double x1 = sample_pos_local(m,n,1);
+        double x2 = sample_pos_local(m,n,2);
+        double x3 = sample_pos_local(m,n,3);
         double kcov[4];
-        kcov[0] = sample_dir(m,n,0);
-        kcov[1] = sample_dir(m,n,1);
-        kcov[2] = sample_dir(m,n,2);
-        kcov[3] = sample_dir(m,n,3);
+        kcov[0] = sample_dir_local(m,n,0);
+        kcov[1] = sample_dir_local(m,n,1);
+        kcov[2] = sample_dir_local(m,n,2);
+        kcov[3] = sample_dir_local(m,n,3);
 
         // Extract model variables
-        double rho = sample_rho(m,n);
+        double rho = sample_rho_local(m,n);
         double pgas = 0.0;
         if (plasma_model == PlasmaModel::ti_te_beta)
-          pgas = sample_pgas(m,n);
+          pgas = sample_pgas_local(m,n);
         double kappa = 0.0;
         if (plasma_model == PlasmaModel::code_kappa)
-          kappa = sample_kappa(m,n);
-        double uu1_sim = sample_uu1(m,n);
-        double uu2_sim = sample_uu2(m,n);
-        double uu3_sim = sample_uu3(m,n);
-        double bb1_sim = sample_bb1(m,n);
-        double bb2_sim = sample_bb2(m,n);
-        double bb3_sim = sample_bb3(m,n);
+          kappa = sample_kappa_local(m,n);
+        double uu1_sim = sample_uu1_local(m,n);
+        double uu2_sim = sample_uu2_local(m,n);
+        double uu3_sim = sample_uu3_local(m,n);
+        double bb1_sim = sample_bb1_local(m,n);
+        double bb2_sim = sample_bb2_local(m,n);
+        double bb3_sim = sample_bb3_local(m,n);
 
         // Skip coupling if magnetic field vanishes
         if (bb1_sim == 0.0 and bb2_sim == 0.0 and bb3_sim == 0.0)
@@ -262,7 +343,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double xx_1_6_times_2_11_12 = std::sqrt(std::cbrt(32.0 * math::sqrt2 * xx_j));
         double factor_i = xx_1_2 + xx_1_6_times_2_11_12;
         double coefficient_1 = math::sqrt2 * math::pi / 27.0;
-        j_i(m,n) = coefficient_j * exp_neg_xx_1_3 * coefficient_1 * sin_theta_b * factor_i
+        j_i_local(m,n) = coefficient_j * exp_neg_xx_1_3 * coefficient_1 * sin_theta_b * factor_i
             * factor_i / nu_2_cgs;
         if (image_polarization)
         {
@@ -275,30 +356,31 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
           double sin_theta_b_shift =
               sin_theta_b * std::cos(28.0 / 25.0) - cos_theta_b * std::sin(28.0 / 25.0);
           double coefficient_2 = (37.0 - 87.0 * sin_theta_b_shift) / (100.0 * (theta_e + 1.0));
-          j_q(m,n) = -coefficient_j * exp_neg_xx_1_3 * coefficient_1 * sin_theta_b * factor_q
+          j_q_local(m,n) = -coefficient_j * exp_neg_xx_1_3 * coefficient_1 * sin_theta_b * factor_q
               * factor_q / nu_2_cgs;
-          j_v(m,n) = coefficient_j * exp_neg_xx_1_3 * coefficient_2 * std::pow(factor_v, 5.0 / 3.0)
-              / nu_2_cgs;
+          j_v_local(m,n) = coefficient_j * exp_neg_xx_1_3 * coefficient_2
+              * std::pow(factor_v, 5.0 / 3.0) / nu_2_cgs;
         }
 
         // Calculate thermal synchrotron absorptivities from Kirchoff's law
         double b_nu_cgs = 2.0 * physics::h * nu_cgs * nu_cgs * nu_cgs / (physics::c * physics::c)
             / std::expm1(physics::h * nu_cgs / kb_tt_e_cgs);
-        alpha_i(m,n) = nu_3_cgs * j_i(m,n) / b_nu_cgs;
+        alpha_i_local(m,n) = nu_3_cgs * j_i_local(m,n) / b_nu_cgs;
         if (image_polarization)
         {
-          alpha_q(m,n) = nu_3_cgs * j_q(m,n) / b_nu_cgs;
-          alpha_v(m,n) = nu_3_cgs * j_v(m,n) / b_nu_cgs;
+          alpha_q_local(m,n) = nu_3_cgs * j_q_local(m,n) / b_nu_cgs;
+          alpha_v_local(m,n) = nu_3_cgs * j_v_local(m,n) / b_nu_cgs;
         }
 
         // Account for numerical issues later arising from absorptivities being too small
-        if (1.0 / (alpha_i(m,n) * alpha_i(m,n)) == std::numeric_limits<double>::infinity())
+        if (1.0 / (alpha_i_local(m,n) * alpha_i_local(m,n))
+            == std::numeric_limits<double>::infinity())
         {
-          alpha_i(m,n) = 0.0;
+          alpha_i_local(m,n) = 0.0;
           if (image_polarization)
           {
-            alpha_q(m,n) = 0.0;
-            alpha_v(m,n) = 0.0;
+            alpha_q_local(m,n) = 0.0;
+            alpha_v_local(m,n) = 0.0;
           }
         }
 
@@ -320,12 +402,27 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
           double factor_fm = factor_f + (xx_rho_exp - xx_rho_8_3) * 0.5
               * (1.0 + std::tanh(10.0 * std::log(xx_rho / 120.0)));
           double delta_jj_5 = 0.4379 * std::log(1.0 + 0.001858 * std::pow(xx_rho, 1.503));
-          rho_q(m,n) = coefficient_rho * nu_c_cgs * sin2_theta_b / nu_2_cgs * factor_fm
+          rho_q_local(m,n) = coefficient_rho * nu_c_cgs * sin2_theta_b / nu_2_cgs * factor_fm
               * (kk_1 / kk_2 + 6.0 * theta_e);
-          rho_v(m,n) = 2.0 * coefficient_rho * cos_theta_b / nu_cgs * (kk_0 - delta_jj_5) / kk_2;
+          rho_v_local(m,n) =
+              2.0 * coefficient_rho * cos_theta_b / nu_cgs * (kk_0 - delta_jj_5) / kk_2;
         }
       }
     }
+  }
+
+  // Free memory
+  sample_rho_adaptive.Deallocate();
+  sample_pgas_adaptive.Deallocate();
+  sample_kappa_adaptive.Deallocate();
+  if (not image_polarization)
+  {
+    sample_uu1_adaptive.Deallocate();
+    sample_uu2_adaptive.Deallocate();
+    sample_uu3_adaptive.Deallocate();
+    sample_bb1_adaptive.Deallocate();
+    sample_bb2_adaptive.Deallocate();
+    sample_bb3_adaptive.Deallocate();
   }
   return;
 }

@@ -3,8 +3,10 @@ model_type  = simulation  # type of model (formula, simulation)
 num_threads = 4           # number of threads to use in parallel
 
 # Output parameters
-output_format = npy                          # format of output file (raw, npy, npz)
-output_file   = output/quick_simulation.npy  # file to be (over)written with image data
+output_format = npz                          # format of output file (raw, npy, npz)
+output_file   = output/quick_simulation.npz  # file to be (over)written with image data
+output_params = true                         # flag for saving camera parameters
+output_camera = false                        # flag for saving camera details
 
 # Checkpoint parameters
 checkpoint_geodesic_save = false  # flag indicating geodesics should be saved
@@ -64,3 +66,6 @@ ray_tol_rel     = 1.0e-8          # relative tolerance for taking full steps
 ray_err_factor  = 0.9             # coefficient used to scale step size based on error
 ray_min_factor  = 0.2             # minimum ratio of new to old step size
 ray_max_factor  = 10.0            # maximum ratio of new to old step size
+
+# Adaptive parameters
+adaptive_on = false  # flag indicating adaptive ray tracing should be used

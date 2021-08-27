@@ -17,34 +17,67 @@
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Assumes sample_num, sample_pos, and sample_dir have been set.
-//   Allocates and initializes j_i and alpha_i.
+//   Works on arrays appropriate for root level or adaptively refined regions.
+//   Assumes sample_flags (or sample_flags_adaptive[adaptive_current_level]), sample_num (or
+//       sample_num_adaptive[adaptive_current_level]), sample_pos (or
+//       sample_pos_adaptive[adaptive_current_level]), and sample_dir (or
+//       sample_dir_adaptive[adaptive_current_level]) have been set.
+//   Allocates and initializes j_i (or j_i_adaptive) and alpha_i (or alpha_i_adaptive).
 //   References code comparison paper 2020 ApJ 897 148 (C).
 void RadiationIntegrator::CalculateFormulaCoefficients()
 {
-  // Allocate coefficient arrays
-  if (first_time)
+  // Allocate arrays
+  int num_pix = camera_num_pix;
+  if (adaptive_on and adaptive_current_level > 0)
   {
-    j_i.Allocate(camera_num_pix, geodesic_num_steps);
-    alpha_i.Allocate(camera_num_pix, geodesic_num_steps);
+    num_pix = block_counts[adaptive_current_level] * block_num_pix;
+    int geodesic_num_steps_local = geodesic_num_steps_adaptive[adaptive_current_level];
+    j_i_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+    alpha_i_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+    j_i_adaptive.Zero();
+    alpha_i_adaptive.Zero();
+  }
+  else if (first_time)
+  {
+    j_i.Allocate(num_pix, geodesic_num_steps);
+    alpha_i.Allocate(num_pix, geodesic_num_steps);
+    j_i.Zero();
+    alpha_i.Zero();
   }
 
-  // Go through pixels in parallel
+  // Alias arrays
+  Array<bool> sample_flags_local = sample_flags;
+  Array<int> sample_num_local = sample_num;
+  Array<double> sample_pos_local = sample_pos;
+  Array<double> sample_dir_local = sample_dir;
+  Array<double> j_i_local = j_i;
+  Array<double> alpha_i_local = alpha_i;
+  if (adaptive_on and adaptive_current_level > 0)
+  {
+    sample_flags_local = sample_flags_adaptive[adaptive_current_level];
+    sample_num_local = sample_num_adaptive[adaptive_current_level];
+    sample_pos_local = sample_pos_adaptive[adaptive_current_level];
+    sample_dir_local = sample_dir_adaptive[adaptive_current_level];
+    j_i_local = j_i_adaptive;
+    alpha_i_local = alpha_i_adaptive;
+  }
+
+  // Go through rays in parallel
   #pragma omp parallel for schedule(static)
-  for (int m = 0; m < camera_num_pix; m++)
+  for (int m = 0; m < num_pix; m++)
   {
     // Check number of steps
-    int num_steps = sample_num(m);
+    int num_steps = sample_num_local(m);
     if (num_steps <= 0)
       continue;
 
     // Set pixel to NaN if ray has problem
-    if (fallback_nan and sample_flags(m))
+    if (fallback_nan and sample_flags_local(m))
     {
       for (int n = 0; n < num_steps; n++)
       {
-        j_i(m,n) = std::numeric_limits<double>::quiet_NaN();
-        alpha_i(m,n) = std::numeric_limits<double>::quiet_NaN();
+        j_i_local(m,n) = std::numeric_limits<double>::quiet_NaN();
+        alpha_i_local(m,n) = std::numeric_limits<double>::quiet_NaN();
       }
       continue;
     }
@@ -53,13 +86,13 @@ void RadiationIntegrator::CalculateFormulaCoefficients()
     for (int n = 0; n < num_steps; n++)
     {
       // Extract geodesic position and momentum
-      double x = sample_pos(m,n,1);
-      double y = sample_pos(m,n,2);
-      double z = sample_pos(m,n,3);
-      double k_0 = sample_dir(m,n,0);
-      double k_1 = sample_dir(m,n,1);
-      double k_2 = sample_dir(m,n,2);
-      double k_3 = sample_dir(m,n,3);
+      double x = sample_pos_local(m,n,1);
+      double y = sample_pos_local(m,n,2);
+      double z = sample_pos_local(m,n,3);
+      double k_0 = sample_dir_local(m,n,0);
+      double k_1 = sample_dir_local(m,n,1);
+      double k_2 = sample_dir_local(m,n,2);
+      double k_3 = sample_dir_local(m,n,3);
 
       // Calculate coordinates
       double r = RadialGeodesicCoordinate(x, y, z);
@@ -113,12 +146,12 @@ void RadiationIntegrator::CalculateFormulaCoefficients()
       // Calculate emission coefficient in CGS units (C 9-10)
       double j_nu_fluid_cgs =
           formula_cn0 * n_n0_fluid * std::pow(nu_fluid_cgs / formula_nup, -formula_alpha);
-      j_i(m,n) = j_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs);
+      j_i_local(m,n) = j_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs);
 
       // Calculate absorption coefficient in CGS units (C 11-12)
       double alpha_nu_fluid_cgs = formula_a * formula_cn0 * n_n0_fluid
           * std::pow(nu_fluid_cgs / formula_nup, -formula_beta - formula_alpha);
-      alpha_i(m,n) = alpha_nu_fluid_cgs * nu_fluid_cgs;
+      alpha_i_local(m,n) = alpha_nu_fluid_cgs * nu_fluid_cgs;
     }
   }
   return;

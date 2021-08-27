@@ -10,8 +10,10 @@
 
 // Blacklight headers
 #include "geodesic_integrator.hpp"
-#include "../input_reader/input_reader.hpp"  // InputReader
-#include "../utils/exceptions.hpp"           // BlacklightException
+#include "../blacklight.hpp"                                 // enums
+#include "../input_reader/input_reader.hpp"                  // InputReader
+#include "../radiation_integrator/radiation_integrator.hpp"  // RadiationIntegrator
+#include "../utils/exceptions.hpp"                           // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
 
@@ -80,6 +82,20 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   ray_min_factor = p_input_reader->ray_min_factor.value();
   ray_max_factor = p_input_reader->ray_max_factor.value();
 
+  // Copy adaptive parameters
+  adaptive_on = p_input_reader->adaptive_on.value();
+  if (adaptive_on)
+  {
+    adaptive_block_size = p_input_reader->adaptive_block_size.value();
+    if (adaptive_block_size <= 0)
+      throw BlacklightException("Must have positive adaptive_block_size.");
+    if (image_resolution % adaptive_block_size != 0)
+      throw BlacklightException("Must have adaptive_block_size divide image_resolution.");
+    adaptive_max_level = p_input_reader->adaptive_max_level.value();
+    if (adaptive_max_level < 1)
+      throw BlacklightException("Must have at least one allowed refinement level.");
+  }
+
   // Calculate termination radii
   double r_horizon = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
   switch (ray_terminate)
@@ -103,6 +119,64 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
 
   // Calculate number of pixels
   camera_num_pix = image_resolution * image_resolution;
+
+  // Allocate space for calculating adaptive refinement
+  if (adaptive_on)
+  {
+    linear_root_blocks = image_resolution / adaptive_block_size;
+    block_num_pix = adaptive_block_size * adaptive_block_size;
+    camera_loc_adaptive = new Array<int>[adaptive_max_level+1];
+    camera_pos_adaptive = new Array<double>[adaptive_max_level+1];
+    camera_dir_adaptive = new Array<double>[adaptive_max_level+1];
+    geodesic_num_steps_adaptive = new int[adaptive_max_level+1];
+    sample_flags_adaptive = new Array<bool>[adaptive_max_level+1];
+    sample_num_adaptive = new Array<int>[adaptive_max_level+1];
+    sample_pos_adaptive = new Array<double>[adaptive_max_level+1];
+    sample_dir_adaptive = new Array<double>[adaptive_max_level+1];
+    sample_len_adaptive = new Array<double>[adaptive_max_level+1];
+  }
+
+  // Initialize locations of root blocks
+  if (adaptive_on)
+  {
+    camera_loc_adaptive[0].Allocate(linear_root_blocks * linear_root_blocks, 2);
+    for (int block_v = 0, block = 0; block_v < linear_root_blocks; block_v++)
+      for (int block_u = 0; block_u < linear_root_blocks; block_u++, block++)
+      {
+        camera_loc_adaptive[0](block,0) = block_v;
+        camera_loc_adaptive[0](block,1) = block_u;
+      }
+  }
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Geodesic integrator destructor
+GeodesicIntegrator::~GeodesicIntegrator()
+{
+  if (adaptive_on)
+  {
+    for (int level = 0; level <= adaptive_max_level; level++)
+    {
+      camera_loc_adaptive[level].Deallocate();
+      camera_pos_adaptive[level].Deallocate();
+      camera_dir_adaptive[level].Deallocate();
+      sample_flags_adaptive[level].Deallocate();
+      sample_num_adaptive[level].Deallocate();
+      sample_pos_adaptive[level].Deallocate();
+      sample_dir_adaptive[level].Deallocate();
+      sample_len_adaptive[level].Deallocate();
+    }
+    delete[] camera_loc_adaptive;
+    delete[] camera_pos_adaptive;
+    delete[] camera_dir_adaptive;
+    delete[] geodesic_num_steps_adaptive;
+    delete[] sample_flags_adaptive;
+    delete[] sample_num_adaptive;
+    delete[] sample_pos_adaptive;
+    delete[] sample_dir_adaptive;
+    delete[] sample_len_adaptive;
+  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -115,6 +189,9 @@ double GeodesicIntegrator::Integrate()
 {
   // Prepare timer
   double time_start = omp_get_wtime();
+
+  // Reset adaptive level counter
+  adaptive_current_level = 0;
 
   // Load data from checkpoint
   if (checkpoint_geodesic_load)
@@ -132,6 +209,37 @@ double GeodesicIntegrator::Integrate()
   // Save data to checkpoint
   if (checkpoint_geodesic_save)
     SaveGeodesics();
+
+  // Calculate elapsed time
+  return omp_get_wtime() - time_start;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for augmenting rays at new refinement level
+// Inputs:
+//   p_radiation_integrator: pointer to object containing processed image
+// Outputs:
+//   returned value: execution time in seconds
+// Notes:
+//   Acquires values from RadiationIntegrator that were not available at construction.
+double GeodesicIntegrator::AddGeodesics(const RadiationIntegrator *p_radiation_integrator)
+{
+  // Prepare timer
+  double time_start = omp_get_wtime();
+
+  // Increment adaptive level counter
+  adaptive_current_level++;
+
+  // Acquire refinement data
+  block_counts = p_radiation_integrator->block_counts;
+  refinement_flags = p_radiation_integrator->refinement_flags;
+
+  // Calculate geodesics
+  AugmentCamera();
+  InitializeGeodesics();
+  IntegrateGeodesics();
+  ReverseGeodesics();
 
   // Calculate elapsed time
   return omp_get_wtime() - time_start;

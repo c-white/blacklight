@@ -11,6 +11,9 @@
 #include "../input_reader/input_reader.hpp"  // InputReader
 #include "../utils/array.hpp"                // Array
 
+// Forward declarations
+struct RadiationIntegrator;
+
 //--------------------------------------------------------------------------------------------------
 
 // Geodesic integrator
@@ -20,7 +23,7 @@ struct GeodesicIntegrator
   GeodesicIntegrator(const InputReader *p_input_reader);
   GeodesicIntegrator(const GeodesicIntegrator &source) = delete;
   GeodesicIntegrator &operator=(const GeodesicIntegrator &source) = delete;
-  ~GeodesicIntegrator() {}
+  ~GeodesicIntegrator();
 
   // Input data - general
   ModelType model_type;
@@ -61,15 +64,24 @@ struct GeodesicIntegrator
   double ray_min_factor;
   double ray_max_factor;
 
+  // Input data - adaptive parameters
+  bool adaptive_on;
+  int adaptive_block_size;
+  int adaptive_max_level;
+
   // Geometry data
   double bh_m;
   double bh_a;
   double r_terminate;
 
   // Camera data
-  double momentum_factor;
-  double camera_ucon[4], camera_ucov[4], camera_up_con_c[4];
   int camera_num_pix;
+  double momentum_factor;
+  double cam_x[4];
+  double u_con[4], u_cov[4];
+  double norm_con[4], norm_con_c[4];
+  double hor_con_c[4];
+  double vert_con_c[4];
   Array<double> camera_pos, camera_dir;
 
   // Geodesic data
@@ -79,8 +91,25 @@ struct GeodesicIntegrator
   Array<int> sample_num;
   Array<double> sample_pos, sample_dir, sample_len;
 
-  // External function
+  // Adaptive data
+  int adaptive_current_level;
+  int linear_root_blocks;
+  int block_num_pix;
+  int *block_counts;
+  Array<bool> *refinement_flags;
+  Array<int> *camera_loc_adaptive;
+  Array<double> *camera_pos_adaptive;
+  Array<double> *camera_dir_adaptive;
+  int *geodesic_num_steps_adaptive;
+  Array<bool> *sample_flags_adaptive;
+  Array<int> *sample_num_adaptive;
+  Array<double> *sample_pos_adaptive;
+  Array<double> *sample_dir_adaptive;
+  Array<double> *sample_len_adaptive;
+
+  // External functions
   double Integrate();
+  double AddGeodesics(const RadiationIntegrator *p_radiation_integrator);
 
   // Internal functions - geodesic_checkpoint.cpp
   void SaveGeodesics();
@@ -88,6 +117,11 @@ struct GeodesicIntegrator
 
   // Internal functions - camera.cpp
   void InitializeCamera();
+  void AugmentCamera();
+  void SetPixelPlane(double u_ind, double v_ind, int ind, Array<double> &position,
+      Array<double> &direction);
+  void SetPixelPinhole(double u_ind, double v_ind, int ind, Array<double> &position,
+      Array<double> &direction);
 
   // Internal functions - geodesics.cpp
   void InitializeGeodesics();

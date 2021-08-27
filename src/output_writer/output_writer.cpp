@@ -18,17 +18,18 @@
 
 // Output writer constructor
 // Inputs:
-//   p_input_reader: pointer to object containing input parameters
-//   p_geodesic_integrator: pointer to object containing ray data
-//   p_radiation_integrator: pointer to object containing processed image
+//   p_input_reader_: pointer to object containing input parameters
+//   p_geodesic_integrator_: pointer to object containing ray data
+//   p_radiation_integrator_: pointer to object containing processed image
 // Notes:
 //   File is not opened for writing until Write() function is called, in order to not bother keeping
 //       an open file idle for the bulk of the computation, and because the file name might be
 //       reformatted after this constructor is called.
 OutputWriter::OutputWriter(const InputReader *p_input_reader_,
-    const GeodesicIntegrator *p_geodesic_integrator,
+    const GeodesicIntegrator *p_geodesic_integrator_,
     const RadiationIntegrator *p_radiation_integrator_)
-  : p_input_reader(p_input_reader_), p_radiation_integrator(p_radiation_integrator_)
+  : p_input_reader(p_input_reader_), p_geodesic_integrator(p_geodesic_integrator_),
+    p_radiation_integrator(p_radiation_integrator_)
 {
   // Copy output parameters
   output_format = p_input_reader->output_format.value();
@@ -39,7 +40,13 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   }
 
   // Copy image parameters
+  if (output_format == OutputFormat::npz and output_camera)
+    image_camera = p_input_reader->image_camera.value();
   image_resolution = p_input_reader->image_resolution.value();
+  image_polarization = p_input_reader->image_polarization.value();
+  if (image_polarization and
+      not (output_format == OutputFormat::npz or output_format == OutputFormat::npy))
+    throw BlacklightException("Only npz or npy outputs support polarization.");
   if (output_format == OutputFormat::npz and output_params)
   {
     image_width_array.Allocate(1);
@@ -50,9 +57,17 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
     mass_msun_array(0) = p_radiation_integrator->mass_msun;
   }
 
-  // Make local shallow copies of data, reshaping the arrays
-  if (output_format == OutputFormat::npz and output_camera)
-    image_camera = p_input_reader->image_camera.value();
+  // Copy adaptive parameters
+  adaptive_on = p_input_reader->adaptive_on.value();
+  if (adaptive_on)
+  {
+    if (output_format != OutputFormat::npz)
+      throw BlacklightException("Only npz outputs support adaptive ray tracing.");
+    adaptive_block_size = p_input_reader->adaptive_block_size.value();
+    adaptive_max_level = p_input_reader->adaptive_max_level.value();
+  }
+
+  // Make shallow copies of camera data, reshaping the arrays
   if (output_format == OutputFormat::npz and output_camera and image_camera == Camera::plane)
   {
     camera_pos = p_geodesic_integrator->camera_pos;
@@ -65,6 +80,37 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
     camera_dir.n3 = image_resolution;
     camera_dir.n2 = image_resolution;
   }
+
+  // Allocate space for shallow copies of adaptive data
+  adaptive_num_levels_array.Allocate(1);
+  if (adaptive_on)
+  {
+    image_adaptive = new Array<double>[adaptive_max_level+1];
+    camera_loc_adaptive = new Array<int>[adaptive_max_level+1];
+    camera_pos_adaptive = new Array<double>[adaptive_max_level+1];
+    camera_dir_adaptive = new Array<double>[adaptive_max_level+1];
+  }
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Output writer destructor
+OutputWriter::~OutputWriter()
+{
+  if (adaptive_on)
+  {
+    for (int level = 0; level <= adaptive_max_level; level++)
+    {
+      image_adaptive[level].Deallocate();
+      camera_loc_adaptive[level].Deallocate();
+      camera_pos_adaptive[level].Deallocate();
+      camera_dir_adaptive[level].Deallocate();
+    }
+    delete[] image_adaptive;
+    delete[] camera_loc_adaptive;
+    delete[] camera_pos_adaptive;
+    delete[] camera_dir_adaptive;
+  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -76,7 +122,7 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
 //   Opens and closes stream for reading.
 void OutputWriter::Write()
 {
-  // Make shallow copy of image
+  // Make shallow copy of root image data
   if (first_time)
   {
     image = p_radiation_integrator->image;
@@ -84,6 +130,44 @@ void OutputWriter::Write()
     image.n2 = image_resolution;
     image.n1 = image_resolution;
   }
+
+  // Make shallow copy of adaptive image data
+  adaptive_num_levels_array(0) = p_radiation_integrator->adaptive_num_levels;
+  if (adaptive_on)
+  {
+    block_counts_array.Allocate(adaptive_num_levels_array(0) + 1);
+    block_counts_array(0) = p_radiation_integrator->block_counts[0];
+    for (int level = 1; level <= adaptive_num_levels_array(0); level++)
+    {
+      block_counts_array(level) = p_radiation_integrator->block_counts[level];
+      image_adaptive[level] = p_radiation_integrator->image_adaptive[level];
+      image_adaptive[level].n4 = image_adaptive[level].n2;
+      image_adaptive[level].n3 = block_counts_array(level);
+      image_adaptive[level].n2 = adaptive_block_size;
+      image_adaptive[level].n1 = adaptive_block_size;
+    }
+  }
+
+  // Make shallow copy of adaptive camera data
+  if (adaptive_on)
+    for (int level = 1; level <= adaptive_num_levels_array(0); level++)
+      camera_loc_adaptive[level] = p_geodesic_integrator->camera_loc_adaptive[level];
+  if (adaptive_on and output_camera and image_camera == Camera::plane)
+    for (int level = 1; level <= adaptive_num_levels_array(0); level++)
+    {
+      camera_pos_adaptive[level] = p_geodesic_integrator->camera_pos_adaptive[level];
+      camera_pos_adaptive[level].n4 = block_counts_array(level);
+      camera_pos_adaptive[level].n3 = adaptive_block_size;
+      camera_pos_adaptive[level].n2 = adaptive_block_size;
+    }
+  if (adaptive_on and output_camera and image_camera == Camera::pinhole)
+    for (int level = 1; level <= adaptive_num_levels_array(0); level++)
+    {
+      camera_dir_adaptive[level] = p_geodesic_integrator->camera_dir_adaptive[level];
+      camera_dir_adaptive[level].n4 = block_counts_array(level);
+      camera_dir_adaptive[level].n3 = adaptive_block_size;
+      camera_dir_adaptive[level].n2 = adaptive_block_size;
+    }
 
   // Open output file
   output_file = p_input_reader->output_file_formatted;
@@ -116,5 +200,8 @@ void OutputWriter::Write()
 
   // Update first time flag
   first_time = false;
+
+  // Free memory
+  block_counts_array.Deallocate();
   return;
 }
