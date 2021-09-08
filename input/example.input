@@ -50,6 +50,15 @@ plasma_rat_low   = 1.0         # ion-electron temperature ratio at zero plasma b
 plasma_rat_high  = 10.0        # ion-electron temperature ratio at infinite plasma beta
 plasma_sigma_max = 1.0         # if nonnegative, cutoff in sigma above which plasma is ignored
 
+# Slow light parameters (only used if model_type == simulation)
+slow_light_on   = false  # flag indicating slow light should be used
+slow_interp     = true   # flag indicating slow light should interpolate between input files
+slow_chunk_size = 10     # number of simultaneous files to use for slow light
+slow_t_start    = 0.0    # time at camera of first slow light snapshot to make
+slow_dt         = 1.0    # timestep between slow light snapshots to make
+slow_num_images = 1      # number of slow light snapshots to make
+slow_offset     = 0      # offset to use for numbering slow light output files
+
 # Fallback parameters
 fallback_nan   = true    # flag indicating any fallback should result in NaN for that ray
 fallback_rho   = 1.0e-6  # out-of-bounds density (model_type == simulation and not fallback_nan)

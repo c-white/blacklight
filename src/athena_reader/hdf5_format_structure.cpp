@@ -231,26 +231,25 @@ void AthenaReader::ReadHDF5RootObjectHeader()
       {
         root_grid_size_found = true;
         Array<int> root_grid_size;
-        SetHDF5IntArray(datatype_raw, dataspace_raw, message_data + offset, true, root_grid_size);
+        SetHDF5IntArray(datatype_raw, dataspace_raw, message_data + offset, root_grid_size);
         n_3_root = root_grid_size(2);
       }
       else if (name == "DatasetNames")
       {
         dataset_names_found = true;
-        SetHDF5StringArray(datatype_raw, dataspace_raw, message_data + offset, first_time,
-            &dataset_names, &num_dataset_names);
+        SetHDF5StringArray(datatype_raw, dataspace_raw, message_data + offset,
+            first_time_root_object_header, &dataset_names, &num_dataset_names);
       }
       else if (name == "VariableNames")
       {
         variable_names_found = true;
-        SetHDF5StringArray(datatype_raw, dataspace_raw, message_data + offset, first_time,
-            &variable_names, &num_variable_names);
+        SetHDF5StringArray(datatype_raw, dataspace_raw, message_data + offset,
+            first_time_root_object_header, &variable_names, &num_variable_names);
       }
       else if (name == "NumVariables")
       {
         num_variables_found = true;
-        SetHDF5IntArray(datatype_raw, dataspace_raw, message_data + offset, first_time,
-            num_variables);
+        SetHDF5IntArray(datatype_raw, dataspace_raw, message_data + offset, num_variables);
       }
 
       // Free raw buffers
@@ -275,6 +274,9 @@ void AthenaReader::ReadHDF5RootObjectHeader()
   if (num_variables.n1 != num_dataset_names)
     throw BlacklightException("DatasetNames and NumVariables file-level attribute mismatch.");
   VerifyVariables();
+
+  // Update first time flag
+  first_time_root_object_header = false;
   return;
 }
 
@@ -310,7 +312,7 @@ void AthenaReader::ReadHDF5Tree()
   // Read number of children
   unsigned short int num_entries;
   data_stream.read(reinterpret_cast<char *>(&num_entries), 2);
-  if (first_time)
+  if (first_time_tree)
     num_children = num_entries;
   else if (num_children != num_entries)
     throw BlacklightException("File layout mismatch upon subsequent read.");
@@ -319,12 +321,143 @@ void AthenaReader::ReadHDF5Tree()
   data_stream.ignore(16);
 
   // Read addresses of children
-  if (first_time)
+  if (first_time_tree)
     children_addresses = new unsigned long int[num_children];
   for (int n = 0; n < num_children; n++)
   {
     data_stream.ignore(8);
     data_stream.read(reinterpret_cast<char *>(children_addresses + n), 8);
   }
+
+  // Update first time flag
+  first_time_tree = false;
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to read a scalar, single-precision file attribute
+// Inputs:
+//   attribute_name: name of attribute
+// Outputs:
+//   *p_val: value set
+// Notes:
+//   Assumes root_object_header_address set.
+//   Changes stream pointer.
+//   Must have object header version 1.
+//   Must not have shared header messages.
+//   Must have attribute message version 1.
+//   Must have size of offsets 8.
+//   Must be run on little-endian machine.
+void AthenaReader::ReadHDF5FloatAttribute(const char *attribute_name, float *p_val)
+{
+  // Check object header version
+  data_stream.seekg(static_cast<std::streamoff>(root_object_header_address));
+  if (data_stream.get() != 1)
+    throw BlacklightException("Unexpected HDF5 object header version.");
+  data_stream.ignore(1);
+
+  // Read number of header messages
+  unsigned short int num_messages;
+  data_stream.read(reinterpret_cast<char *>(&num_messages), 2);
+
+  // Skip reading object reference count and object header size
+  data_stream.ignore(8);
+
+  // Align to 8 bytes within header (location of padding not documented)
+  data_stream.ignore(4);
+
+  // Go through messages
+  bool attribute_found = false;
+  for (int n = 0; n < num_messages; n++)
+  {
+    // Read message type and size
+    unsigned short int message_type, message_size;
+    data_stream.read(reinterpret_cast<char *>(&message_type), 2);
+    data_stream.read(reinterpret_cast<char *>(&message_size), 2);
+
+    // Check message flags
+    unsigned char message_flags;
+    data_stream.read(reinterpret_cast<char *>(&message_flags), 1);
+    data_stream.ignore(3);
+    if (message_flags & 0b00000010)
+      throw BlacklightException("Unexpected HDF5 header message flag.");
+
+    // Read message data
+    unsigned char *message_data = new unsigned char[message_size];
+    data_stream.read(reinterpret_cast<char *>(message_data), message_size);
+
+    // Follow any continuation messages
+    if (message_type == 16)
+    {
+      unsigned long int new_offset;
+      std::memcpy(&new_offset, message_data, 8);
+      data_stream.seekg(static_cast<std::streamoff>(new_offset));
+      continue;
+    }
+
+    // Inspect any attribute messages
+    else if (message_type == 12)
+    {
+
+      // Check attribute message version
+      int offset = 0;
+      if (message_data[offset] != 1)
+        throw BlacklightException("Unexpected HDF5 attribute message version.");
+      offset += 2;
+
+      // Read attribute message metadata
+      unsigned short int name_size, datatype_size, dataspace_size;
+      std::memcpy(&name_size, message_data + offset, 2);
+      offset += 2;
+      std::memcpy(&datatype_size, message_data + offset, 2);
+      offset += 2;
+      std::memcpy(&dataspace_size, message_data + offset, 2);
+      offset += 2;
+      unsigned short int name_size_pad = static_cast<unsigned short int>((8 - name_size % 8) % 8);
+      unsigned short int datatype_size_pad =
+          static_cast<unsigned short int>((8 - datatype_size % 8) % 8);
+      unsigned short int dataspace_size_pad =
+          static_cast<unsigned short int>((8 - dataspace_size % 8) % 8);
+
+      // Read attribute message data
+      unsigned char *name_raw = new unsigned char[name_size];
+      unsigned char *datatype_raw = new unsigned char[datatype_size];
+      unsigned char *dataspace_raw = new unsigned char[dataspace_size];
+      std::memcpy(name_raw, message_data + offset, name_size);
+      offset += name_size + name_size_pad;
+      std::memcpy(datatype_raw, message_data + offset, datatype_size);
+      offset += datatype_size + datatype_size_pad;
+      std::memcpy(dataspace_raw, message_data + offset, dataspace_size);
+      offset += dataspace_size + dataspace_size_pad;
+      std::string name(reinterpret_cast<char *>(name_raw),
+          static_cast<std::string::size_type>(static_cast<int>(name_size) - 1));
+
+      // Read and set desired attributes
+      if (name == attribute_name)
+      {
+        attribute_found = true;
+        Array<float> attribute;
+        SetHDF5FloatArray(datatype_raw, dataspace_raw, message_data + offset, attribute);
+        *p_val = attribute(0);
+      }
+
+      // Free raw buffers
+      delete[] name_raw;
+      delete[] datatype_raw;
+      delete[] dataspace_raw;
+    }
+
+    // Free raw buffer
+    delete[] message_data;
+
+    // Break when required information found
+    if (attribute_found)
+      break;
+  }
+
+  // Check that appropriate message was found
+  if (not attribute_found)
+    throw BlacklightException("Could not find needed file-level attributes.");
   return;
 }

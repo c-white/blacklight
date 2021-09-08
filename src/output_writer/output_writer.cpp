@@ -1,9 +1,12 @@
 // Blacklight output writer
 
 // C++ headers
+#include <cstdio>    // snprintf
 #include <fstream>   // ofstream
 #include <ios>       // ios_base
 #include <optional>  // optional
+#include <sstream>   // ostringstream
+#include <string>    // stoi, string
 
 // Blacklight headers
 #include "output_writer.hpp"
@@ -31,13 +34,21 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   : p_input_reader(p_input_reader_), p_geodesic_integrator(p_geodesic_integrator_),
     p_radiation_integrator(p_radiation_integrator_)
 {
+  // Copy general input data
+  model_type = p_input_reader->model_type.value();
+
   // Copy output parameters
   output_format = p_input_reader->output_format.value();
+  output_file = p_input_reader->output_file.value();
   if (output_format == OutputFormat::npz)
   {
     output_params = p_input_reader->output_params.value();
     output_camera = p_input_reader->output_camera.value();
   }
+
+  // Copy simulation parameters
+  if (model_type == ModelType::simulation)
+    simulation_multiple = p_input_reader->simulation_multiple.value();
 
   // Copy image parameters
   if (output_format == OutputFormat::npz and output_camera)
@@ -116,11 +127,12 @@ OutputWriter::~OutputWriter()
 //--------------------------------------------------------------------------------------------------
 
 // Output writer write function
-// Inputs: (none)
+// Inputs:
+//   snapshot: index (starting at 0) of which snapshot is about to be written
 // Outputs: (none)
 // Notes:
 //   Opens and closes stream for reading.
-void OutputWriter::Write()
+void OutputWriter::Write(int snapshot)
 {
   // Make shallow copy of root image data
   if (first_time)
@@ -170,8 +182,11 @@ void OutputWriter::Write()
     }
 
   // Open output file
-  output_file = p_input_reader->output_file_formatted;
-  p_output_stream = new std::ofstream(output_file, std::ios_base::out | std::ios_base::binary);
+  std::string output_file_formatted = output_file;
+  if (model_type == ModelType::simulation and simulation_multiple)
+    output_file_formatted = FormatFilename(snapshot);
+  p_output_stream =
+      new std::ofstream(output_file_formatted, std::ios_base::out | std::ios_base::binary);
   if (not p_output_stream->is_open())
     throw BlacklightException("Could not open output file.");
 
@@ -204,4 +219,46 @@ void OutputWriter::Write()
   // Free memory
   block_counts_array.Deallocate();
   return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to construct filename formatted with file number
+// Inputs:
+//   file_number: number of output file to construct
+// Outputs:
+//   returned_value: string containing formatted filename
+std::string OutputWriter::FormatFilename(int file_number)
+{
+  // Locate braces
+  std::string::size_type output_pos_open = output_file.find_first_of('{');
+  if (output_pos_open == std::string::npos)
+    throw BlacklightException("Invalid output_file for multiple runs.");
+  std::string::size_type output_pos_close = output_file.find_first_of('}', output_pos_open);
+  if (output_pos_close == std::string::npos)
+    throw BlacklightException("Invalid output_file for multiple runs.");
+
+  // Parse integer format string
+  if (output_file[output_pos_close-1] != 'd')
+    throw BlacklightException("Invalid output_file for multiple runs.");
+  int output_field_length = 0;
+  if (output_pos_close - output_pos_open > 2)
+    output_field_length = std::stoi(output_file.substr(output_pos_open + 1,
+        output_pos_close - output_pos_open - 2));
+  int file_number_length = std::snprintf(nullptr, 0, "%d", file_number);
+  if (file_number_length < 0)
+    throw BlacklightException("Could not format file name.");
+  int num_zeros = 0;
+  if (file_number_length < output_field_length)
+    num_zeros = output_field_length - file_number_length;
+
+  // Create filename
+  std::ostringstream output_filename;
+  output_filename << output_file.substr(0, output_pos_open);
+  for (int n = 0; n < num_zeros; n++)
+    output_filename << "0";
+  output_filename << file_number;
+  output_filename << output_file.substr(output_pos_close + 1);
+  std::string output_file_formatted = output_filename.str();
+  return output_file_formatted;
 }

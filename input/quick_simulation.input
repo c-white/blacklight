@@ -33,6 +33,9 @@ plasma_rat_low   = 1.0         # ion-electron temperature ratio at zero plasma b
 plasma_rat_high  = 10.0        # ion-electron temperature ratio at infinite plasma beta
 plasma_sigma_max = 1.0         # if nonnegative, cutoff in sigma above which plasma is ignored
 
+# Slow light parameters (only used if model_type == simulation)
+slow_light_on = false  # flag indicating slow light should be used
+
 # Fallback parameters
 fallback_nan = true  # flag indicating any fallback should result in NaN for that ray
 

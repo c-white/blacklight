@@ -29,13 +29,26 @@ struct AthenaReader
   // Input data - general
   ModelType model_type;
 
-  // Input data - simulation and plasma parameters
+  // Input data - simulation parameters
   std::string simulation_file;
+  bool simulation_multiple;
+  int simulation_start;
+  int simulation_end;
   std::string simulation_kappa_name;
+
+  // Input data - plasma parameters
   PlasmaModel plasma_model;
 
-  // Flag
+  // Input data - slow light parameters
+  bool slow_light_on;
+  int slow_chunk_size;
+  double slow_t_start;
+  double slow_dt;
+
+  // Flags for tracking function calls
   bool first_time = true;
+  bool first_time_root_object_header = true;
+  bool first_time_tree = true;
 
   // Metadata
   std::ifstream data_stream;
@@ -53,6 +66,9 @@ struct AthenaReader
   int ind_rho, ind_pgas, ind_kappa;
   int ind_uu1, ind_uu2, ind_uu3;
   int ind_bb1, ind_bb2, ind_bb3;
+  int num_arrays;
+  int latest_file_number;
+  const float extrapolation_tolerance = 1.0;
 
   // Data
   int n_3_root;
@@ -60,12 +76,14 @@ struct AthenaReader
   Array<int> locations;
   Array<float> x1f, x2f, x3f;
   Array<float> x1v, x2v, x3v;
-  Array<float> prim, bb;
+  float *time;
+  Array<float> *prim, *bb;
 
   // External function
-  double Read();
+  double Read(int snapshot);
 
   // Internal functions - athena_reader.cpp
+  std::string FormatFilename(int file_number);
   void VerifyVariables();
 
   // Internal functions - hdf5_format_structure.cpp
@@ -74,6 +92,7 @@ struct AthenaReader
   void ReadHDF5RootHeap();
   void ReadHDF5RootObjectHeader();
   void ReadHDF5Tree();
+  void ReadHDF5FloatAttribute(const char *attribute_name, float *p_val);
 
   // Internal functions - hdf5_format_metadata.cpp
   unsigned long int ReadHDF5DatasetHeaderAddress(const char *name);
@@ -89,10 +108,9 @@ struct AthenaReader
       const unsigned char *dataspace_raw, const unsigned char *data_raw, bool allocate,
       std::string **string_array, int *p_array_length);
   static void SetHDF5IntArray(const unsigned char *datatype_raw, const unsigned char *dataspace_raw,
-      const unsigned char *data_raw, bool allocate, Array<int> &int_array);
+      const unsigned char *data_raw, Array<int> &int_array);
   static void SetHDF5FloatArray(const unsigned char *datatype_raw,
-      const unsigned char *dataspace_raw, const unsigned char *data_raw, bool allocate,
-      Array<float> &float_array);
+      const unsigned char *dataspace_raw, const unsigned char *data_raw, Array<float> &float_array);
 };
 
 #endif

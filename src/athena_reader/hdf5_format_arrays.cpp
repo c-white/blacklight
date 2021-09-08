@@ -31,7 +31,7 @@ void AthenaReader::ReadHDF5IntArray(const char *name, Array<int> &int_array)
   ReadHDF5DataObjectHeader(header_address, &datatype_raw, &dataspace_raw, &data_raw);
 
   // Set array
-  SetHDF5IntArray(datatype_raw, dataspace_raw, data_raw, first_time, int_array);
+  SetHDF5IntArray(datatype_raw, dataspace_raw, data_raw, int_array);
   delete[] datatype_raw;
   delete[] dataspace_raw;
   delete[] data_raw;
@@ -57,7 +57,7 @@ void AthenaReader::ReadHDF5FloatArray(const char *name, Array<float> &float_arra
   ReadHDF5DataObjectHeader(header_address, &datatype_raw, &dataspace_raw, &data_raw);
 
   // Set array
-  SetHDF5FloatArray(datatype_raw, dataspace_raw, data_raw, first_time, float_array);
+  SetHDF5FloatArray(datatype_raw, dataspace_raw, data_raw, float_array);
   delete[] datatype_raw;
   delete[] dataspace_raw;
   delete[] data_raw;
@@ -137,9 +137,8 @@ void AthenaReader::SetHDF5StringArray(const unsigned char *datatype_raw,
 //   datatype_raw: raw datatype description
 //   dataspace_raw: raw dataspace description
 //   data_raw: raw data
-//   allocate: flag indicating new memory should be allocated
 // Outputs:
-//   int_array: array allocated and set
+//   int_array: array allocated (if not already allocated) and set
 // Notes:
 //   Must have datatype version 1.
 //   Must be 4 or 8 bytes.
@@ -148,8 +147,7 @@ void AthenaReader::SetHDF5StringArray(const unsigned char *datatype_raw,
 //   Must have no offset.
 //   Must be run on little-endian machine.
 void AthenaReader::SetHDF5IntArray(const unsigned char *datatype_raw,
-    const unsigned char *dataspace_raw, const unsigned char *data_raw, bool allocate,
-    Array<int> &int_array)
+    const unsigned char *dataspace_raw, const unsigned char *data_raw, Array<int> &int_array)
 {
   // Check datatype version and class
   int offset = 0;
@@ -194,17 +192,19 @@ void AthenaReader::SetHDF5IntArray(const unsigned char *datatype_raw,
   // Allocate array
   if (num_dims == 1)
   {
-    if (allocate)
+    if (not int_array.allocated)
       int_array.Allocate(static_cast<int>(dims[0]));
-    else if (dims[0] != static_cast<unsigned long int>(int_array.n1))
+    else if (static_cast<unsigned long int>(int_array.n1) != dims[0]
+        or static_cast<unsigned int>(int_array.n_tot) != num_elements)
       throw BlacklightException("Array mismatch upon subsequent read.");
   }
   else if (num_dims == 2)
   {
-    if (allocate)
+    if (not int_array.allocated)
       int_array.Allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]));
-    else if (dims[0] != static_cast<unsigned long int>(int_array.n2)
-        or dims[1] != static_cast<unsigned long int>(int_array.n1))
+    else if (static_cast<unsigned long int>(int_array.n2) != dims[0]
+        or static_cast<unsigned long int>(int_array.n1) != dims[1]
+        or static_cast<unsigned int>(int_array.n_tot) != num_elements)
       throw BlacklightException("Array mismatch upon subsequent read.");
   }
   else
@@ -245,16 +245,14 @@ void AthenaReader::SetHDF5IntArray(const unsigned char *datatype_raw,
 //   datatype_raw: raw datatype description
 //   dataspace_raw: raw dataspace description
 //   data_raw: raw data
-//   allocate: flag indicating new memory should be allocated
 // Outputs:
-//   float_array: array allocated and set
+//   float_array: array allocated (if not already allocated) and set
 // Notes:
 //   Must have datatype version 1.
 //   Must be standard 4-byte floats.
 //   Must be run on little-endian machine.
 void AthenaReader::SetHDF5FloatArray(const unsigned char *datatype_raw,
-    const unsigned char *dataspace_raw, const unsigned char *data_raw, bool allocate,
-    Array<float> &float_array)
+    const unsigned char *dataspace_raw, const unsigned char *data_raw, Array<float> &float_array)
 {
   // Check datatype version and class
   int offset = 0;
@@ -312,31 +310,41 @@ void AthenaReader::SetHDF5FloatArray(const unsigned char *datatype_raw,
     num_elements *= static_cast<unsigned int>(dims[n]);
 
   // Allocate array
-  if (num_dims == 1)
+  if (num_dims == 0)
   {
-    if (allocate)
+    if (not float_array.allocated)
+      float_array.Allocate(1);
+    else if (float_array.n_tot != num_elements)
+      throw BlacklightException("Array mismatch upon subsequent read.");
+  }
+  else if (num_dims == 1)
+  {
+    if (not float_array.allocated)
       float_array.Allocate(static_cast<int>(dims[0]));
-    else if (dims[0] != static_cast<unsigned long int>(float_array.n1))
+    else if (static_cast<unsigned long int>(float_array.n1) != dims[0]
+        or static_cast<unsigned int>(float_array.n_tot) != num_elements)
       throw BlacklightException("Array mismatch upon subsequent read.");
   }
   else if (num_dims == 2)
   {
-    if (allocate)
+    if (not float_array.allocated)
       float_array.Allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]));
-    else if (dims[0] != static_cast<unsigned long int>(float_array.n2)
-        or dims[1] != static_cast<unsigned long int>(float_array.n1))
+    else if (static_cast<unsigned long int>(float_array.n2) != dims[0]
+        or static_cast<unsigned long int>(float_array.n1) != dims[1]
+        or static_cast<unsigned int>(float_array.n_tot) != num_elements)
       throw BlacklightException("Array mismatch upon subsequent read.");
   }
   else if (num_dims == 5)
   {
-    if (allocate)
+    if (not float_array.allocated)
       float_array.Allocate(static_cast<int>(dims[0]), static_cast<int>(dims[1]),
           static_cast<int>(dims[2]), static_cast<int>(dims[3]), static_cast<int>(dims[4]));
-    else if (dims[0] != static_cast<unsigned long int>(float_array.n5)
-        or dims[1] != static_cast<unsigned long int>(float_array.n4)
-        or dims[2] != static_cast<unsigned long int>(float_array.n3)
-        or dims[3] != static_cast<unsigned long int>(float_array.n2)
-        or dims[4] != static_cast<unsigned long int>(float_array.n1))
+    else if (static_cast<unsigned long int>(float_array.n5) != dims[0]
+        or static_cast<unsigned long int>(float_array.n4) != dims[1]
+        or static_cast<unsigned long int>(float_array.n3) != dims[2]
+        or static_cast<unsigned long int>(float_array.n2) != dims[3]
+        or static_cast<unsigned long int>(float_array.n1) != dims[4]
+        or static_cast<unsigned int>(float_array.n_tot) != num_elements)
       throw BlacklightException("Array mismatch upon subsequent read.");
   }
   else

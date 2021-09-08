@@ -108,6 +108,21 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     plasma_sigma_max = p_input_reader->plasma_sigma_max.value();
   }
 
+  // Copy slow light parameters
+  if (model_type == ModelType::simulation)
+  {
+    slow_light_on = p_input_reader->slow_light_on.value();
+    if (slow_light_on)
+    {
+      if (checkpoint_sample_save or checkpoint_sample_load)
+        throw BlacklightException("Cannot use sample checkpoints with slow light.");
+      slow_interp = p_input_reader->slow_interp.value();
+      slow_chunk_size = p_input_reader->slow_chunk_size.value();
+      slow_t_start = p_input_reader->slow_t_start.value();
+      slow_dt = p_input_reader->slow_dt.value();
+    }
+  }
+
   // Copy fallback parameters
   fallback_nan = p_input_reader->fallback_nan.value();
   if (model_type == ModelType::simulation and not fallback_nan)
@@ -201,6 +216,10 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     sample_len_adaptive = p_geodesic_integrator->sample_len_adaptive;
   }
 
+  // Copy slow light extrapolation tolerance
+  if (slow_light_on)
+    extrapolation_tolerance = p_athena_reader->extrapolation_tolerance;
+
   // Calculate black hole mass
   switch (model_type)
   {
@@ -260,6 +279,7 @@ RadiationIntegrator::~RadiationIntegrator()
 
 // Top-level function for processing raw data into image
 // Inputs:
+//   snapshot: index (starting at 0) of which snapshot is about to be processed
 //   *p_time_sample: amount of time already taken for sampling
 //   *p_time_integrate: amount of time already taken for integrating
 // Outputs:
@@ -268,7 +288,7 @@ RadiationIntegrator::~RadiationIntegrator()
 //   returned value: flag indicating no additional geodesics need to be run for this snapshot
 // Notes:
 //   Assumes all data arrays have been set.
-bool RadiationIntegrator::Integrate(double *p_time_sample, double *p_time_integrate)
+bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double *p_time_integrate)
 {
   // Prepare timers
   double time_sample_start = 0.0;
@@ -283,16 +303,18 @@ bool RadiationIntegrator::Integrate(double *p_time_sample, double *p_time_integr
     if (first_time)
       ObtainGridData();
     if (adaptive_on and adaptive_current_level > 0)
-      CalculateSimulationSampling();
+      CalculateSimulationSampling(snapshot);
     else if (first_time)
     {
       if (checkpoint_sample_load)
         LoadSampling();
       else
-        CalculateSimulationSampling();
+        CalculateSimulationSampling(snapshot);
       if (checkpoint_sample_save)
         SaveSampling();
     }
+    else if (slow_light_on)
+      CalculateSimulationSampling(snapshot);
     SampleSimulation();
     time_sample_end = omp_get_wtime();
   }

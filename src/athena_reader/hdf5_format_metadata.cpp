@@ -232,7 +232,12 @@ void AthenaReader::ReadHDF5DataspaceDims(const unsigned char *dataspace_raw,
   offset += 5;
 
   // Allocate and extract dimensions
-  *p_dims = new unsigned long int[*p_num_dims];
-  std::memcpy(*p_dims, dataspace_raw + offset, static_cast<std::size_t>(8 * (*p_num_dims)));
+  if (*p_num_dims > 0)
+  {
+    *p_dims = new unsigned long int[*p_num_dims];
+    std::memcpy(*p_dims, dataspace_raw + offset, static_cast<std::size_t>(8 * (*p_num_dims)));
+  }
+  else
+    *p_dims = nullptr;
   return;
 }

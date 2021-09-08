@@ -61,6 +61,13 @@ struct RadiationIntegrator
   double plasma_rat_low;
   double plasma_sigma_max;
 
+  // Input data - slow light parameters
+  bool slow_light_on;
+  bool slow_interp;
+  int slow_chunk_size;
+  double slow_t_start;
+  double slow_dt;
+
   // Input data - fallback parameters
   bool fallback_nan;
   float fallback_rho;
@@ -91,7 +98,7 @@ struct RadiationIntegrator
   double adaptive_rel_lapl_cut;
   double adaptive_rel_lapl_frac;
 
-  // Flag
+  // Flag for tracking function calls
   bool first_time = true;
 
   // Geometry data
@@ -130,9 +137,11 @@ struct RadiationIntegrator
   Array<int> levels, locations;
   Array<float> x1f, x2f, x3f;
   Array<float> x1v, x2v, x3v;
-  Array<float> grid_rho, grid_pgas, grid_kappa;
-  Array<float> grid_uu1, grid_uu2, grid_uu3;
-  Array<float> grid_bb1, grid_bb2, grid_bb3;
+  float *time;
+  Array<float> *grid_prim, *grid_bb;
+  int ind_rho, ind_pgas, ind_kappa;
+  int ind_uu1, ind_uu2, ind_uu3;
+  int ind_bb1, ind_bb2, ind_bb3;
 
   // Sample data
   Array<int> sample_inds;
@@ -141,6 +150,7 @@ struct RadiationIntegrator
   Array<float> sample_rho, sample_pgas, sample_kappa;
   Array<float> sample_uu1, sample_uu2, sample_uu3;
   Array<float> sample_bb1, sample_bb2, sample_bb3;
+  float extrapolation_tolerance;
 
   // Coefficient data
   Array<double> j_i, j_q, j_v;
@@ -178,7 +188,7 @@ struct RadiationIntegrator
   Array<double> *image_blocks;
 
   // External function
-  bool Integrate(double *p_time_sample, double *p_time_integrate);
+  bool Integrate(int snapshot, double *p_time_sample, double *p_time_integrate);
 
   // Internal functions - sample_checkpoint.cpp
   void SaveSampling();
@@ -186,13 +196,13 @@ struct RadiationIntegrator
 
   // Internal functions - simulation_sampling.cpp
   void ObtainGridData();
-  void CalculateSimulationSampling();
+  void CalculateSimulationSampling(int snapshot);
   void SampleSimulation();
   void FindNearbyInds(int b, int k, int j, int i, int k_c, int j_c, int i_c, double x3, double x2,
       double x1, int inds[4]);
-  float InterpolateSimple(const Array<float> &grid_vals, int b, int k, int j, int i, double f_k,
-      double f_j, double f_i);
-  float InterpolateAdvanced(const Array<float> &grid_vals, int m, int n);
+  double InterpolateSimple(const Array<float> &grid_vals, int grid_ind, int b, int k, int j, int i,
+      double f_k, double f_j, double f_i);
+  double InterpolateAdvanced(const Array<float> &grid_vals, int grid_ind, int m, int n);
 
   // Internal functions - simulation_coefficients.cpp
   void CalculateSimulationCoefficients();

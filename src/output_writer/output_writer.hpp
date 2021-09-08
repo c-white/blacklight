@@ -33,11 +33,17 @@ struct OutputWriter
   const GeodesicIntegrator *p_geodesic_integrator;
   const RadiationIntegrator *p_radiation_integrator;
 
+  // Input data - general
+  ModelType model_type;
+
   // Input data - output parameters
   OutputFormat output_format;
   std::string output_file;
   bool output_params;
   bool output_camera;
+
+  // Input data - simulation parameters
+  bool simulation_multiple;
 
   // Input data - image parameters
   Camera image_camera;
@@ -49,7 +55,7 @@ struct OutputWriter
   int adaptive_block_size;
   int adaptive_max_level;
 
-  // Flag
+  // Flag for tracking function calls
   bool first_time = true;
 
   // File data
@@ -72,7 +78,10 @@ struct OutputWriter
   Array<double> *camera_dir_adaptive;
 
   // External function
-  void Write();
+  void Write(int snapshot);
+
+  // Internal functions - output_writer.cpp
+  std::string FormatFilename(int file_number);
 
   // Internal functions - raw_format.cpp
   void WriteRaw();

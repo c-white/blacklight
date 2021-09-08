@@ -477,12 +477,12 @@ void GeodesicIntegrator::IntegrateGeodesics()
       }
 
     // Calculate maximum number of steps actually taken
-    #pragma omp for schedule(static) reduction(max:geodesic_num_steps_local)
+    #pragma omp for schedule(static) reduction(max: geodesic_num_steps_local)
     for (int m = 0; m < num_pix; m++)
       geodesic_num_steps_local = std::max(geodesic_num_steps_local, sample_num_local(m));
 
     // Calculate number of geodesics that do not terminate properly
-    #pragma omp for schedule(static) reduction(+:num_bad_geodesics)
+    #pragma omp for schedule(static) reduction(+: num_bad_geodesics)
     for (int m = 0; m < num_pix; m++)
       if (sample_flags_local(m))
         num_bad_geodesics++;

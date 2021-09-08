@@ -3,6 +3,7 @@
 // C++ headers
 #include <algorithm>  // max, min
 #include <limits>     // numeric_limits
+#include <sstream>    // ostringstream
 
 // Library headers
 #include <omp.h>  // pragmas
@@ -12,16 +13,21 @@
 #include "../blacklight.hpp"                   // enums
 #include "../athena_reader/athena_reader.hpp"  // AthenaReader
 #include "../utils/array.hpp"                  // Array
-#include "../utils/exceptions.hpp"             // BlacklightException
+#include "../utils/exceptions.hpp"             // BlacklightException, BlacklightWarning
 
 //--------------------------------------------------------------------------------------------------
 
 // Function for making shallow copies of arrays containing simulation data.
 // Inputs: (none)
 // Outputs: (none)
+// Notes:
 //   Acquires values from AthenaReader that were not available at construction.
 void RadiationIntegrator::ObtainGridData()
 {
+  // Copy grid metadata
+  if (simulation_coord == Coordinates::sph_ks and simulation_interp and simulation_block_interp)
+    n_3_root = p_athena_reader->n_3_root;
+
   // Copy grid layout
   if (simulation_interp and simulation_block_interp)
   {
@@ -37,61 +43,23 @@ void RadiationIntegrator::ObtainGridData()
   x2v = p_athena_reader->x2v;
   x3v = p_athena_reader->x3v;
 
+  // Copy time
+  time = p_athena_reader->time;
+
   // Copy cell values
-  grid_rho = p_athena_reader->prim;
-  grid_rho.Slice(5, p_athena_reader->ind_rho);
-  if (plasma_model == PlasmaModel::ti_te_beta)
-  {
-    grid_pgas = p_athena_reader->prim;
-    grid_pgas.Slice(5, p_athena_reader->ind_pgas);
-  }
-  if (plasma_model == PlasmaModel::code_kappa)
-  {
-    grid_kappa = p_athena_reader->prim;
-    grid_kappa.Slice(5, p_athena_reader->ind_kappa);
-  }
-  grid_uu1 = p_athena_reader->prim;
-  grid_uu1.Slice(5, p_athena_reader->ind_uu1);
-  grid_uu2 = p_athena_reader->prim;
-  grid_uu2.Slice(5, p_athena_reader->ind_uu2);
-  grid_uu3 = p_athena_reader->prim;
-  grid_uu3.Slice(5, p_athena_reader->ind_uu3);
-  grid_bb1 = p_athena_reader->bb;
-  grid_bb1.Slice(5, p_athena_reader->ind_bb1);
-  grid_bb2 = p_athena_reader->bb;
-  grid_bb2.Slice(5, p_athena_reader->ind_bb2);
-  grid_bb3 = p_athena_reader->bb;
-  grid_bb3.Slice(5, p_athena_reader->ind_bb3);
-  return;
-}
+  grid_prim = p_athena_reader->prim;
+  grid_bb = p_athena_reader->bb;
 
-//--------------------------------------------------------------------------------------------------
-
-// Function for determining how to sample cell data onto rays.
-// Inputs: (none)
-// Outputs: (none)
-// Notes:
-//   Works on arrays appropriate for root level or adaptively refined regions.
-//   Assumes geodesic_num_steps (or geodesic_num_steps_adaptive[adaptive_current_level]),
-//       sample_flags (or sample_flags_adaptive[adaptive_current_level]), sample_num (or
-//       sample_num_adaptive[adaptive_current_level]), and sample_pos (or
-//       sample_pos_adaptive[adaptive_current_level]) have been set.
-//   Allocates and initializes sample_inds (or sample_inds_adaptive), sample_nan (or
-//       sample_nan_adaptive), and sample_fallback (or sample_fallback_adaptive).
-//   Allocates and initializes sample_fracs (or sample_fracs_adaptive) if simulation_interp == true.
-//   If simulation_interp == false, locates cell containing geodesic sample point.
-//   If simulation_interp == true and simulation_block_interp == false, prepares trilinear
-//       interpolation to geodesic sample point from cell centers, using only data within the same
-//       block of cells (i.e. sometimes using extrapolation near block edges).
-//   If simulation_interp == true and simulation_block_interp == true, prepares trilinear
-//       interpolation after obtaining anchor points possibly from neighboring blocks, even at
-//       different refinement levels, or across the periodic boundary in spherical coordinates.
-//   Acquires values from AthenaReader that were not available at construction.
-void RadiationIntegrator::CalculateSimulationSampling()
-{
-  // Copy grid data scalars
-  if (simulation_coord == Coordinates::sph_ks and simulation_interp and simulation_block_interp)
-    n_3_root = p_athena_reader->n_3_root;
+  // Copy indices
+  ind_rho = p_athena_reader->ind_rho;
+  ind_pgas = p_athena_reader->ind_pgas;
+  ind_kappa = p_athena_reader->ind_kappa;
+  ind_uu1 = p_athena_reader->ind_uu1;
+  ind_uu2 = p_athena_reader->ind_uu2;
+  ind_uu3 = p_athena_reader->ind_uu3;
+  ind_bb1 = p_athena_reader->ind_bb1;
+  ind_bb2 = p_athena_reader->ind_bb2;
+  ind_bb3 = p_athena_reader->ind_bb3;
 
   // Calculate maximum refinement level and number of blocks in x^3-direction at each level
   if (simulation_coord == Coordinates::sph_ks and simulation_interp and simulation_block_interp)
@@ -106,44 +74,75 @@ void RadiationIntegrator::CalculateSimulationSampling()
     for (int level = 1; level <= max_level; level++)
       n_3_level(level) = n_3_level(level-1) * 2;
   }
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for determining how to sample cell data onto rays.
+// Inputs:
+//   snapshot: index (starting at 0) of which snapshot is about to be processed
+// Outputs: (none)
+// Notes:
+//   Works on arrays appropriate for root level or adaptively refined regions.
+//   Assumes geodesic_num_steps (or geodesic_num_steps_adaptive[adaptive_current_level]),
+//       sample_flags (or sample_flags_adaptive[adaptive_current_level]), sample_num (or
+//       sample_num_adaptive[adaptive_current_level]), and sample_pos (or
+//       sample_pos_adaptive[adaptive_current_level]) have been set.
+//   Allocates and initializes sample_inds (or sample_inds_adaptive), sample_nan (or
+//       sample_nan_adaptive), and sample_fallback (or sample_fallback_adaptive).
+//   Allocates and initializes sample_fracs (or sample_fracs_adaptive) if simulation_interp == true
+//       or if slow_light_on == true and slow_interp == true.
+//   If simulation_interp == false, locates cell containing geodesic sample point.
+//   If simulation_interp == true and simulation_block_interp == false, prepares trilinear
+//       interpolation to geodesic sample point from cell centers, using only data within the same
+//       block of cells (i.e. sometimes using extrapolation near block edges).
+//   If simulation_interp == true and simulation_block_interp == true, prepares trilinear
+//       interpolation after obtaining anchor points possibly from neighboring blocks, even at
+//       different refinement levels, or across the periodic boundary in spherical coordinates.
+//   If slow_light_on == true, chooses from multiple available time slices for each point.
+//   If slow_light_on == true and slow_interp == true, prepares interpolation between adjacent (or
+//       sometimes identical) time slices.
+void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
+{
+  // Calculate time of snapshot
+  double snapshot_time = 0.0;
+  if (slow_light_on)
+    snapshot_time = slow_t_start + slow_dt * snapshot;
 
   // Allocate arrays
   int num_pix = camera_num_pix;
+  int num_interp_inds = 4;
+  if (slow_light_on)
+    num_interp_inds++;
+  int num_interp_fracs = 0;
+  if (simulation_interp)
+    num_interp_fracs += 3;
+  if (slow_light_on and slow_interp)
+    num_interp_fracs++;
   if (adaptive_on and adaptive_current_level > 0)
   {
     num_pix = block_counts[adaptive_current_level] * block_num_pix;
     int geodesic_num_steps_local = geodesic_num_steps_adaptive[adaptive_current_level];
     if (simulation_interp and simulation_block_interp)
-    {
-      sample_inds_adaptive.Allocate(num_pix, geodesic_num_steps_local, 8, 4);
-      sample_fracs_adaptive.Allocate(num_pix, geodesic_num_steps_local, 3);
-    }
-    else if (simulation_interp)
-    {
-      sample_inds_adaptive.Allocate(num_pix, geodesic_num_steps_local, 4);
-      sample_fracs_adaptive.Allocate(num_pix, geodesic_num_steps_local, 3);
-    }
+      sample_inds_adaptive.Allocate(num_pix, geodesic_num_steps_local, 8, num_interp_inds);
     else
-      sample_inds_adaptive.Allocate(num_pix, geodesic_num_steps_local, 4);
+      sample_inds_adaptive.Allocate(num_pix, geodesic_num_steps_local, num_interp_inds);
+    if (num_interp_fracs > 0)
+      sample_fracs_adaptive.Allocate(num_pix, geodesic_num_steps_local, num_interp_fracs);
     sample_nan_adaptive.Allocate(num_pix, geodesic_num_steps_local);
     sample_fallback_adaptive.Allocate(num_pix, geodesic_num_steps_local);
     sample_nan_adaptive.Zero();
     sample_fallback_adaptive.Zero();
   }
-  else
+  else if (first_time)
   {
     if (simulation_interp and simulation_block_interp)
-    {
-      sample_inds.Allocate(num_pix, geodesic_num_steps, 8, 4);
-      sample_fracs.Allocate(num_pix, geodesic_num_steps, 3);
-    }
-    else if (simulation_interp)
-    {
-      sample_inds.Allocate(num_pix, geodesic_num_steps, 4);
-      sample_fracs.Allocate(num_pix, geodesic_num_steps, 3);
-    }
+      sample_inds.Allocate(num_pix, geodesic_num_steps, 8, num_interp_inds);
     else
-      sample_inds.Allocate(num_pix, geodesic_num_steps, 4);
+      sample_inds.Allocate(num_pix, geodesic_num_steps, num_interp_inds);
+    if (num_interp_fracs > 0)
+      sample_fracs.Allocate(num_pix, geodesic_num_steps, num_interp_fracs);
     sample_nan.Allocate(num_pix, geodesic_num_steps);
     sample_fallback.Allocate(num_pix, geodesic_num_steps);
     sample_nan.Zero();
@@ -169,6 +168,16 @@ void RadiationIntegrator::CalculateSimulationSampling()
     sample_fallback_local = sample_fallback_adaptive;
   }
 
+  // Prepare bookkeeping for warnings and errors
+  int num_extrap_camera_small = 0;
+  int num_extrap_camera_large = 0;
+  int num_extrap_source_small = 0;
+  int num_extrap_source_large = 0;
+  double val_extrap_camera_small = 0.0;
+  double val_extrap_camera_large = 0.0;
+  double val_extrap_source_small = 0.0;
+  double val_extrap_source_large = 0.0;
+
   // Work in parallel
   #pragma omp parallel
   {
@@ -189,7 +198,10 @@ void RadiationIntegrator::CalculateSimulationSampling()
     double x3_max_block = x3f(b,n_k);
 
     // Resample cell data onto geodesics
-    #pragma omp for schedule(static)
+    #pragma omp for schedule(static) reduction(+: num_extrap_camera_small, \
+        num_extrap_camera_large, num_extrap_source_small, num_extrap_source_large) reduction(max: \
+        val_extrap_camera_small, val_extrap_camera_large, val_extrap_source_small, \
+        val_extrap_source_large)
     for (int m = 0; m < num_pix; m++)
     {
       // Extract number of steps along this geodesic
@@ -203,10 +215,21 @@ void RadiationIntegrator::CalculateSimulationSampling()
         continue;
       }
 
+      // Prepare bookkeeping for extrapolation
+      bool extrap_camera_small = false;
+      bool extrap_camera_large = false;
+      bool extrap_source_small = false;
+      bool extrap_source_large = false;
+      double val_extrap_camera_small_local = 0.0;
+      double val_extrap_camera_large_local = 0.0;
+      double val_extrap_source_small_local = 0.0;
+      double val_extrap_source_large_local = 0.0;
+
       // Go along geodesic
       for (int n = 0; n < num_steps; n++)
       {
         // Extract coordinates
+        double x0 = sample_pos_local(m,n,0) + snapshot_time;
         double x1 = sample_pos_local(m,n,1);
         double x2 = sample_pos_local(m,n,2);
         double x3 = sample_pos_local(m,n,3);
@@ -214,6 +237,63 @@ void RadiationIntegrator::CalculateSimulationSampling()
         // Convert coordinates
         if (simulation_coord == Coordinates::sph_ks)
           CKSToSKS(&x1, &x2, &x3);
+
+        // Calculate time interpolation
+        int t_ind = 0;
+        double t_frac = 0.0;
+        if (slow_light_on)
+        {
+          if (x0 >= static_cast<double>(time[0]))
+          {
+            if (x0 > static_cast<double>(time[0] + extrapolation_tolerance))
+            {
+              extrap_camera_large = true;
+              val_extrap_camera_large_local =
+                  std::max(val_extrap_camera_large_local, x0 - static_cast<double>(time[0]));
+            }
+            else if (x0 > static_cast<double>(time[0]))
+            {
+              extrap_camera_small = true;
+              val_extrap_camera_small_local =
+                  std::max(val_extrap_camera_small_local, x0 - static_cast<double>(time[0]));
+            }
+          }
+          else if (x0 <= static_cast<double>(time[slow_chunk_size-1]))
+          {
+            if (x0 < static_cast<double>(time[slow_chunk_size-1] - extrapolation_tolerance))
+            {
+              extrap_source_large = true;
+              val_extrap_source_large_local = std::max(val_extrap_source_large_local,
+                  static_cast<double>(time[slow_chunk_size-1]) - x0);
+            }
+            else if (x0 < static_cast<double>(time[slow_chunk_size-1]))
+            {
+              extrap_source_small = true;
+              val_extrap_source_small_local = std::max(val_extrap_source_small_local,
+                  static_cast<double>(time[slow_chunk_size-1]) - x0);
+            }
+            if (slow_interp)
+            {
+              t_ind = slow_chunk_size - 2;
+              t_frac = 1.0;
+            }
+            else
+              t_ind = slow_chunk_size - 1;
+          }
+          else
+          {
+            while (static_cast<double>(time[t_ind++]) > x0);
+            if (slow_interp)
+            {
+              t_ind--;
+              t_frac = (x0 - static_cast<double>(time[t_ind]))
+                  / static_cast<double>(time[t_ind+1] - time[t_ind]);
+            }
+            else if
+                (static_cast<double>(time[t_ind-1]) - x0 <= x0 - static_cast<double>(time[t_ind]))
+              t_ind--;
+          }
+        }
 
         // Determine block
         if (x1 < x1_min_block or x1 > x1_max_block or x2 < x2_min_block or x2 > x2_max_block
@@ -278,6 +358,10 @@ void RadiationIntegrator::CalculateSimulationSampling()
           sample_inds_local(m,n,1) = k;
           sample_inds_local(m,n,2) = j;
           sample_inds_local(m,n,3) = i;
+          if (slow_light_on)
+            sample_inds_local(m,n,4) = t_ind;
+          if (slow_light_on and slow_interp)
+            sample_fracs_local(m,n,0) = t_frac;
         }
 
         // Prepare to sample values with intrablock interpolation
@@ -296,9 +380,13 @@ void RadiationIntegrator::CalculateSimulationSampling()
           sample_inds_local(m,n,1) = k_m;
           sample_inds_local(m,n,2) = j_m;
           sample_inds_local(m,n,3) = i_m;
+          if (slow_light_on)
+            sample_inds_local(m,n,4) = t_ind;
           sample_fracs_local(m,n,0) = f_k;
           sample_fracs_local(m,n,1) = f_j;
           sample_fracs_local(m,n,2) = f_i;
+          if (slow_light_on and slow_interp)
+            sample_fracs_local(m,n,3) = t_frac;
         }
 
         // Prepare to sample values with interblock interpolation
@@ -342,14 +430,78 @@ void RadiationIntegrator::CalculateSimulationSampling()
 
           // Store results
           for (int p = 0; p < 8; p++)
+          {
             for (int q = 0; q < 4; q++)
               sample_inds_local(m,n,p,q) = inds[p][q];
+            if (slow_light_on)
+              sample_inds_local(m,n,p,4) = t_ind;
+          }
           sample_fracs_local(m,n,0) = f_k;
           sample_fracs_local(m,n,1) = f_j;
           sample_fracs_local(m,n,2) = f_i;
+          if (slow_light_on and slow_interp)
+            sample_fracs_local(m,n,3) = t_frac;
         }
       }
+
+      // Add to accounting of warnings and errors
+      if (extrap_camera_small)
+      {
+        num_extrap_camera_small++;
+        val_extrap_camera_small = std::max(val_extrap_camera_small, val_extrap_camera_small_local);
+      }
+      if (extrap_camera_large)
+      {
+        num_extrap_camera_large++;
+        val_extrap_camera_large = std::max(val_extrap_camera_large, val_extrap_camera_large_local);
+      }
+      if (extrap_source_small)
+      {
+        num_extrap_source_small++;
+        val_extrap_source_small = std::max(val_extrap_source_small, val_extrap_source_small_local);
+      }
+      if (extrap_source_large)
+      {
+        num_extrap_source_large++;
+        val_extrap_source_large = std::max(val_extrap_source_large, val_extrap_source_large_local);
+      }
     }
+  }
+
+  // Throw error if large extrapolation needed
+  if (num_extrap_camera_large > 0)
+  {
+    std::ostringstream message;
+    message << "Snapshot " << snapshot << " at time " << snapshot_time;
+    message << " requires significant extrapolation forward in time (" << num_extrap_camera_large;
+    message << "/" << num_pix << " pixels, by up to " << val_extrap_camera_large << ").";
+    throw BlacklightException(message.str().c_str());
+  }
+  if (num_extrap_source_large > 0)
+  {
+    std::ostringstream message;
+    message << "Snapshot " << snapshot << " at time " << snapshot_time;
+    message << " requires significant extrapolation backward in time (" << num_extrap_source_large;
+    message << "/" << num_pix << " pixels, by up to " << val_extrap_source_large << ").";
+    throw BlacklightException(message.str().c_str());
+  }
+
+  // Warn if small extrapolation needed
+  if (num_extrap_camera_small > 0)
+  {
+    std::ostringstream message;
+    message << "Snapshot " << snapshot << " at time " << snapshot_time;
+    message << " requires moderate extrapolation forward in time (" << num_extrap_camera_small;
+    message << "/" << num_pix << " pixels, by up to " << val_extrap_camera_small << ").";
+    BlacklightWarning(message.str().c_str());
+  }
+  if (num_extrap_source_small > 0)
+  {
+    std::ostringstream message;
+    message << "Snapshot " << snapshot << " at time " << snapshot_time;
+    message << " requires moderate extrapolation backward in time (" << num_extrap_source_small;
+    message << "/" << num_pix << " pixels, by up to " << val_extrap_source_small << ").";
+    BlacklightWarning(message.str().c_str());
   }
   return;
 }
@@ -486,21 +638,79 @@ void RadiationIntegrator::SampleSimulation()
       // Set nearest values
       else if (not simulation_interp)
       {
+        // Extract indices
         int b = sample_inds_local(m,n,0);
         int k = sample_inds_local(m,n,1);
         int j = sample_inds_local(m,n,2);
         int i = sample_inds_local(m,n,3);
-        sample_rho_local(m,n) = grid_rho(b,k,j,i);
-        if (plasma_model == PlasmaModel::ti_te_beta)
-          sample_pgas_local(m,n) = grid_pgas(b,k,j,i);
-        if (plasma_model == PlasmaModel::code_kappa)
-          sample_kappa_local(m,n) = grid_kappa(b,k,j,i);
-        sample_uu1_local(m,n) = grid_uu1(b,k,j,i);
-        sample_uu2_local(m,n) = grid_uu2(b,k,j,i);
-        sample_uu3_local(m,n) = grid_uu3(b,k,j,i);
-        sample_bb1_local(m,n) = grid_bb1(b,k,j,i);
-        sample_bb2_local(m,n) = grid_bb2(b,k,j,i);
-        sample_bb3_local(m,n) = grid_bb3(b,k,j,i);
+        int t = 0;
+        if (slow_light_on)
+          t = sample_inds_local(m,n,4);
+
+        // Calculate values without temporal interpolation
+        if (not (slow_light_on and slow_interp))
+        {
+          sample_rho_local(m,n) = grid_prim[t](ind_rho,b,k,j,i);
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            sample_pgas_local(m,n) = grid_prim[t](ind_pgas,b,k,j,i);
+          if (plasma_model == PlasmaModel::code_kappa)
+            sample_kappa_local(m,n) = grid_prim[t](ind_kappa,b,k,j,i);
+          sample_uu1_local(m,n) = grid_prim[t](ind_uu1,b,k,j,i);
+          sample_uu2_local(m,n) = grid_prim[t](ind_uu2,b,k,j,i);
+          sample_uu3_local(m,n) = grid_prim[t](ind_uu3,b,k,j,i);
+          sample_bb1_local(m,n) = grid_bb[t](ind_bb1,b,k,j,i);
+          sample_bb2_local(m,n) = grid_bb[t](ind_bb2,b,k,j,i);
+          sample_bb3_local(m,n) = grid_bb[t](ind_bb3,b,k,j,i);
+        }
+
+        // Calculate values with temporal interpolation
+        else
+        {
+          // Perform spatial interpolation on first slice
+          double rho_1 = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
+          double pgas_1 = 0.0;
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            pgas_1 = static_cast<double>(grid_prim[t](ind_pgas,b,k,j,i));
+          double kappa_1 = 0.0;
+          if (plasma_model == PlasmaModel::code_kappa)
+            kappa_1 = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
+          double uu1_1 = static_cast<double>(grid_prim[t](ind_uu1,b,k,j,i));
+          double uu2_1 = static_cast<double>(grid_prim[t](ind_uu2,b,k,j,i));
+          double uu3_1 = static_cast<double>(grid_prim[t](ind_uu3,b,k,j,i));
+          double bb1_1 = static_cast<double>(grid_prim[t](ind_bb1,b,k,j,i));
+          double bb2_1 = static_cast<double>(grid_prim[t](ind_bb2,b,k,j,i));
+          double bb3_1 = static_cast<double>(grid_prim[t](ind_bb3,b,k,j,i));
+
+          // Perform spatial interpolation on second slice
+          double rho_2 = static_cast<double>(grid_prim[t+1](ind_rho,b,k,j,i));
+          double pgas_2 = 0.0;
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            pgas_2 = static_cast<double>(grid_prim[t+1](ind_pgas,b,k,j,i));
+          double kappa_2 = 0.0;
+          if (plasma_model == PlasmaModel::code_kappa)
+            kappa_2 = static_cast<double>(grid_prim[t+1](ind_kappa,b,k,j,i));
+          double uu1_2 = static_cast<double>(grid_prim[t+1](ind_uu1,b,k,j,i));
+          double uu2_2 = static_cast<double>(grid_prim[t+1](ind_uu2,b,k,j,i));
+          double uu3_2 = static_cast<double>(grid_prim[t+1](ind_uu3,b,k,j,i));
+          double bb1_2 = static_cast<double>(grid_prim[t+1](ind_bb1,b,k,j,i));
+          double bb2_2 = static_cast<double>(grid_prim[t+1](ind_bb2,b,k,j,i));
+          double bb3_2 = static_cast<double>(grid_prim[t+1](ind_bb3,b,k,j,i));
+
+          // Assign interpolated values
+          double t_frac = sample_fracs_local(m,n,0);
+          sample_rho_local(m,n) = static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            sample_pgas_local(m,n) = static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
+          if (plasma_model == PlasmaModel::code_kappa)
+            sample_kappa_local(m,n) =
+                static_cast<float>((1.0 - t_frac) * kappa_1 + t_frac * kappa_2);
+          sample_uu1_local(m,n) = static_cast<float>((1.0 - t_frac) * uu1_1 + t_frac * uu1_2);
+          sample_uu2_local(m,n) = static_cast<float>((1.0 - t_frac) * uu2_1 + t_frac * uu2_2);
+          sample_uu3_local(m,n) = static_cast<float>((1.0 - t_frac) * uu3_1 + t_frac * uu3_2);
+          sample_bb1_local(m,n) = static_cast<float>((1.0 - t_frac) * bb1_1 + t_frac * bb1_2);
+          sample_bb2_local(m,n) = static_cast<float>((1.0 - t_frac) * bb2_1 + t_frac * bb2_2);
+          sample_bb3_local(m,n) = static_cast<float>((1.0 - t_frac) * bb3_1 + t_frac * bb3_2);
+        }
       }
 
       // Set intrablock interpolated values
@@ -511,59 +721,239 @@ void RadiationIntegrator::SampleSimulation()
         int k = sample_inds_local(m,n,1);
         int j = sample_inds_local(m,n,2);
         int i = sample_inds_local(m,n,3);
+        int t = 0;
+        if (slow_light_on)
+          t = sample_inds_local(m,n,4);
         double f_k = sample_fracs_local(m,n,0);
         double f_j = sample_fracs_local(m,n,1);
         double f_i = sample_fracs_local(m,n,2);
 
-        // Perform interpolation
-        sample_rho_local(m,n) = InterpolateSimple(grid_rho, b, k, j, i, f_k, f_j, f_i);
-        if (plasma_model == PlasmaModel::ti_te_beta)
-          sample_pgas_local(m,n) = InterpolateSimple(grid_pgas, b, k, j, i, f_k, f_j, f_i);
-        if (plasma_model == PlasmaModel::code_kappa)
-          sample_kappa_local(m,n) = InterpolateSimple(grid_kappa, b, k, j, i, f_k, f_j, f_i);
-        sample_uu1_local(m,n) = InterpolateSimple(grid_uu1, b, k, j, i, f_k, f_j, f_i);
-        sample_uu2_local(m,n) = InterpolateSimple(grid_uu2, b, k, j, i, f_k, f_j, f_i);
-        sample_uu3_local(m,n) = InterpolateSimple(grid_uu3, b, k, j, i, f_k, f_j, f_i);
-        sample_bb1_local(m,n) = InterpolateSimple(grid_bb1, b, k, j, i, f_k, f_j, f_i);
-        sample_bb2_local(m,n) = InterpolateSimple(grid_bb2, b, k, j, i, f_k, f_j, f_i);
-        sample_bb3_local(m,n) = InterpolateSimple(grid_bb3, b, k, j, i, f_k, f_j, f_i);
+        // Calculate values without temporal interpolation
+        if (not (slow_light_on and slow_interp))
+        {
+          // Perform spatial interpolation
+          double rho = InterpolateSimple(grid_prim[t], ind_rho, b, k, j, i, f_k, f_j, f_i);
+          double pgas = 0.0;
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            pgas = InterpolateSimple(grid_prim[t], ind_pgas, b, k, j, i, f_k, f_j, f_i);
+          double kappa = 0.0;
+          if (plasma_model == PlasmaModel::code_kappa)
+            kappa = InterpolateSimple(grid_prim[t], ind_kappa, b, k, j, i, f_k, f_j, f_i);
+          double uu1 = InterpolateSimple(grid_prim[t], ind_uu1, b, k, j, i, f_k, f_j, f_i);
+          double uu2 = InterpolateSimple(grid_prim[t], ind_uu2, b, k, j, i, f_k, f_j, f_i);
+          double uu3 = InterpolateSimple(grid_prim[t], ind_uu3, b, k, j, i, f_k, f_j, f_i);
+          double bb1 = InterpolateSimple(grid_prim[t], ind_bb1, b, k, j, i, f_k, f_j, f_i);
+          double bb2 = InterpolateSimple(grid_prim[t], ind_bb2, b, k, j, i, f_k, f_j, f_i);
+          double bb3 = InterpolateSimple(grid_prim[t], ind_bb3, b, k, j, i, f_k, f_j, f_i);
 
-        // Account for possible invalid values
-        if (sample_rho_local(m,n) <= 0.0f)
-          sample_rho_local(m,n) = grid_rho(b,k,j,i);
-        if (plasma_model == PlasmaModel::ti_te_beta and sample_pgas_local(m,n) <= 0.0f)
-          sample_pgas_local(m,n) = grid_pgas(b,k,j,i);
-        if (plasma_model == PlasmaModel::code_kappa and sample_kappa_local(m,n) <= 0.0f)
-          sample_kappa_local(m,n) = grid_kappa(b,k,j,i);
+          // Account for possible invalid values
+          if (rho <= 0.0)
+            rho = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
+          if (plasma_model == PlasmaModel::ti_te_beta and pgas <= 0.0)
+            pgas = static_cast<double>(grid_prim[t](ind_pgas,b,k,j,i));
+          if (plasma_model == PlasmaModel::code_kappa and kappa <= 0.0)
+            kappa = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
+
+          // Assign values
+          sample_rho_local(m,n) = static_cast<float>(rho);
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            sample_pgas_local(m,n) = static_cast<float>(pgas);
+          if (plasma_model == PlasmaModel::code_kappa)
+            sample_kappa_local(m,n) = static_cast<float>(kappa);
+          sample_uu1_local(m,n) = static_cast<float>(uu1);
+          sample_uu2_local(m,n) = static_cast<float>(uu2);
+          sample_uu3_local(m,n) = static_cast<float>(uu3);
+          sample_bb1_local(m,n) = static_cast<float>(bb1);
+          sample_bb2_local(m,n) = static_cast<float>(bb2);
+          sample_bb3_local(m,n) = static_cast<float>(bb3);
+        }
+
+        // Calculate values with temporal interpolation
+        else
+        {
+          // Perform spatial interpolation on first slice
+          double rho_1 = InterpolateSimple(grid_prim[t], ind_rho, b, k, j, i, f_k, f_j, f_i);
+          double pgas_1 = 0.0;
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            pgas_1 = InterpolateSimple(grid_prim[t], ind_pgas, b, k, j, i, f_k, f_j, f_i);
+          double kappa_1 = 0.0;
+          if (plasma_model == PlasmaModel::code_kappa)
+            kappa_1 = InterpolateSimple(grid_prim[t], ind_kappa, b, k, j, i, f_k, f_j, f_i);
+          double uu1_1 = InterpolateSimple(grid_prim[t], ind_uu1, b, k, j, i, f_k, f_j, f_i);
+          double uu2_1 = InterpolateSimple(grid_prim[t], ind_uu2, b, k, j, i, f_k, f_j, f_i);
+          double uu3_1 = InterpolateSimple(grid_prim[t], ind_uu3, b, k, j, i, f_k, f_j, f_i);
+          double bb1_1 = InterpolateSimple(grid_prim[t], ind_bb1, b, k, j, i, f_k, f_j, f_i);
+          double bb2_1 = InterpolateSimple(grid_prim[t], ind_bb2, b, k, j, i, f_k, f_j, f_i);
+          double bb3_1 = InterpolateSimple(grid_prim[t], ind_bb3, b, k, j, i, f_k, f_j, f_i);
+
+          // Account for possible invalid values
+          if (rho_1 <= 0.0)
+            rho_1 = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
+          if (plasma_model == PlasmaModel::ti_te_beta and pgas_1 <= 0.0)
+            pgas_1 = static_cast<double>(grid_prim[t](ind_pgas,b,k,j,i));
+          if (plasma_model == PlasmaModel::code_kappa and kappa_1 <= 0.0)
+            kappa_1 = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
+
+          // Perform spatial interpolation on second slice
+          double rho_2 = InterpolateSimple(grid_prim[t+1], ind_rho, b, k, j, i, f_k, f_j, f_i);
+          double pgas_2 = 0.0;
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            pgas_2 = InterpolateSimple(grid_prim[t+1], ind_pgas, b, k, j, i, f_k, f_j, f_i);
+          double kappa_2 = 0.0;
+          if (plasma_model == PlasmaModel::code_kappa)
+            kappa_2 = InterpolateSimple(grid_prim[t+1], ind_kappa, b, k, j, i, f_k, f_j, f_i);
+          double uu1_2 = InterpolateSimple(grid_prim[t+1], ind_uu1, b, k, j, i, f_k, f_j, f_i);
+          double uu2_2 = InterpolateSimple(grid_prim[t+1], ind_uu2, b, k, j, i, f_k, f_j, f_i);
+          double uu3_2 = InterpolateSimple(grid_prim[t+1], ind_uu3, b, k, j, i, f_k, f_j, f_i);
+          double bb1_2 = InterpolateSimple(grid_prim[t+1], ind_bb1, b, k, j, i, f_k, f_j, f_i);
+          double bb2_2 = InterpolateSimple(grid_prim[t+1], ind_bb2, b, k, j, i, f_k, f_j, f_i);
+          double bb3_2 = InterpolateSimple(grid_prim[t+1], ind_bb3, b, k, j, i, f_k, f_j, f_i);
+
+          // Account for possible invalid values
+          if (rho_2 <= 0.0)
+            rho_2 = static_cast<double>(grid_prim[t+1](ind_rho,b,k,j,i));
+          if (plasma_model == PlasmaModel::ti_te_beta and pgas_2 <= 0.0)
+            pgas_2 = static_cast<double>(grid_prim[t+1](ind_pgas,b,k,j,i));
+          if (plasma_model == PlasmaModel::code_kappa and kappa_2 <= 0.0)
+            kappa_2 = static_cast<double>(grid_prim[t+1](ind_kappa,b,k,j,i));
+
+          // Assign interpolated values
+          double t_frac = sample_fracs_local(m,n,3);
+          sample_rho_local(m,n) = static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            sample_pgas_local(m,n) = static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
+          if (plasma_model == PlasmaModel::code_kappa)
+            sample_kappa_local(m,n) =
+                static_cast<float>((1.0 - t_frac) * kappa_1 + t_frac * kappa_2);
+          sample_uu1_local(m,n) = static_cast<float>((1.0 - t_frac) * uu1_1 + t_frac * uu1_2);
+          sample_uu2_local(m,n) = static_cast<float>((1.0 - t_frac) * uu2_1 + t_frac * uu2_2);
+          sample_uu3_local(m,n) = static_cast<float>((1.0 - t_frac) * uu3_1 + t_frac * uu3_2);
+          sample_bb1_local(m,n) = static_cast<float>((1.0 - t_frac) * bb1_1 + t_frac * bb1_2);
+          sample_bb2_local(m,n) = static_cast<float>((1.0 - t_frac) * bb2_1 + t_frac * bb2_2);
+          sample_bb3_local(m,n) = static_cast<float>((1.0 - t_frac) * bb3_1 + t_frac * bb3_2);
+        }
       }
 
       // Set interblock interpolated values
       else
       {
-        // Perform interpolation
-        sample_rho_local(m,n) = InterpolateAdvanced(grid_rho, m, n);
-        if (plasma_model == PlasmaModel::ti_te_beta)
-          sample_pgas_local(m,n) = InterpolateAdvanced(grid_pgas, m, n);
-        if (plasma_model == PlasmaModel::code_kappa)
-          sample_kappa_local(m,n) = InterpolateAdvanced(grid_kappa, m, n);
-        sample_uu1_local(m,n) = InterpolateAdvanced(grid_uu1, m, n);
-        sample_uu2_local(m,n) = InterpolateAdvanced(grid_uu2, m, n);
-        sample_uu3_local(m,n) = InterpolateAdvanced(grid_uu3, m, n);
-        sample_bb1_local(m,n) = InterpolateAdvanced(grid_bb1, m, n);
-        sample_bb2_local(m,n) = InterpolateAdvanced(grid_bb2, m, n);
-        sample_bb3_local(m,n) = InterpolateAdvanced(grid_bb3, m, n);
+        // Extract index
+        int t = 0;
+        if (slow_light_on)
+          t = sample_inds_local(m,n,4);
 
-        // Account for possible invalid values
-        int b = sample_inds_local(m,n,0,0);
-        int k = sample_inds_local(m,n,0,1);
-        int j = sample_inds_local(m,n,0,2);
-        int i = sample_inds_local(m,n,0,3);
-        if (sample_rho_local(m,n) <= 0.0f)
-          sample_rho_local(m,n) = grid_rho(b,k,j,i);
-        if (plasma_model == PlasmaModel::ti_te_beta and sample_pgas_local(m,n) <= 0.0f)
-          sample_pgas_local(m,n) = grid_pgas(b,k,j,i);
-        if (plasma_model == PlasmaModel::code_kappa and sample_kappa_local(m,n) <= 0.0f)
-          sample_kappa_local(m,n) = grid_kappa(b,k,j,i);
+        // Calculate values without temporal interpolation
+        if (not (slow_light_on and slow_interp))
+        {
+          // Perform spatial interpolation
+          double rho = InterpolateAdvanced(grid_prim[t], ind_rho, m, n);
+          double pgas = 0.0;
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            pgas = InterpolateAdvanced(grid_prim[t], ind_pgas, m, n);
+          double kappa = 0.0;
+          if (plasma_model == PlasmaModel::code_kappa)
+            kappa = InterpolateAdvanced(grid_prim[t], ind_kappa, m, n);
+          double uu1 = InterpolateAdvanced(grid_prim[t], ind_uu1, m, n);
+          double uu2 = InterpolateAdvanced(grid_prim[t], ind_uu2, m, n);
+          double uu3 = InterpolateAdvanced(grid_prim[t], ind_uu3, m, n);
+          double bb1 = InterpolateAdvanced(grid_prim[t], ind_bb1, m, n);
+          double bb2 = InterpolateAdvanced(grid_prim[t], ind_bb2, m, n);
+          double bb3 = InterpolateAdvanced(grid_prim[t], ind_bb3, m, n);
+
+          // Account for possible invalid values
+          int b = sample_inds_local(m,n,0,0);
+          int k = sample_inds_local(m,n,0,1);
+          int j = sample_inds_local(m,n,0,2);
+          int i = sample_inds_local(m,n,0,3);
+          if (rho <= 0.0)
+            rho = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
+          if (plasma_model == PlasmaModel::ti_te_beta and pgas <= 0.0)
+            pgas = static_cast<double>(grid_prim[t](ind_pgas,b,k,j,i));
+          if (plasma_model == PlasmaModel::code_kappa and kappa <= 0.0)
+            kappa = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
+
+          // Assign values
+          sample_rho_local(m,n) = static_cast<float>(rho);
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            sample_pgas_local(m,n) = static_cast<float>(pgas);
+          if (plasma_model == PlasmaModel::code_kappa)
+            sample_kappa_local(m,n) = static_cast<float>(kappa);
+          sample_uu1_local(m,n) = static_cast<float>(uu1);
+          sample_uu2_local(m,n) = static_cast<float>(uu2);
+          sample_uu3_local(m,n) = static_cast<float>(uu3);
+          sample_bb1_local(m,n) = static_cast<float>(bb1);
+          sample_bb2_local(m,n) = static_cast<float>(bb2);
+          sample_bb3_local(m,n) = static_cast<float>(bb3);
+        }
+
+        // Calculate values with temporal interpolation
+        else
+        {
+          // Perform spatial interpolation on first slice
+          double rho_1 = InterpolateAdvanced(grid_prim[t], ind_rho, m, n);
+          double pgas_1 = 0.0;
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            pgas_1 = InterpolateAdvanced(grid_prim[t], ind_pgas, m, n);
+          double kappa_1 = 0.0;
+          if (plasma_model == PlasmaModel::code_kappa)
+            kappa_1 = InterpolateAdvanced(grid_prim[t], ind_kappa, m, n);
+          double uu1_1 = InterpolateAdvanced(grid_prim[t], ind_uu1, m, n);
+          double uu2_1 = InterpolateAdvanced(grid_prim[t], ind_uu2, m, n);
+          double uu3_1 = InterpolateAdvanced(grid_prim[t], ind_uu3, m, n);
+          double bb1_1 = InterpolateAdvanced(grid_prim[t], ind_bb1, m, n);
+          double bb2_1 = InterpolateAdvanced(grid_prim[t], ind_bb2, m, n);
+          double bb3_1 = InterpolateAdvanced(grid_prim[t], ind_bb3, m, n);
+
+          // Account for possible invalid values
+          int b = sample_inds_local(m,n,0,0);
+          int k = sample_inds_local(m,n,0,1);
+          int j = sample_inds_local(m,n,0,2);
+          int i = sample_inds_local(m,n,0,3);
+          if (rho_1 <= 0.0)
+            rho_1 = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
+          if (plasma_model == PlasmaModel::ti_te_beta and pgas_1 <= 0.0)
+            pgas_1 = static_cast<double>(grid_prim[t](ind_pgas,b,k,j,i));
+          if (plasma_model == PlasmaModel::code_kappa and kappa_1 <= 0.0)
+            kappa_1 = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
+
+          // Perform spatial interpolation on second slice
+          double rho_2 = InterpolateAdvanced(grid_prim[t+1], ind_rho, m, n);
+          double pgas_2 = 0.0;
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            pgas_2 = InterpolateAdvanced(grid_prim[t+1], ind_pgas, m, n);
+          double kappa_2 = 0.0;
+          if (plasma_model == PlasmaModel::code_kappa)
+            kappa_2 = InterpolateAdvanced(grid_prim[t+1], ind_kappa, m, n);
+          double uu1_2 = InterpolateAdvanced(grid_prim[t+1], ind_uu1, m, n);
+          double uu2_2 = InterpolateAdvanced(grid_prim[t+1], ind_uu2, m, n);
+          double uu3_2 = InterpolateAdvanced(grid_prim[t+1], ind_uu3, m, n);
+          double bb1_2 = InterpolateAdvanced(grid_prim[t+1], ind_bb1, m, n);
+          double bb2_2 = InterpolateAdvanced(grid_prim[t+1], ind_bb2, m, n);
+          double bb3_2 = InterpolateAdvanced(grid_prim[t+1], ind_bb3, m, n);
+
+          // Account for possible invalid values
+          if (rho_2 <= 0.0)
+            rho_2 = static_cast<double>(grid_prim[t+1](ind_rho,b,k,j,i));
+          if (plasma_model == PlasmaModel::ti_te_beta and pgas_2 <= 0.0)
+            pgas_2 = static_cast<double>(grid_prim[t+1](ind_pgas,b,k,j,i));
+          if (plasma_model == PlasmaModel::code_kappa and kappa_2 <= 0.0)
+            kappa_2 = static_cast<double>(grid_prim[t+1](ind_kappa,b,k,j,i));
+
+          // Assign interpolated values
+          double t_frac = sample_fracs_local(m,n,3);
+          sample_rho_local(m,n) = static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
+          if (plasma_model == PlasmaModel::ti_te_beta)
+            sample_pgas_local(m,n) = static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
+          if (plasma_model == PlasmaModel::code_kappa)
+            sample_kappa_local(m,n) =
+                static_cast<float>((1.0 - t_frac) * kappa_1 + t_frac * kappa_2);
+          sample_uu1_local(m,n) = static_cast<float>((1.0 - t_frac) * uu1_1 + t_frac * uu1_2);
+          sample_uu2_local(m,n) = static_cast<float>((1.0 - t_frac) * uu2_1 + t_frac * uu2_2);
+          sample_uu3_local(m,n) = static_cast<float>((1.0 - t_frac) * uu3_1 + t_frac * uu3_2);
+          sample_bb1_local(m,n) = static_cast<float>((1.0 - t_frac) * bb1_1 + t_frac * bb1_2);
+          sample_bb2_local(m,n) = static_cast<float>((1.0 - t_frac) * bb2_1 + t_frac * bb2_2);
+          sample_bb3_local(m,n) = static_cast<float>((1.0 - t_frac) * bb3_1 + t_frac * bb3_2);
+        }
       }
     }
   }
@@ -853,28 +1243,29 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
 // Function for performing simple interpolation near a given cell
 // Inputs:
 //   grid_vals: full array of values on grid
+//   grid_ind: index of quantity to be interpolated
 //   b: block index
 //   k, j, i: cell indices
 //   f_k, f_j, f_i: interpolation fractions
 // Outputs:
 //   returned value: interpolated value from grid
-float RadiationIntegrator::InterpolateSimple(const Array<float> &grid_vals, int b, int k, int j,
-    int i, double f_k, double f_j, double f_i)
+double RadiationIntegrator::InterpolateSimple(const Array<float> &grid_vals, int grid_ind, int b,
+    int k, int j, int i, double f_k, double f_j, double f_i)
 {
-  double val_mmm = static_cast<double>(grid_vals(b,k,j,i));
-  double val_mmp = static_cast<double>(grid_vals(b,k,j,i+1));
-  double val_mpm = static_cast<double>(grid_vals(b,k,j+1,i));
-  double val_mpp = static_cast<double>(grid_vals(b,k,j+1,i+1));
-  double val_pmm = static_cast<double>(grid_vals(b,k+1,j,i));
-  double val_pmp = static_cast<double>(grid_vals(b,k+1,j,i+1));
-  double val_ppm = static_cast<double>(grid_vals(b,k+1,j+1,i));
-  double val_ppp = static_cast<double>(grid_vals(b,k+1,j+1,i+1));
+  double val_mmm = static_cast<double>(grid_vals(grid_ind,b,k,j,i));
+  double val_mmp = static_cast<double>(grid_vals(grid_ind,b,k,j,i+1));
+  double val_mpm = static_cast<double>(grid_vals(grid_ind,b,k,j+1,i));
+  double val_mpp = static_cast<double>(grid_vals(grid_ind,b,k,j+1,i+1));
+  double val_pmm = static_cast<double>(grid_vals(grid_ind,b,k+1,j,i));
+  double val_pmp = static_cast<double>(grid_vals(grid_ind,b,k+1,j,i+1));
+  double val_ppm = static_cast<double>(grid_vals(grid_ind,b,k+1,j+1,i));
+  double val_ppp = static_cast<double>(grid_vals(grid_ind,b,k+1,j+1,i+1));
   double val = (1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
       + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm
       + (1.0 - f_k) * f_j * f_i * val_mpp + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm
       + f_k * (1.0 - f_j) * f_i * val_pmp + f_k * f_j * (1.0 - f_i) * val_ppm
       + f_k * f_j * f_i * val_ppp;
-  return static_cast<float>(val);
+  return val;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -882,13 +1273,15 @@ float RadiationIntegrator::InterpolateSimple(const Array<float> &grid_vals, int 
 // Function for performing advanced interpolation among 8 cells
 // Inputs:
 //   grid_vals: full array of values on grid
+//   grid_ind: index of quantity to be interpolated
 //   m: ray index
 //   n: index along ray
 // Outputs:
 //   returned value: interpolated value from grid
 // Notes:
 //   Assumes sample_inds and sample_fracs have been set.
-float RadiationIntegrator::InterpolateAdvanced(const Array<float> &grid_vals, int m, int n)
+double RadiationIntegrator::InterpolateAdvanced(const Array<float> &grid_vals, int grid_ind, int m,
+    int n)
 {
   double vals[8] = {};
   for (int p = 0; p < 8; p++)
@@ -897,7 +1290,7 @@ float RadiationIntegrator::InterpolateAdvanced(const Array<float> &grid_vals, in
     int k = sample_inds(m,n,p,1);
     int j = sample_inds(m,n,p,2);
     int i = sample_inds(m,n,p,3);
-    vals[p] = static_cast<double>(grid_vals(b,k,j,i));
+    vals[p] = static_cast<double>(grid_vals(grid_ind,b,k,j,i));
   }
   double f_k = sample_fracs(m,n,0);
   double f_j = sample_fracs(m,n,1);
@@ -907,5 +1300,5 @@ float RadiationIntegrator::InterpolateAdvanced(const Array<float> &grid_vals, in
       + (1.0 - f_k) * f_j * f_i * vals[3] + f_k * (1.0 - f_j) * (1.0 - f_i) * vals[4]
       + f_k * (1.0 - f_j) * f_i * vals[5] + f_k * f_j * (1.0 - f_i) * vals[6]
       + f_k * f_j * f_i * vals[7];
-  return static_cast<float>(val);
+  return val;
 }

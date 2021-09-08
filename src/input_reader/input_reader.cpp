@@ -27,9 +27,6 @@ InputReader::InputReader(const std::string input_file_)
 // Inputs: (none)
 // Outputs:
 //   returned value: number of runs to perform based on inputs
-// Notes:
-//   Initializes all member objects that might be used except possibly simulation_file_formatted and
-//       output_file_formatted (both initialized no later than AdjustFileNames()).
 int InputReader::Read()
 {
   // Open input file
@@ -69,7 +66,7 @@ int InputReader::Read()
     else if (key == "output_format")
       output_format = ReadOutputFormat(val);
     else if (key == "output_file")
-      output_file_template = val;
+      output_file = val;
     else if (key == "output_params")
       output_params = ReadBool(val);
     else if (key == "output_camera")
@@ -115,7 +112,7 @@ int InputReader::Read()
 
     // Store simulation parameters
     else if (key == "simulation_file")
-      simulation_file_template = val;
+      simulation_file = val;
     else if (key == "simulation_multiple")
       simulation_multiple = ReadBool(val);
     else if (key == "simulation_start")
@@ -150,6 +147,22 @@ int InputReader::Read()
       plasma_rat_low = std::stod(val);
     else if (key == "plasma_sigma_max")
       plasma_sigma_max = std::stod(val);
+
+    // Store slow light parameters
+    else if (key == "slow_light_on")
+      slow_light_on = ReadBool(val);
+    else if (key == "slow_interp")
+      slow_interp = ReadBool(val);
+    else if (key == "slow_chunk_size")
+      slow_chunk_size = std::stoi(val);
+    else if (key == "slow_t_start")
+      slow_t_start = std::stod(val);
+    else if (key == "slow_dt")
+      slow_dt = std::stod(val);
+    else if (key == "slow_num_images")
+      slow_num_images = std::stoi(val);
+    else if (key == "slow_offset")
+      slow_offset = std::stoi(val);
 
     // Store fallback parameters
     else if (key == "fallback_nan")
@@ -256,104 +269,16 @@ int InputReader::Read()
     }
   }
 
-  // Account for multiple runs
+  // Count number of runs to do
+  int num_runs = 1;
   if (model_type.value() == ModelType::simulation and simulation_multiple.value())
   {
-    // Check number of runs
-    multiple_runs = true;
-    if (simulation_start.value() < 0)
-      throw BlacklightException("Must have nonnegative index simulation_start.");
-    num_runs = simulation_end.value() - simulation_start.value() + 1;
-    if (num_runs <= 0)
-      throw BlacklightException("Must have simulation_end at least as large as simulation_start.");
-
-    // Parse simulation filename template
-    std::string file_template = simulation_file_template.value();
-    simulation_pos_open = file_template.find_first_of('{');
-    if (simulation_pos_open == std::string::npos)
-      throw BlacklightException("Invalid simulation_file for multiple runs.");
-    simulation_pos_close = file_template.find_first_of('}', simulation_pos_open);
-    if (simulation_pos_close == std::string::npos)
-      throw BlacklightException("Invalid simulation_file for multiple runs.");
-    if (file_template[simulation_pos_close-1] != 'd')
-      throw BlacklightException("Invalid simulation_file for multiple runs.");
-    simulation_field_length = 0;
-    if (simulation_pos_close - simulation_pos_open > 2)
-      simulation_field_length = std::stoi(file_template.substr(simulation_pos_open + 1,
-          simulation_pos_close - simulation_pos_open - 2));
-
-    // Parse output filename template
-    file_template = output_file_template.value();
-    output_pos_open = file_template.find_first_of('{');
-    if (output_pos_open == std::string::npos)
-      throw BlacklightException("Invalid output_file for multiple runs.");
-    output_pos_close = file_template.find_first_of('}', output_pos_open);
-    if (output_pos_close == std::string::npos)
-      throw BlacklightException("Invalid output_file for multiple runs.");
-    if (file_template[output_pos_close-1] != 'd')
-      throw BlacklightException("Invalid output_file for multiple runs.");
-    output_field_length = 0;
-    if (output_pos_close - output_pos_open > 2)
-      output_field_length = std::stoi(file_template.substr(output_pos_open + 1,
-          output_pos_close - output_pos_open - 2));
-  }
-
-  // Account for single run
-  else
-  {
-    multiple_runs = false;
-    num_runs = 1;
-    if (model_type.value() == ModelType::simulation)
-      simulation_file_formatted = simulation_file_template.value();
-    output_file_formatted = output_file_template.value();
+    if (slow_light_on.value())
+      num_runs = slow_num_images.value();
+    else
+      num_runs = simulation_end.value() - simulation_start.value() + 1;
   }
   return num_runs;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// Function for preparing file names with appropriate substitutions
-// Inputs:
-//   index: index of file number, starting at 0
-// Outputs: (none)
-void InputReader::AdjustFileNames(int index)
-{
-  // Do nothing for single run
-  if (not multiple_runs)
-    return;
-
-  // Calculate length of field to fill
-  int file_number = simulation_start.value() + index;
-  int file_number_length = std::snprintf(nullptr, 0, "%d", file_number);
-  if (file_number_length < 0)
-    throw BlacklightException("Could not format file name.");
-
-  // Set simulation filename
-  int num_zeros = 0;
-  if (file_number_length < simulation_field_length)
-    num_zeros = simulation_field_length - file_number_length;
-  std::string file_template = simulation_file_template.value();
-  std::ostringstream simulation_filename;
-  simulation_filename << file_template.substr(0, simulation_pos_open);
-  for (int n = 0; n < num_zeros; n++)
-    simulation_filename << "0";
-  simulation_filename << file_number;
-  simulation_filename << file_template.substr(simulation_pos_close + 1);
-  simulation_file_formatted = simulation_filename.str();
-
-  // Set output filename
-  num_zeros = 0;
-  if (file_number_length < output_field_length)
-    num_zeros = output_field_length - file_number_length;
-  file_template = output_file_template.value();
-  std::ostringstream output_filename;
-  output_filename << file_template.substr(0, output_pos_open);
-  for (int n = 0; n < num_zeros; n++)
-    output_filename << "0";
-  output_filename << file_number;
-  output_filename << file_template.substr(output_pos_close + 1);
-  output_file_formatted = output_filename.str();
-  return;
 }
 
 //--------------------------------------------------------------------------------------------------

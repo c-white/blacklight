@@ -67,6 +67,7 @@ struct Array
       unsigned int i1_);
 
   // Functions - miscellaneous
+  void Swap(Array<type> &other);
   void Slice(int dimension, int index);
   void Zero();
   std::size_t GetNumBytes() const;

@@ -483,6 +483,45 @@ type &Array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3,
 
 //--------------------------------------------------------------------------------------------------
 
+// Swap function
+// Inputs:
+//   other: array with which this should be swapped
+// Outputs: (none)
+template<typename type>
+void Array<type>::Swap(Array<type> &other)
+{
+  // Only allow swapping of allocated arrays
+  if (not allocated or not other.allocated)
+    throw BlacklightException("Attempting to swap an unallocated array.");
+
+  // Make temporary shallow copy of other
+  bool other_is_copy = other.is_copy;
+  Array<type> temp(other);
+
+  // Copy data from this to other
+  other.data = data;
+  other.n1 = n1;
+  other.n2 = n2;
+  other.n3 = n3;
+  other.n4 = n4;
+  other.n5 = n5;
+  other.n_tot = n_tot;
+  other.is_copy = is_copy;
+
+  // Copy data from tmp to this
+  data = temp.data;
+  n1 = temp.n1;
+  n2 = temp.n2;
+  n3 = temp.n3;
+  n4 = temp.n4;
+  n5 = temp.n5;
+  n_tot = temp.n_tot;
+  is_copy = other_is_copy;
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
 // Multidimensional array slicing
 // Inputs:
 //   dimension: dimension of slice starting at 1 for innermost dimension

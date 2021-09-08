@@ -176,13 +176,10 @@ int main(int argc, char *argv[])
   // Go through runs
   for (int n = 0; n < num_runs; n++)
   {
-    // Adjust file names
-    p_input_reader->AdjustFileNames(n);
-
     // Read Athena++ file
     try
     {
-      time_read += p_athena_reader->Read();
+      time_read += p_athena_reader->Read(n);
     }
     catch (const BlacklightException &exception)
     {
@@ -202,7 +199,7 @@ int main(int argc, char *argv[])
       // Integrate radiation
       try
       {
-        adaptive_complete = p_radiation_integrator->Integrate(&time_sample, &time_radiation);
+        adaptive_complete = p_radiation_integrator->Integrate(n, &time_sample, &time_radiation);
       }
       catch (const BlacklightException &exception)
       {
@@ -236,7 +233,7 @@ int main(int argc, char *argv[])
     // Write output
     try
     {
-      p_output_writer->Write();
+      p_output_writer->Write(n);
     }
     catch (const BlacklightException &exception)
     {

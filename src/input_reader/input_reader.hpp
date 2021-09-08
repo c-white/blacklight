@@ -30,7 +30,7 @@ struct InputReader
 
   // Data - output parameters
   std::optional<OutputFormat> output_format;
-  std::optional<std::string> output_file_template;
+  std::optional<std::string> output_file;
   std::optional<bool> output_params;
   std::optional<bool> output_camera;
 
@@ -56,7 +56,7 @@ struct InputReader
   std::optional<double> formula_beta;
 
   // Data - simulation parameters
-  std::optional<std::string> simulation_file_template;
+  std::optional<std::string> simulation_file;
   std::optional<bool> simulation_multiple;
   std::optional<int> simulation_start;
   std::optional<int> simulation_end;
@@ -75,6 +75,15 @@ struct InputReader
   std::optional<double> plasma_rat_high;
   std::optional<double> plasma_rat_low;
   std::optional<double> plasma_sigma_max;
+
+  // Data - slow light parameters
+  std::optional<bool> slow_light_on;
+  std::optional<bool> slow_interp;
+  std::optional<int> slow_chunk_size;
+  std::optional<double> slow_t_start;
+  std::optional<double> slow_dt;
+  std::optional<int> slow_num_images;
+  std::optional<int> slow_offset;
 
   // Data - fallback parameters
   std::optional<bool> fallback_nan;
@@ -129,21 +138,8 @@ struct InputReader
   std::optional<double> adaptive_rel_lapl_cut;
   std::optional<double> adaptive_rel_lapl_frac;
 
-  // String substitution data
-  bool multiple_runs;
-  int num_runs;
-  std::string simulation_file_formatted;
-  std::string::size_type simulation_pos_open;
-  std::string::size_type simulation_pos_close;
-  int simulation_field_length;
-  std::string output_file_formatted;
-  std::string::size_type output_pos_open;
-  std::string::size_type output_pos_close;
-  int output_field_length;
-
   // External functions
   int Read();
-  void AdjustFileNames(int index);
 
   // Internal functions - input_reader.cpp
   static bool RemoveableSpace(unsigned char c);

@@ -74,7 +74,7 @@ bool RadiationIntegrator::CheckAdaptiveRefinement()
     }
 
     // Calculate number of blocks needed for next level
-    #pragma omp for schedule(static) reduction(+:num_refined_blocks)
+    #pragma omp for schedule(static) reduction(+: num_refined_blocks)
     for (int block = 0; block < block_counts[adaptive_current_level]; block++)
       if (refinement_flags[adaptive_current_level](block))
         num_refined_blocks++;
