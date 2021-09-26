@@ -12,9 +12,9 @@ output_camera = false               # flag for saving camera details (output_for
 checkpoint_geodesic_save = false                 # flag indicating geodesics should be saved
 checkpoint_geodesic_load = false                 # flag indicating geodesics should be loaded
 checkpoint_geodesic_file = output/geodesics.dat  # name of geodesic checkpoint file
-checkpoint_sample_save = false                   # flag indicating sampling should be saved
-checkpoint_sample_load = false                   # flag indicating sampling should be loaded
-checkpoint_sample_file = output/sample.dat       # name of sampling checkpoint file
+checkpoint_sample_save   = false                 # flag indicating sampling should be saved
+checkpoint_sample_load   = false                 # flag indicating sampling should be loaded
+checkpoint_sample_file   = output/sample.dat     # name of sampling checkpoint file
 
 # Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
 formula_mass  = 6.0e11   # black hole mass in cm
