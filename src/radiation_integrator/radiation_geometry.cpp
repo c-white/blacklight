@@ -548,12 +548,12 @@ void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, doub
 
 // Function for calculating orthonormal tetrad components in geodesic coordinates
 // Inputs:
-//   ucon: contravariant velocity components 
-//   ucov: covariant velocity components
-//   kcon: contravariant momentum components
-//   kcov: covariant momentum components
-//   up_con: contravariant components of up direction (usually magnetic field)
-//   gcov: contravariant metric components
+//   ucon: contravariant components of timelike velocity
+//   ucov: covariant components of timelike velocity
+//   kcon: contravariant components of null momentum
+//   kcov: covariant components of null momentum
+//   up_con: contravariant components of spacelike up direction (usually magnetic field)
+//   gcov: covariant metric components
 //   gcon: contravariant metric components
 // Outputs:
 //   tetrad: components set
@@ -563,6 +563,9 @@ void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, doub
 //   Aligns 3-direction with projection of k into space orthogonal to 0-direction.
 //   Aligns 2-direction with projection of up into plane orthogonal to 0- and 3-directions.
 //   Chooses 1-direction to make tetrad right-handed.
+//   Assumes |det(g)| = 1 (as in Cartesian Kerr-Schild or Minkowski coordinates).
+//   Generalizes 2012 ApJ 752 123 to case where up direction is not magnetic field, and changes
+//       ordering of basis vectors.
 void RadiationIntegrator::Tetrad(const double ucon[4], const double ucov[4], const double kcon[4],
     const double kcov[4], const double up_con[4], const Array<double> &gcov,
     const Array<double> &gcon, Array<double> &tetrad)
@@ -591,12 +594,6 @@ void RadiationIntegrator::Tetrad(const double ucon[4], const double ucov[4], con
   // Calculate components of unit vector in 3-direction
   for (int mu = 0; mu < 4; mu++)
     tetrad(3,mu) = kcon[mu] / omega - ucon[mu];
-  double u_e_3 = 0.0;
-  for (int mu = 0; mu < 4; mu++)
-    u_e_3 += ucov[mu] * tetrad(3,mu);
-  double e_tet_cov_3_fluid_con_1 = tetrad(3,1) + u_e_3 * ucon[1];
-  double e_tet_cov_3_fluid_con_2 = tetrad(3,2) + u_e_3 * ucon[2];
-  double e_tet_cov_3_fluid_con_3 = tetrad(3,3) + u_e_3 * ucon[3];
 
   // Calculate components of unit vector in 2-direction
   for (int mu = 0; mu < 4; mu++)
@@ -608,40 +605,26 @@ void RadiationIntegrator::Tetrad(const double ucon[4], const double ucov[4], con
   norm = std::sqrt(norm);
   for (int mu = 0; mu < 4; mu++)
     tetrad(2,mu) /= norm;
-  double u_e_2 = 0.0;
-  for (int mu = 0; mu < 4; mu++)
-    u_e_2 += ucov[mu] * tetrad(2,mu);
-  double e_tet_cov_2_fluid_con_1 = tetrad(2,1) + u_e_2 * ucon[1];
-  double e_tet_cov_2_fluid_con_2 = tetrad(2,2) + u_e_2 * ucon[2];
-  double e_tet_cov_2_fluid_con_3 = tetrad(2,3) + u_e_2 * ucon[3];
 
   // Calculate components of unit vector in 1-direction
-  double gcon_f11 = gcon(1,1) + ucon[1] * ucon[1];
-  double gcon_f12 = gcon(1,2) + ucon[1] * ucon[2];
-  double gcon_f13 = gcon(1,3) + ucon[1] * ucon[3];
-  double gcon_f22 = gcon(2,2) + ucon[2] * ucon[2];
-  double gcon_f23 = gcon(2,3) + ucon[2] * ucon[3];
-  double gcon_f33 = gcon(3,3) + ucon[3] * ucon[3];
-  double det_fluid_inv = gcon_f11 * gcon_f22 * gcon_f33 + 2.0 * gcon_f12 * gcon_f13 * gcon_f23
-      - gcon_f11 * gcon_f23 * gcon_f23 - gcon_f22 * gcon_f13 * gcon_f13
-      - gcon_f33 * gcon_f12 * gcon_f12;
-  double det_fluid_sqrt = 1.0 / std::sqrt(det_fluid_inv);
-  double e_tet_cov_1_fluid_cov_1 = det_fluid_sqrt * (e_tet_cov_2_fluid_con_2
-      * e_tet_cov_3_fluid_con_3 - e_tet_cov_2_fluid_con_3 * e_tet_cov_3_fluid_con_2);
-  double e_tet_cov_1_fluid_cov_2 = det_fluid_sqrt * (e_tet_cov_2_fluid_con_3
-      * e_tet_cov_3_fluid_con_1 - e_tet_cov_2_fluid_con_1 * e_tet_cov_3_fluid_con_3);
-  double e_tet_cov_1_fluid_cov_3 = det_fluid_sqrt * (e_tet_cov_2_fluid_con_1
-      * e_tet_cov_3_fluid_con_2 - e_tet_cov_2_fluid_con_2 * e_tet_cov_3_fluid_con_1);
-  double e_tet_cov_1_fluid_con_1 = gcon_f11 * e_tet_cov_1_fluid_cov_1
-      + gcon_f12 * e_tet_cov_1_fluid_cov_2 + gcon_f13 * e_tet_cov_1_fluid_cov_3;
-  double e_tet_cov_1_fluid_con_2 = gcon_f12 * e_tet_cov_1_fluid_cov_1
-      + gcon_f22 * e_tet_cov_1_fluid_cov_2 + gcon_f23 * e_tet_cov_1_fluid_cov_3;
-  double e_tet_cov_1_fluid_con_3 = gcon_f13 * e_tet_cov_1_fluid_cov_1
-      + gcon_f23 * e_tet_cov_1_fluid_cov_2 + gcon_f33 * e_tet_cov_1_fluid_cov_3;
-  tetrad(1,0) = -(ucov[1] * e_tet_cov_1_fluid_con_1 + ucov[2] * e_tet_cov_1_fluid_con_2
-      + ucov[3] * e_tet_cov_1_fluid_con_3) / ucov[0];
-  tetrad(1,1) = e_tet_cov_1_fluid_con_1;
-  tetrad(1,2) = e_tet_cov_1_fluid_con_2;
-  tetrad(1,3) = e_tet_cov_1_fluid_con_3;
+  double tetrad_1_cov[4];
+  tetrad_1_cov[0] = tetrad(0,1) * (tetrad(2,3) * tetrad(3,2) - tetrad(2,2) * tetrad(3,3))
+      + tetrad(0,2) * (tetrad(2,1) * tetrad(3,3) - tetrad(2,3) * tetrad(3,1))
+      + tetrad(0,3) * (tetrad(2,2) * tetrad(3,1) - tetrad(2,1) * tetrad(3,2));
+  tetrad_1_cov[1] = tetrad(0,0) * (tetrad(2,2) * tetrad(3,3) - tetrad(2,3) * tetrad(3,2))
+      + tetrad(0,2) * (tetrad(2,3) * tetrad(3,0) - tetrad(2,0) * tetrad(3,3))
+      + tetrad(0,3) * (tetrad(2,0) * tetrad(3,2) - tetrad(2,2) * tetrad(3,0));
+  tetrad_1_cov[2] = tetrad(0,0) * (tetrad(2,3) * tetrad(3,1) - tetrad(2,1) * tetrad(3,3))
+      + tetrad(0,1) * (tetrad(2,0) * tetrad(3,3) - tetrad(2,3) * tetrad(3,0))
+      + tetrad(0,3) * (tetrad(2,1) * tetrad(3,0) - tetrad(2,0) * tetrad(3,1));
+  tetrad_1_cov[3] = tetrad(0,0) * (tetrad(2,1) * tetrad(3,2) - tetrad(2,2) * tetrad(3,1))
+      + tetrad(0,1) * (tetrad(2,2) * tetrad(3,0) - tetrad(2,0) * tetrad(3,2))
+      + tetrad(0,2) * (tetrad(2,0) * tetrad(3,1) - tetrad(2,1) * tetrad(3,0));
+  for (int mu = 0; mu < 4; mu++)
+  {
+    tetrad(1,mu) = 0.0;
+    for (int nu = 0; nu < 4; nu++)
+      tetrad(1,mu) += gcon(mu,nu) * tetrad_1_cov[nu];
+  }
   return;
 }
