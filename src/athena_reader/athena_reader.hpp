@@ -68,7 +68,7 @@ struct AthenaReader
   int ind_bb1, ind_bb2, ind_bb3;
   int num_arrays;
   int latest_file_number;
-  const float extrapolation_tolerance = 1.0;
+  const float extrapolation_tolerance = 1.0f;
 
   // Data
   int n_3_root;

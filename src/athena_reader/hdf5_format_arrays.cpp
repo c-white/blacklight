@@ -314,7 +314,7 @@ void AthenaReader::SetHDF5FloatArray(const unsigned char *datatype_raw,
   {
     if (not float_array.allocated)
       float_array.Allocate(1);
-    else if (float_array.n_tot != num_elements)
+    else if (static_cast<unsigned int>(float_array.n_tot) != num_elements)
       throw BlacklightException("Array mismatch upon subsequent read.");
   }
   else if (num_dims == 1)

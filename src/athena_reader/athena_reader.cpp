@@ -154,7 +154,7 @@ double AthenaReader::Read(int snapshot)
     float snapshot_time = static_cast<float>(slow_t_start + slow_dt * snapshot);
 
     // Initialize most recent file time and number
-    float latest_time = static_cast<float>(snapshot_time - 2.0f * extrapolation_tolerance);
+    float latest_time = snapshot_time - 2.0f * extrapolation_tolerance;
     if (not first_time)
       latest_time = time[0];
     int latest_file_number_old = -1;
