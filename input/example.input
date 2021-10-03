@@ -43,12 +43,19 @@ simulation_interp       = false               # flag indicating interpolation sh
 simulation_block_interp = false               # flag indicating interpolation should cross blocks
 
 # Plasma parameters (only used if model_type == simulation)
-plasma_mu        = 0.5         # molecular weight of fluid in proton masses
-plasma_ne_ni     = 1.0         # electrons per ion
-plasma_model     = ti_te_beta  # electron temperature model (ti_te_beta, code_kappa)
-plasma_rat_low   = 1.0         # ion-electron temperature ratio at zero plasma beta
-plasma_rat_high  = 10.0        # ion-electron temperature ratio at infinite plasma beta
-plasma_sigma_max = 1.0         # if nonnegative, cutoff in sigma above which plasma is ignored
+plasma_mu         = 0.5         # molecular weight of fluid in proton masses
+plasma_ne_ni      = 1.0         # electrons per ion
+plasma_model      = ti_te_beta  # thermal electron temperature model (ti_te_beta, code_kappa)
+plasma_rat_low    = 1.0         # ion-electron temperature ratio at zero plasma beta
+plasma_rat_high   = 10.0        # ion-electron temperature ratio at infinite plasma beta
+plasma_power_frac = 0.0         # fraction of electrons with power-law distribution
+plasma_p          = 3.0         # power-law index
+plasma_gamma_min  = 1.0         # minimum Lorentz factor in power law
+plasma_gamma_max  = 10.0        # maximum Lorentz factor in power law
+plasma_kappa_frac = 0.0         # fraction of electrons with kappa distribution
+plasma_kappa      = 3.5         # kappa parameter for kappa distribution
+plasma_w          = 1.0         # w parameter for kappa distribution
+plasma_sigma_max  = 1.0         # if nonnegative, cutoff in sigma above which plasma is ignored
 
 # Slow light parameters (only used if model_type == simulation)
 slow_light_on   = false  # flag indicating slow light should be used

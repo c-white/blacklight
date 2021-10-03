@@ -72,8 +72,15 @@ struct InputReader
   std::optional<double> plasma_mu;
   std::optional<double> plasma_ne_ni;
   std::optional<PlasmaModel> plasma_model;
-  std::optional<double> plasma_rat_high;
   std::optional<double> plasma_rat_low;
+  std::optional<double> plasma_rat_high;
+  std::optional<double> plasma_power_frac;
+  std::optional<double> plasma_p;
+  std::optional<double> plasma_gamma_min;
+  std::optional<double> plasma_gamma_max;
+  std::optional<double> plasma_kappa_frac;
+  std::optional<double> plasma_kappa;
+  std::optional<double> plasma_w;
   std::optional<double> plasma_sigma_max;
 
   // Data - slow light parameters

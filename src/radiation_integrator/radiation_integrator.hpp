@@ -56,9 +56,17 @@ struct RadiationIntegrator
   // Input data - plasma parameters
   double plasma_mu;
   double plasma_ne_ni;
+  double plasma_thermal_frac;
   PlasmaModel plasma_model;
-  double plasma_rat_high;
   double plasma_rat_low;
+  double plasma_rat_high;
+  double plasma_power_frac;
+  double plasma_p;
+  double plasma_gamma_min;
+  double plasma_gamma_max;
+  double plasma_kappa_frac;
+  double plasma_kappa;
+  double plasma_w;
   double plasma_sigma_max;
 
   // Input data - slow light parameters
@@ -187,6 +195,25 @@ struct RadiationIntegrator
   Array<double> *image_adaptive;
   Array<double> *image_blocks;
 
+  // Precalculated values
+  double power_jj, power_jj_q, power_jj_v;
+  double power_aa, power_aa_q, power_aa_v;
+  double power_rho, power_rho_q, power_rho_v;
+  double kappa_jj_low, kappa_jj_low_q, kappa_jj_low_v;
+  double kappa_jj_high, kappa_jj_high_q, kappa_jj_high_v;
+  double kappa_jj_x_i, kappa_jj_x_q, kappa_jj_x_v;
+  double kappa_aa_low, kappa_aa_low_q, kappa_aa_low_v;
+  double kappa_aa_high, kappa_aa_high_i, kappa_aa_high_q, kappa_aa_high_v;
+  double kappa_aa_x_i, kappa_aa_x_q, kappa_aa_x_v;
+  double kappa_rho_frac;
+  double kappa_rho_q_low_a, kappa_rho_q_low_b, kappa_rho_q_low_c, kappa_rho_q_low_d,
+      kappa_rho_q_low_e;
+  double kappa_rho_q_high_a, kappa_rho_q_high_b, kappa_rho_q_high_c, kappa_rho_q_high_d,
+      kappa_rho_q_high_e;
+  double kappa_rho_v;
+  double kappa_rho_v_low_a, kappa_rho_v_low_b;
+  double kappa_rho_v_high_a, kappa_rho_v_high_b;
+
   // External function
   bool Integrate(int snapshot, double *p_time_sample, double *p_time_integrate);
 
@@ -206,6 +233,7 @@ struct RadiationIntegrator
 
   // Internal functions - simulation_coefficients.cpp
   void CalculateSimulationCoefficients();
+  double Hypergeometric(double alpha, double beta, double gamma, double z);
 
   // Internal functions - formula_coefficients.cpp
   void CalculateFormulaCoefficients();

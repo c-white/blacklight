@@ -2,7 +2,7 @@
 
 // C++ headers
 #include <algorithm>  // min
-#include <cmath>      // cbrt, cos, cyl_bessel_k, exp, expm1, pow, sin, sinh, sqrt, tanh
+#include <cmath>      // cbrt, cos, cyl_bessel_k, exp, expm1, pow, sin, sinh, sqrt, tanh, tgamma
 #include <limits>     // numeric_limits
 
 // Library headers
@@ -33,14 +33,9 @@
 //       rho_v_adaptive) if image_polarization == true.
 //   References beta-dependent temperature ratio electron model from 2016 AA 586 A38 (E1).
 //   References entropy-based electron model from 2017 MNRAS 466 705 (E2).
-//   References symphony paper 2016 ApJ 822 34 (S).
-//     J_V in (S 31) has an overall sign error that is corrected here and in the symphony code.
-//   References grtrans paper 2016 MNRAS 462 115 (G)
-//   Emissivities, absorptivities, and rotativities are calculated in their invariant forms,
-//       disagreeing with their definitions in (S) and (G) but agreeing with their usages in 2018
-//       MNRAS 475 43.
-//   Uses the definitions of nu_c and nu_s from (S); nu_{s,alt} is what (G) calls nu_c, and nu_c is
-//       what (G) calls nu_B.
+//   References arxiv:2108.10359v1 (M) for transfer coefficients.
+//   Transfer coefficients are calculated in their invariant forms, disagreeing with their
+//       definitions in (M) but agreeing with their usages in 2018 MNRAS 475 43.
 //   Tetrad is chosen such that j_U, alpha_U, rho_U = 0.
 //   Deallocates sample_rho_adaptive, sample_pgas_adaptive, and sample_kappa_adaptive.
 //   Dealllocates sample_uu1_adaptive, sample_uu2_adaptive, sample_uu3_adaptive,
@@ -48,6 +43,148 @@
 //       image_polarization == false.
 void RadiationIntegrator::CalculateSimulationCoefficients()
 {
+  // Precalculate power-law values
+  if (first_time and plasma_power_frac != 0.0)
+  {
+    double var_a = std::pow(3.0, plasma_p / 2.0) * (plasma_p - 1.0);
+    double var_b = 2.0 * (plasma_p + 1.0);
+    double var_c =
+        std::pow(plasma_gamma_min, 1.0 - plasma_p) - std::pow(plasma_gamma_max, 1.0 - plasma_p);
+    double var_d = std::tgamma((3.0 * plasma_p - 1.0) / 12.0);
+    double var_e = std::tgamma((3.0 * plasma_p + 19.0) / 12.0);
+    double var_f = std::pow(3.0, (plasma_p + 1.0) / 2.0) * (plasma_p - 1.0) / 4.0;
+    double var_g = std::tgamma((3.0 * plasma_p + 2.0) / 12.0);
+    double var_h = std::tgamma((3.0 * plasma_p + 22.0) / 12.0);
+    power_jj = var_a / var_b / var_c * var_d * var_e;
+    power_aa = var_f / var_c * var_g * var_h;
+    if (image_polarization)
+    {
+      double var_i = 2.0 * (plasma_p + 2.0) / (plasma_p + 1.0);
+      double var_j = std::pow(plasma_gamma_min, -(plasma_p + 1.0));
+      double var_k = std::log(plasma_gamma_min);
+      power_jj_q = -(plasma_p + 1.0) / (plasma_p + 7.0 / 3.0);
+      power_jj_v = 0.684 * std::pow(plasma_p, 0.49);
+      power_aa_q = -std::pow(0.034 * plasma_p - 0.0344, 0.086);
+      power_aa_v = std::pow(0.71 * plasma_p + 0.0352, 0.394);
+      power_rho = (plasma_p - 1.0) / var_c;
+      power_rho_q = -std::pow(plasma_gamma_min, 2.0 - plasma_p) / (plasma_p / 2.0 - 1.0);
+      power_rho_v = var_i * var_j * var_k;
+    }
+  }
+
+  // Precalculate kappa-distribution values
+  if (first_time and plasma_kappa_frac != 0.0)
+  {
+    double var_a = 4.0 * math::pi * std::tgamma(plasma_kappa - 4.0 / 3.0);
+    double var_b = std::pow(3.0, 7.0 / 3.0) * std::tgamma(plasma_kappa - 2.0);
+    double var_c = std::pow(3.0, (plasma_kappa - 1.0) / 2.0);
+    double var_d = (plasma_kappa - 2.0) * (plasma_kappa - 1.0) / 4.0;
+    double var_e = std::tgamma(plasma_kappa / 4.0 - 1.0 / 3.0);
+    double var_f = std::tgamma(plasma_kappa / 4.0 + 4.0 / 3.0);
+    double var_g = std::pow(3.0, 1.0 / 6.0) * 10.0 / 41.0;
+    double var_h = plasma_w * plasma_kappa;
+    double var_i = 2.0 * math::pi * std::pow(var_h, plasma_kappa - 10.0 / 3.0);
+    double var_j = (plasma_kappa - 2.0) * (plasma_kappa - 1.0) * plasma_kappa;
+    double var_k = 3.0 * plasma_kappa - 1.0;
+    double var_l = std::tgamma(5.0 / 3.0);
+    double var_m = Hypergeometric(plasma_kappa - 1.0 / 3.0, plasma_kappa + 1.0,
+        plasma_kappa + 2.0 / 3.0, -var_h);
+    double var_n = std::pow(math::pi, 1.5) / 3.0;
+    double var_o = var_j / (var_h * var_h * var_h);
+    double var_p = 2.0 * std::tgamma(2.0 + plasma_kappa / 2.0) / (2.0 + plasma_kappa) - 1.0;
+    kappa_jj_low = var_a / var_b;
+    kappa_jj_high = var_c * var_d * var_e * var_f;
+    kappa_jj_x_i = 3.0 * std::pow(plasma_kappa, -1.5);
+    kappa_aa_low = var_g * var_i * var_j / var_k * var_l * var_m;
+    kappa_aa_high = var_n * var_o * var_p;
+    kappa_aa_x_i = std::pow(-1.75 + 1.6 * plasma_kappa, 0.86);
+    if (image_polarization)
+    {
+      double var_q = 14.3 * std::pow(plasma_w, -0.928);
+      double var_r = 169.0 * std::pow(plasma_kappa, -8.0) + 0.0052 * plasma_kappa - 0.0526
+          + 47.0 / (200.0 * plasma_kappa);
+      kappa_jj_low_q = 0.5;
+      kappa_jj_low_v = 0.5625 * std::pow(plasma_kappa, -0.528) / plasma_w;
+      kappa_jj_high_q = 0.64 + 0.02 * plasma_kappa;
+      kappa_jj_high_v = 0.765625 * std::pow(plasma_kappa, -0.44) / plasma_w;
+      kappa_jj_x_q = 3.7 * std::pow(plasma_kappa, -1.6);
+      kappa_jj_x_v = kappa_jj_x_i;
+      kappa_aa_low_q = 25.0 / 48.0;
+      kappa_aa_low_v = 77.0 / (100.0 * plasma_w) * std::pow(plasma_kappa, -0.7);
+      kappa_aa_high_i = std::pow(3.0 / plasma_kappa, 4.75) + 0.6;
+      kappa_aa_high_q = 441.0 * std::pow(plasma_kappa, -5.76) + 0.55;
+      kappa_aa_high_v = var_q * var_r;
+      kappa_aa_x_q = 1.4 * std::pow(plasma_kappa, -1.15);
+      kappa_aa_x_v = 1.22 * std::pow(plasma_kappa, -1.136) + 0.007;
+      kappa_rho_v = std::cyl_bessel_k(0.0, 1.0 / plasma_w) / std::cyl_bessel_k(2.0, 1.0 / plasma_w);
+      if (plasma_kappa < 4.0)
+      {
+        kappa_rho_frac = (plasma_kappa - 3.5) / (4.0 - 3.5);
+        kappa_rho_q_low_a =
+            17.0 * plasma_w + std::sqrt(plasma_w) * (-3.0 + 7.0 * std::exp(-5.0 * plasma_w));
+        kappa_rho_q_low_b = -1.0 / 30.0;
+        kappa_rho_q_low_c = 0.1;
+        kappa_rho_q_low_d = -1.5;
+        kappa_rho_q_low_e = 0.471;
+        kappa_rho_q_high_a = 46.0 / 3.0 * plasma_w
+            + std::sqrt(plasma_w) * (-5.0 / 3.0 + 17.0 / 3.0 * std::exp(-5.0 * plasma_w));
+        kappa_rho_q_high_b = -1.0 / 18.0;
+        kappa_rho_q_high_c = 1.0 / 6.0;
+        kappa_rho_q_high_d = -1.75;
+        kappa_rho_q_high_e = 0.5;
+        kappa_rho_v_low_a = (plasma_w * plasma_w + 2.0 * plasma_w + 1.0)
+            / (3.125 * plasma_w * plasma_w + 4.0 * plasma_w + 1.0);
+        kappa_rho_v_low_b = 0.447;
+        kappa_rho_v_high_a = (plasma_w * plasma_w + 54.0 * plasma_w + 50.0)
+            / (30.0 / 11.0 * plasma_w * plasma_w + 134.0 * plasma_w + 50.0);
+        kappa_rho_v_high_b = 0.391;
+      }
+      else if (plasma_kappa < 4.5)
+      {
+        kappa_rho_frac = (plasma_kappa - 4.0) / (4.5 - 4.0);
+        kappa_rho_q_low_a = 46.0 / 3.0 * plasma_w
+            + std::sqrt(plasma_w) * (-5.0 / 3.0 + 17.0 / 3.0 * std::exp(-5.0 * plasma_w));
+        kappa_rho_q_low_b = -1.0 / 18.0;
+        kappa_rho_q_low_c = 1.0 / 6.0;
+        kappa_rho_q_low_d = -1.75;
+        kappa_rho_q_low_e = 0.5;
+        kappa_rho_q_high_a =
+            14.0 * plasma_w + std::sqrt(plasma_w) * (-1.625 + 4.5 * std::exp(-5.0 * plasma_w));
+        kappa_rho_q_high_b = -1.0 / 12.0;
+        kappa_rho_q_high_c = 0.25;
+        kappa_rho_q_high_d = -2.0;
+        kappa_rho_q_high_e = 0.525;
+        kappa_rho_v_low_a = (plasma_w * plasma_w + 54.0 * plasma_w + 50.0)
+            / (30.0 / 11.0 * plasma_w * plasma_w + 134.0 * plasma_w + 50.0);
+        kappa_rho_v_low_b = 0.391;
+        kappa_rho_v_high_a = (plasma_w * plasma_w + 43.0 * plasma_w + 38.0)
+            / (7.0 / 3.0 * plasma_w * plasma_w + 92.5 * plasma_w + 38.0);
+        kappa_rho_v_high_b = 0.348;
+      }
+      else
+      {
+        kappa_rho_frac = (plasma_kappa - 4.5) / (5.0 - 4.5);
+        kappa_rho_q_low_a =
+            14.0 * plasma_w + std::sqrt(plasma_w) * (-1.625 + 4.5 * std::exp(-5.0 * plasma_w));
+        kappa_rho_q_low_b = -1.0 / 12.0;
+        kappa_rho_q_low_c = 0.25;
+        kappa_rho_q_low_d = -2.0;
+        kappa_rho_q_low_e = 0.525;
+        kappa_rho_q_high_a =
+            12.5 * plasma_w + std::sqrt(plasma_w) * (-1.0 + 5.0 * std::exp(-5.0 * plasma_w));
+        kappa_rho_q_high_b = -0.125;
+        kappa_rho_q_high_c = 0.375;
+        kappa_rho_q_high_d = -2.25;
+        kappa_rho_q_high_e = 0.541;
+        kappa_rho_v_low_a = (plasma_w * plasma_w + 43.0 * plasma_w + 38.0)
+            / (7.0 / 3.0 * plasma_w * plasma_w + 92.5 * plasma_w + 38.0);
+        kappa_rho_v_low_b = 0.348;
+        kappa_rho_v_high_a = (plasma_w + 13.0 / 14.0) / (2.0 * plasma_w + 13.0 / 14.0);
+        kappa_rho_v_high_b = 0.313;
+      }
+    }
+  }
+
   // Allocate arrays
   int num_pix = camera_num_pix;
   if (adaptive_on and adaptive_current_level > 0)
@@ -282,7 +419,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         // Calculate electron temperature for model with T_i/T_e a function of beta (E1 1)
         double kb_tt_e_cgs = 0.0;
         double theta_e = 0.0;
-        if (plasma_model == PlasmaModel::ti_te_beta)
+        if (plasma_thermal_frac != 0.0 and plasma_model == PlasmaModel::ti_te_beta)
         {
           double beta_inv = b_sq / (2.0 * pgas);
           double tt_rat = (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv)
@@ -293,7 +430,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         }
 
         // Calculate electron temperature for given electron entropy (E2 13)
-        if (plasma_model == PlasmaModel::code_kappa)
+        if (plasma_thermal_frac != 0.0 and plasma_model == PlasmaModel::code_kappa)
         {
           double mu_e = plasma_mu * (1.0 + 1.0 / plasma_ne_ni);
           double rho_e = rho * physics::m_e / (mu_e * physics::m_p);
@@ -332,85 +469,225 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
           nu_cgs -= kcov[mu] * ucon[mu];
         nu_cgs *= momentum_factor;
         double nu_2_cgs = nu_cgs * nu_cgs;
-        double nu_3_cgs = nu_2_cgs * nu_cgs;
         double n_cgs = rho * simulation_rho_cgs / (plasma_mu * physics::m_p);
         double n_e_cgs = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
         double bb_cgs = std::sqrt(4.0 * math::pi * b_sq * e_unit);
         double nu_c_cgs = physics::e * bb_cgs / (2.0 * math::pi * physics::m_e * physics::c);
         double nu_s_cgs = 2.0 / 9.0 * nu_c_cgs * theta_e * theta_e * sin_theta_b;
-        double nu_s_alt_cgs = 27.0 / 4.0 * nu_s_cgs;
 
-        // Calculate thermal synchrotron emissivities (S 29,31)
-        double coefficient_j = n_e_cgs * physics::e * physics::e * nu_c_cgs / physics::c;
-        double xx_j = nu_cgs / nu_s_cgs;
-        double exp_neg_xx_1_3 = std::exp(-std::cbrt(xx_j));
-        double xx_1_2 = std::sqrt(xx_j);
-        double xx_1_6_times_2_11_12 = std::sqrt(std::cbrt(32.0 * math::sqrt2 * xx_j));
-        double factor_i = xx_1_2 + xx_1_6_times_2_11_12;
-        double coefficient_1 = math::sqrt2 * math::pi / 27.0;
-        j_i_local(m,n) = coefficient_j * exp_neg_xx_1_3 * coefficient_1 * sin_theta_b * factor_i
-            * factor_i / nu_2_cgs;
-        if (image_polarization)
+        // Calculate thermal synchrotron emissivities (M 28,30)
+        if (plasma_thermal_frac != 0.0)
         {
-          double xx_9_25 = std::pow(xx_j, 9.0 / 25.0);
-          double theta_e_24_25 = std::pow(theta_e, 24.0 / 25.0);
-          double theta_e_3_5 = std::pow(theta_e, 3.0 / 5.0);
-          double factor_q = xx_1_2 + (7.0 * theta_e_24_25 + 35.0) / (10.0 * theta_e_24_25 + 75.0)
-              * xx_1_6_times_2_11_12;
-          double factor_v = 1.0 + (theta_e_3_5 / 25.0 + 7.0 / 10.0) * xx_9_25;
-          double sin_theta_b_shift =
-              sin_theta_b * std::cos(28.0 / 25.0) - cos_theta_b * std::sin(28.0 / 25.0);
-          double coefficient_2 = (37.0 - 87.0 * sin_theta_b_shift) / (100.0 * (theta_e + 1.0));
-          j_q_local(m,n) = -coefficient_j * exp_neg_xx_1_3 * coefficient_1 * sin_theta_b * factor_q
-              * factor_q / nu_2_cgs;
-          j_v_local(m,n) = coefficient_j * exp_neg_xx_1_3 * coefficient_2
-              * std::pow(factor_v, 5.0 / 3.0) / nu_2_cgs;
-        }
-
-        // Calculate thermal synchrotron absorptivities from Kirchoff's law
-        double b_nu_cgs = 2.0 * physics::h * nu_cgs * nu_cgs * nu_cgs / (physics::c * physics::c)
-            / std::expm1(physics::h * nu_cgs / kb_tt_e_cgs);
-        alpha_i_local(m,n) = nu_3_cgs * j_i_local(m,n) / b_nu_cgs;
-        if (image_polarization)
-        {
-          alpha_q_local(m,n) = nu_3_cgs * j_q_local(m,n) / b_nu_cgs;
-          alpha_v_local(m,n) = nu_3_cgs * j_v_local(m,n) / b_nu_cgs;
-        }
-
-        // Account for numerical issues later arising from absorptivities being too small
-        if (1.0 / (alpha_i_local(m,n) * alpha_i_local(m,n))
-            == std::numeric_limits<double>::infinity())
-        {
-          alpha_i_local(m,n) = 0.0;
+          double xx = nu_cgs / nu_s_cgs;
+          double xx_1_2 = std::sqrt(xx);
+          double xx_1_3 = std::cbrt(xx);
+          double xx_1_6 = std::sqrt(xx_1_3);
+          double coefficient = plasma_thermal_frac * n_e_cgs * physics::e * physics::e * nu_c_cgs
+              / (physics::c * nu_2_cgs) * std::exp(-xx_1_3);
+          double var_a = math::sqrt2 * math::pi / 27.0 * sin_theta_b;
+          double var_b = std::pow(2.0, 11.0 / 12.0);
+          double var_c = xx_1_2 + var_b * xx_1_6;
+          j_i_local(m,n) = coefficient * var_a * var_c * var_c;
           if (image_polarization)
           {
-            alpha_q_local(m,n) = 0.0;
-            alpha_v_local(m,n) = 0.0;
+            double var_d =
+                (7.0 * std::pow(theta_e, 0.96) + 35.0) / (10.0 * std::pow(theta_e, 0.96)) * var_b;
+            double var_e = xx_1_2 + var_d * xx_1_6;
+            double var_f = cos_theta_b / theta_e;
+            double var_g = math::pi / 3.0 + math::pi / 3.0 * xx_1_3 + 2.0 / 300.0 * xx_1_2
+                + 2.0 / 19.0 * math::pi * xx_1_3 * xx_1_3;
+            j_q_local(m,n) = -coefficient * var_a * var_e * var_e;
+            j_v_local(m,n) = coefficient * var_f * var_g;
           }
         }
 
-        // Calculate thermal synchrotron rotativities (G B4,B6,B8,B13-B15)
-        if (image_polarization)
+        // Calculate thermal synchrotron absorptivities from Kirchoff's law
+        if (plasma_thermal_frac != 0.0)
         {
-          double coefficient_rho =
-              n_e_cgs * physics::e * physics::e * nu_c_cgs / (physics::m_e * physics::c);
+          // Calculate absorptivities
+          double b_nu_nu_3_cgs = 2.0 * physics::h / (physics::c * physics::c)
+              / std::expm1(physics::h * nu_cgs / kb_tt_e_cgs);
+          alpha_i_local(m,n) = j_i_local(m,n) / b_nu_nu_3_cgs;
+          if (image_polarization)
+          {
+            alpha_q_local(m,n) = j_q_local(m,n) / b_nu_nu_3_cgs;
+            alpha_v_local(m,n) = j_v_local(m,n) / b_nu_nu_3_cgs;
+          }
+
+          // Account for numerical issues later arising from absorptivities being too small
+          if (1.0 / (alpha_i_local(m,n) * alpha_i_local(m,n))
+              == std::numeric_limits<double>::infinity())
+          {
+            alpha_i_local(m,n) = 0.0;
+            if (image_polarization)
+            {
+              alpha_q_local(m,n) = 0.0;
+              alpha_v_local(m,n) = 0.0;
+            }
+          }
+        }
+
+        // Calculate thermal synchrotron rotativities (M 33-37)
+        if (plasma_thermal_frac != 0.0 and image_polarization)
+        {
+          double coefficient_q = -plasma_thermal_frac * n_e_cgs * physics::e * physics::e * nu_c_cgs
+              * nu_c_cgs * sin2_theta_b / (physics::m_e * physics::c * nu_2_cgs);
+          double coefficient_v = plasma_thermal_frac * 2.0 * n_e_cgs * physics::e * physics::e
+              * nu_c_cgs * cos_theta_b / (physics::m_e * physics::c * nu_cgs);
           double kk_0 = std::cyl_bessel_k(0.0, 1.0 / theta_e);
           double kk_1 = std::cyl_bessel_k(1.0, 1.0 / theta_e);
           double kk_2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
-          double xx_rho =
-              1.0 / std::sqrt(3.0 / (2.0 * math::sqrt2) * 1.0e-3 * nu_cgs / nu_s_alt_cgs);
-          double xx_rho_exp = 0.011 * std::exp(-xx_rho / 47.2);
-          double xx_rho_8_3 = 1.0e4 / std::cbrt(2.0 * std::sqrt(94143178827.0)) * math::pi
-              * std::pow(xx_rho, -8.0/3.0);
-          double factor_f = 2.011 * std::exp(-std::pow(xx_rho, 1.035) / 4.7)
-              - std::cos(xx_rho / 2.0) * std::exp(-std::pow(xx_rho, 1.2) / 2.73) - xx_rho_exp;
-          double factor_fm = factor_f + (xx_rho_exp - xx_rho_8_3) * 0.5
-              * (1.0 + std::tanh(10.0 * std::log(xx_rho / 120.0)));
-          double delta_jj_5 = 0.4379 * std::log(1.0 + 0.001858 * std::pow(xx_rho, 1.503));
-          rho_q_local(m,n) = coefficient_rho * nu_c_cgs * sin2_theta_b / nu_2_cgs * factor_fm
-              * (kk_1 / kk_2 + 6.0 * theta_e);
-          rho_v_local(m,n) =
-              2.0 * coefficient_rho * cos_theta_b / nu_cgs * (kk_0 - delta_jj_5) / kk_2;
+          double xx = nu_cgs / nu_s_cgs;
+          double xx_neg_1_2 = 1.0 / std::sqrt(xx);
+          double var_a = 2.011 * std::exp(-19.78 * std::pow(xx, -0.5175));
+          double var_b = std::cos(39.89 * xx_neg_1_2) * std::exp(-70.16 * std::pow(xx, -0.6));
+          double var_c = 0.011 * std::exp(-1.69 * xx_neg_1_2);
+          double var_d = 0.003135 * std::pow(xx, 4.0 / 3.0);
+          double var_e = 0.5 * (1.0 + std::tanh(10.0 * std::log(0.6648 * xx_neg_1_2)));
+          double f_0 = var_a - var_b - var_c;
+          double f_m = f_0 + (var_c - var_d) * var_e;
+          double delta_jj_5 = 0.4379 * std::log(1.0 + 1.3414 * std::pow(xx, -0.7515));
+          rho_q_local(m,n) = coefficient_q * f_m * (kk_1 / kk_2 + 6.0 * theta_e);
+          rho_v_local(m,n) = coefficient_v * (kk_0 - delta_jj_5) / kk_2;
+        }
+
+        // Calculate power-law synchrotron emissivities (M 28,38)
+        if (plasma_power_frac != 0.0)
+        {
+          double var_a = std::pow(nu_cgs / (nu_c_cgs * sin_theta_b), -(plasma_p - 1.0) / 2.0);
+          double coefficient = plasma_power_frac * n_e_cgs * physics::e * physics::e * nu_c_cgs
+              / (physics::c * nu_2_cgs) * power_jj * sin_theta_b * var_a;
+          j_i_local(m,n) += coefficient;
+          if (image_polarization)
+          {
+            double var_b = cos_theta_b / sin_theta_b;
+            double var_c = 1.0 / std::sqrt(nu_cgs / (3.0 * nu_c_cgs * sin_theta_b));
+            j_q_local(m,n) += coefficient * power_jj_q;
+            j_v_local(m,n) += coefficient * power_jj_v * var_b * var_c;
+          }
+        }
+
+        // Calculate power-law synchrotron absorptivities (M 29,39)
+        if (plasma_power_frac != 0.0)
+        {
+          double var_a = std::pow(nu_cgs / (nu_c_cgs * sin_theta_b), -(plasma_p + 2.0) / 2.0);
+          double coefficient = plasma_power_frac * n_e_cgs * physics::e * physics::e
+              / (physics::m_e * physics::c) * var_a;
+          alpha_i_local(m,n) += coefficient;
+          if (image_polarization)
+          {
+            double var_b = std::pow(3.1 * std::pow(sin_theta_b, -1.92) - 3.1, 0.512);
+            double var_c = 1.0 / std::sqrt(nu_cgs / (nu_c_cgs * sin_theta_b));
+            double var_d = cos_theta_b >= 0.0 ? 1.0 : -1.0;
+            alpha_q_local(m,n) += coefficient * power_aa_q;
+            alpha_v_local(m,n) += coefficient * power_aa_v * var_b * var_c * var_d;
+          }
+        }
+
+        // Calculate power-law synchrotron rotativities (M 40-42)
+        if (plasma_power_frac != 0.0 and image_polarization)
+        {
+          double var_a = n_e_cgs * physics::e * physics::e * nu_cgs
+              / (physics::m_e * physics::c * nu_c_cgs * sin_theta_b);
+          double var_b = nu_c_cgs * sin_theta_b / nu_cgs;
+          double var_c = var_b * var_b;
+          double var_d = var_c * var_b;
+          double var_e = 1.0 - std::pow(2.0 * nu_c_cgs * plasma_gamma_min * plasma_gamma_min
+              * sin_theta_b / (3.0 * nu_cgs), plasma_p / 2.0 - 1.0);
+          double var_f = cos_theta_b / sin_theta_b;
+          double coefficient = plasma_power_frac * power_rho * var_a;
+          rho_q_local(m,n) += coefficient * power_rho_q * var_d * var_e;
+          rho_v_local(m,n) += coefficient * power_rho_v * var_c * var_f;
+        }
+
+        // Calculate kappa-distribution synchrotron emissivities (M 28,43-46)
+        if (plasma_kappa_frac != 0.0)
+        {
+          double nu_kappa_cgs =
+              nu_c_cgs * plasma_w * plasma_w * plasma_kappa * plasma_kappa * sin_theta_b;
+          double xx = nu_cgs / nu_kappa_cgs;
+          double var_a = plasma_kappa_frac * n_e_cgs * physics::e * physics::e * nu_c_cgs
+              / (physics::c * nu_2_cgs);
+          double var_b = std::cbrt(xx) * sin_theta_b;
+          double var_c = std::pow(xx, -(plasma_kappa - 2.0) / 2.0) * sin_theta_b;
+          double coefficient_low = kappa_jj_low * var_a * var_b;
+          double coefficient_high = kappa_jj_high * var_a * var_c;
+          j_i_local(m,n) += std::pow(std::pow(coefficient_low, -kappa_jj_x_i)
+              + std::pow(coefficient_high, -kappa_jj_x_i), -1.0 / kappa_jj_x_i);
+          if (image_polarization)
+          {
+            double var_d = std::pow(std::pow(sin_theta_b, -2.4) - 1.0, 0.48);
+            double var_e = std::pow(xx, -0.35);
+            double var_f = std::pow(std::pow(sin_theta_b, -2.5) - 1.0, 0.44);
+            double var_g = std::pow(plasma_kappa, -0.44) / plasma_w;
+            double var_h = cos_theta_b >= 0.0 ? 1.0 : -1.0;
+            double jj_q_low = coefficient_low * kappa_jj_low_q;
+            double jj_v_low = coefficient_low * kappa_jj_low_v * var_d * var_e;
+            double jj_q_high = coefficient_high * kappa_jj_high_q;
+            double jj_v_high = coefficient_high * kappa_jj_high_v * var_f * var_g;
+            j_q_local(m,n) -= std::pow(std::pow(jj_q_low, -kappa_jj_x_q)
+                + std::pow(jj_q_high, -kappa_jj_x_q), -1.0 / kappa_jj_x_q);
+            j_v_local(m,n) += std::pow(std::pow(jj_v_low, -kappa_jj_x_v)
+                + std::pow(jj_v_high, -kappa_jj_x_v), -1.0 / kappa_jj_x_v) * var_h;
+          }
+        }
+
+        // Calculate kappa-distribution synchrotron absoptivities (M 29,47-50)
+        if (plasma_kappa_frac != 0.0)
+        {
+          double nu_kappa_cgs =
+              nu_c_cgs * plasma_w * plasma_w * plasma_kappa * plasma_kappa * sin_theta_b;
+          double xx = nu_cgs / nu_kappa_cgs;
+          double var_a =
+              plasma_kappa_frac * n_e_cgs * physics::e * physics::e / (physics::m_e * physics::c);
+          double var_b = std::pow(xx, -2.0 / 3.0);
+          double var_c = std::pow(xx, -(1.0 + plasma_kappa) / 2.0);
+          double coefficient_low = kappa_aa_low * var_a * var_b;
+          double coefficient_high = kappa_aa_high * var_a * var_c;
+          double aa_i_low = coefficient_low;
+          double aa_i_high = coefficient_high * kappa_aa_high_i;
+          alpha_i_local(m,n) += std::pow(std::pow(aa_i_low, -kappa_aa_x_i)
+              + std::pow(aa_i_high, -kappa_aa_x_i), -1.0 / kappa_aa_x_i);
+          if (image_polarization)
+          {
+            double var_d = std::pow(std::pow(sin_theta_b, -2.28) - 1.0, 0.446);
+            double var_e = std::pow(xx, -0.35);
+            double var_f = std::sqrt(std::pow(sin_theta_b, -2.05) - 1.0);
+            double var_g = 1.0 / std::sqrt(xx);
+            double var_h = cos_theta_b >= 0.0 ? 1.0 : -1.0;
+            double aa_q_low = coefficient_low * kappa_aa_low_q;
+            double aa_v_low = coefficient_low * kappa_aa_low_v * var_d * var_e;
+            double aa_q_high = coefficient_high * kappa_aa_high_q;
+            double aa_v_high = coefficient_high * kappa_aa_high_v * var_f * var_g;
+            alpha_q_local(m,n) -= std::pow(std::pow(aa_q_low, -kappa_aa_x_q)
+                + std::pow(aa_q_high, -kappa_aa_x_q), -1.0 / kappa_aa_x_q);
+            alpha_v_local(m,n) += std::pow(std::pow(aa_v_low, -kappa_aa_x_v)
+                + std::pow(aa_v_high, -kappa_aa_x_v), -1.0 / kappa_aa_x_v) * var_h;
+          }
+        }
+
+        // Calculate kappa-distribution synchrotron rotativities (M 51-54)
+        if (plasma_kappa_frac != 0.0 and image_polarization)
+        {
+          double nu_kappa_cgs =
+              nu_c_cgs * plasma_w * plasma_w * plasma_kappa * plasma_kappa * sin_theta_b;
+          double xx = nu_cgs / nu_kappa_cgs;
+          double var_a = -plasma_kappa_frac * n_e_cgs * physics::e * physics::e * nu_c_cgs
+              * nu_c_cgs * sin2_theta_b / (physics::m_e * physics::c * nu_2_cgs);
+          double var_b = plasma_kappa_frac * 2.0 * n_e_cgs * physics::e * physics::e * nu_c_cgs
+              * cos_theta_b / (physics::m_e * physics::c * nu_cgs);
+          double rho_q_low = var_a * kappa_rho_q_low_a * (1.0 - std::exp(kappa_rho_q_low_b
+              * std::pow(xx, 0.84)) - std::sin(kappa_rho_q_low_c * xx) * std::exp(kappa_rho_q_low_d
+              * std::pow(xx, kappa_rho_q_low_e)));
+          double rho_q_high = var_a * kappa_rho_q_high_a * (1.0 - std::exp(kappa_rho_q_high_b
+              * std::pow(xx, 0.84)) - std::sin(kappa_rho_q_high_c * xx)
+              * std::exp(kappa_rho_q_high_d * std::pow(xx, kappa_rho_q_high_e)));
+          double rho_v_low = kappa_rho_v * var_b * kappa_rho_v_low_a
+              * (1.0 - 0.17 * std::log(1.0 + kappa_rho_v_low_b / std::sqrt(xx)));
+          double rho_v_high = kappa_rho_v * var_b * kappa_rho_v_high_a
+              * (1.0 - 0.17 * std::log(1.0 + kappa_rho_v_high_b / std::sqrt(xx)));
+          rho_q_local(m,n) += (1.0 - kappa_rho_frac) * rho_q_low + kappa_rho_frac * rho_q_high;
+          rho_v_local(m,n) += (1.0 - kappa_rho_frac) * rho_v_low + kappa_rho_frac * rho_v_high;
         }
       }
     }
@@ -430,4 +707,55 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
     sample_bb3_adaptive.Deallocate();
   }
   return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for evaluating hypergeometric function
+// Inputs:
+//   alpha, beta, gamma: function parameters
+//   z: abscissa
+// Outputs:
+//   returned value: 2F1(alpha, beta, gamma, z)
+// Notes:
+//   Requires z < 0 and designed for use case of alpha = kappa - 1/3, beta = kappa + 1,
+//       gamma = kappa + 2/3, and z = -w * kappa.
+//   Evaluates Pfaff-transformation equivalent
+//       (1 - z)^(-alpha) * 2F1(alpha, gamma - beta, gamma, z / (z - 1)).
+//   Uses series expansion 2F1(a, b, c, x) = 1 + sum_{k=1}^infinity (a)_k (b)_k x^k / ((c)_k k!),
+//       with (y)_k = y * (y + 1) * ... * (y + k - 1), that should converge to within 1% in the
+//       range 3.5 <= kappa <= 5, 1 <= w <= 3.
+double RadiationIntegrator::Hypergeometric(double alpha, double beta, double gamma, double z)
+{
+  // Parameters
+  const int k_max = 10;
+
+  // Perform transformation
+  double a = alpha;
+  double b = gamma - beta;
+  double c = gamma;
+  double x = z / (z - 1.0);
+
+  // Prepare to accumulate result
+  double result = 1.0;
+  double a_k = 1.0;
+  double b_k = 1.0;
+  double c_k = 1.0;
+  double xk = 1.0;
+  double k_factorial = 1.0;
+
+  // Sum series
+  for (int k = 1; k <= k_max; k++)
+  {
+    a_k *= a + k - 1.0;
+    b_k *= b + k - 1.0;
+    c_k *= c + k - 1.0;
+    xk *= x;
+    k_factorial *= k;
+    result += a_k * b_k * xk / (c_k * k_factorial);
+  }
+
+  // Scale result
+  result *= std::pow(1.0 - z, -alpha);
+  return result;
 }

@@ -14,7 +14,7 @@
 #include "../geodesic_integrator/geodesic_integrator.hpp"  // GeodesicIntegrator
 #include "../input_reader/input_reader.hpp"                // InputReader
 #include "../utils/array.hpp"                              // Array
-#include "../utils/exceptions.hpp"                         // BlacklightWarning
+#include "../utils/exceptions.hpp"                         // BlacklightException, BlacklightWarning
 
 //--------------------------------------------------------------------------------------------------
 
@@ -102,9 +102,29 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     plasma_model = p_input_reader->plasma_model.value();
     if (plasma_model == PlasmaModel::ti_te_beta)
     {
-      plasma_rat_high = p_input_reader->plasma_rat_high.value();
       plasma_rat_low = p_input_reader->plasma_rat_low.value();
+      plasma_rat_high = p_input_reader->plasma_rat_high.value();
     }
+    plasma_power_frac = p_input_reader->plasma_power_frac.value();
+    if (plasma_power_frac < 0.0 or plasma_power_frac > 1.0)
+      BlacklightWarning("Fraction of power-law electrons outside [0, 1].");
+    if (plasma_power_frac != 0.0)
+    {
+      plasma_p = p_input_reader->plasma_p.value();
+      plasma_gamma_min = p_input_reader->plasma_gamma_min.value();
+      plasma_gamma_max = p_input_reader->plasma_gamma_max.value();
+    }
+    plasma_kappa_frac = p_input_reader->plasma_kappa_frac.value();
+    if (plasma_kappa_frac < 0.0 or plasma_kappa_frac > 1.0)
+      BlacklightWarning("Fraction of kappa-distribution electrons outside [0, 1].");
+    if (plasma_kappa_frac != 0.0)
+    {
+      plasma_kappa = p_input_reader->plasma_kappa.value();
+      plasma_w = p_input_reader->plasma_w.value();
+    }
+    plasma_thermal_frac = 1.0 - (plasma_power_frac + plasma_kappa_frac);
+    if (plasma_thermal_frac < 0.0 or plasma_thermal_frac > 1.0)
+      BlacklightWarning("Fraction of thermal electrons outside [0, 1].");
     plasma_sigma_max = p_input_reader->plasma_sigma_max.value();
   }
 
@@ -143,6 +163,14 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   else if (p_input_reader->image_polarization.has_value()
       and p_input_reader->image_polarization.value())
     BlacklightWarning("Ignoring image_polarization selection.");
+  if (image_polarization and model_type == ModelType::simulation and plasma_kappa_frac != 0.0)
+  {
+    if (plasma_kappa < 3.5 or plasma_kappa > 5.0)
+      throw BlacklightException("Polarized transport only supports kappa in [3.5, 5].");
+    else if (plasma_kappa != 3.5 and plasma_kappa != 4.0 and plasma_kappa != 4.5
+        and plasma_kappa != 5.0)
+      BlacklightWarning("Polarized transport will interpolate formulas based on kappa.");
+  }
 
   // Copy ray-tracing parameters
   ray_flat = p_input_reader->ray_flat.value();

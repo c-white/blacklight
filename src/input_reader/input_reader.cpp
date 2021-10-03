@@ -141,10 +141,24 @@ int InputReader::Read()
       plasma_ne_ni = std::stod(val);
     else if (key == "plasma_model")
       plasma_model = ReadPlasmaModel(val);
-    else if (key == "plasma_rat_high")
-      plasma_rat_high = std::stod(val);
     else if (key == "plasma_rat_low")
       plasma_rat_low = std::stod(val);
+    else if (key == "plasma_rat_high")
+      plasma_rat_high = std::stod(val);
+    else if (key == "plasma_power_frac")
+      plasma_power_frac = std::stod(val);
+    else if (key == "plasma_p")
+      plasma_p = std::stod(val);
+    else if (key == "plasma_gamma_min")
+      plasma_gamma_min = std::stod(val);
+    else if (key == "plasma_gamma_max")
+      plasma_gamma_max = std::stod(val);
+    else if (key == "plasma_kappa_frac")
+      plasma_kappa_frac = std::stod(val);
+    else if (key == "plasma_kappa")
+      plasma_kappa = std::stod(val);
+    else if (key == "plasma_w")
+      plasma_w = std::stod(val);
     else if (key == "plasma_sigma_max")
       plasma_sigma_max = std::stod(val);
 
