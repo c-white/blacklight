@@ -45,9 +45,11 @@ struct OutputWriter
   // Input data - simulation parameters
   bool simulation_multiple;
 
+  // Input data - camera parameters
+  Camera camera_type;
+  int camera_resolution;
+
   // Input data - image parameters
-  Camera image_camera;
-  int image_resolution;
   bool image_polarization;
 
   // Input data - adaptive parameters

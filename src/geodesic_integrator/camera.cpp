@@ -26,37 +26,37 @@
 void GeodesicIntegrator::InitializeCamera()
 {
   // Calculate trigonometric quantities
-  double sth = std::sin(image_th);
-  double cth = std::cos(image_th);
-  double sph = std::sin(image_ph);
-  double cph = std::cos(image_ph);
-  double srot = std::sin(image_rotation);
-  double crot = std::cos(image_rotation);
+  double sth = std::sin(camera_th);
+  double cth = std::cos(camera_th);
+  double sph = std::sin(camera_ph);
+  double cph = std::cos(camera_ph);
+  double srot = std::sin(camera_rotation);
+  double crot = std::cos(camera_rotation);
 
   // Calculate camera position
   cam_x[0] = 0.0;
-  cam_x[1] = sth * (image_r * cph - bh_a * sph);
-  cam_x[2] = sth * (image_r * sph + bh_a * cph);
-  cam_x[3] = image_r * cth;
+  cam_x[1] = sth * (camera_r * cph - bh_a * sph);
+  cam_x[2] = sth * (camera_r * sph + bh_a * cph);
+  cam_x[3] = camera_r * cth;
   if (ray_flat)
   {
-    cam_x[1] = image_r * sth * cph;
-    cam_x[2] = image_r * sth * sph;
+    cam_x[1] = camera_r * sth * cph;
+    cam_x[2] = camera_r * sth * sph;
   }
 
   // Calculate metric in spherical coordinates
   double a2 = bh_a * bh_a;
-  double r2 = image_r * image_r;
-  double delta = r2 - 2.0 * bh_m * image_r + a2;
+  double r2 = camera_r * camera_r;
+  double delta = r2 - 2.0 * bh_m * camera_r + a2;
   double sigma = r2 + a2 * cth * cth;
-  double g_cov_r_r = 1.0 + 2.0 * bh_m * image_r / sigma;
+  double g_cov_r_r = 1.0 + 2.0 * bh_m * camera_r / sigma;
   double g_cov_r_th = 0.0;
-  double g_cov_r_ph = -(1.0 + 2.0 * bh_m * image_r / sigma) * bh_a * sth * sth;
+  double g_cov_r_ph = -(1.0 + 2.0 * bh_m * camera_r / sigma) * bh_a * sth * sth;
   double g_cov_th_th = sigma;
   double g_cov_th_ph = 0.0;
-  double g_cov_ph_ph = (r2 + a2 + 2.0 * bh_m * a2 * image_r / sigma * sth * sth) * sth * sth;
-  double g_con_t_t = -(1.0 + 2.0 * bh_m * image_r / sigma);
-  double g_con_t_r = 2.0 * bh_m * image_r / sigma;
+  double g_cov_ph_ph = (r2 + a2 + 2.0 * bh_m * a2 * camera_r / sigma * sth * sth) * sth * sth;
+  double g_con_t_t = -(1.0 + 2.0 * bh_m * camera_r / sigma);
+  double g_con_t_r = 2.0 * bh_m * camera_r / sigma;
   double g_con_t_th = 0.0;
   double g_con_t_ph = 0.0;
   double g_con_r_r = delta / sigma;
@@ -84,31 +84,31 @@ void GeodesicIntegrator::InitializeCamera()
   double beta_con_r = -g_con_t_r / g_con_t_t;
   double beta_con_th = -g_con_t_th / g_con_t_t;
   double beta_con_ph = -g_con_t_ph / g_con_t_t;
-  double utn = std::sqrt(1.0 + g_cov_r_r * image_urn * image_urn
-      + 2.0 * g_cov_r_th * image_urn * image_uthn + 2.0 * g_cov_r_ph * image_urn * image_uphn
-      + g_cov_th_th * image_uthn * image_uthn + 2.0 * g_cov_th_ph * image_uthn * image_uphn
-      + g_cov_ph_ph * image_uphn * image_uphn);
+  double utn = std::sqrt(1.0 + g_cov_r_r * camera_urn * camera_urn
+      + 2.0 * g_cov_r_th * camera_urn * camera_uthn + 2.0 * g_cov_r_ph * camera_urn * camera_uphn
+      + g_cov_th_th * camera_uthn * camera_uthn + 2.0 * g_cov_th_ph * camera_uthn * camera_uphn
+      + g_cov_ph_ph * camera_uphn * camera_uphn);
   u_con[0] = utn / alpha;
-  double ur = image_urn - beta_con_r / alpha * utn;
-  double uth = image_uthn - beta_con_th / alpha * utn;
-  double uph = image_uphn - beta_con_ph / alpha * utn;
+  double ur = camera_urn - beta_con_r / alpha * utn;
+  double uth = camera_uthn - beta_con_th / alpha * utn;
+  double uph = camera_uphn - beta_con_ph / alpha * utn;
 
   // Calculate Jacobian of transformation
   double dx_dr = sth * cph;
   double dy_dr = sth * sph;
   double dz_dr = cth;
-  double dx_dth = cth * (image_r * cph - bh_a * sph);
-  double dy_dth = cth * (image_r * sph + bh_a * cph);
-  double dz_dth = -image_r * sth;
-  double dx_dph = sth * (-image_r * sph - bh_a * cph);
-  double dy_dph = sth * (image_r * cph - bh_a * sph);
+  double dx_dth = cth * (camera_r * cph - bh_a * sph);
+  double dy_dth = cth * (camera_r * sph + bh_a * cph);
+  double dz_dth = -camera_r * sth;
+  double dx_dph = sth * (-camera_r * sph - bh_a * cph);
+  double dy_dph = sth * (camera_r * cph - bh_a * sph);
   double dz_dph = 0.0;
   if (ray_flat)
   {
-    dx_dth = image_r * cth * cph;
-    dy_dth = image_r * cth * sph;
-    dx_dph = -image_r * sth * sph;
-    dy_dph = image_r * sth * cph;
+    dx_dth = camera_r * cth * cph;
+    dy_dth = camera_r * cth * sph;
+    dx_dph = -camera_r * sth * sph;
+    dy_dph = camera_r * sth * cph;
   }
 
   // Calculate camera velocity
@@ -131,9 +131,9 @@ void GeodesicIntegrator::InitializeCamera()
   double g_con_thn_thn = (g_con_t_t * g_con_th_th - g_con_t_th * g_con_t_th) / g_con_t_t;
   double g_con_thn_phn = (g_con_t_t * g_con_th_ph - g_con_t_th * g_con_t_ph) / g_con_t_t;
   double g_con_phn_phn = (g_con_t_t * g_con_ph_ph - g_con_t_ph * g_con_t_ph) / g_con_t_t;
-  double k_rn = image_k_r;
-  double k_thn = image_k_th;
-  double k_phn = image_k_ph;
+  double k_rn = camera_k_r;
+  double k_thn = camera_k_th;
+  double k_phn = camera_k_ph;
   double k_tn = -std::sqrt(g_con_rn_rn * k_rn * k_rn + 2.0 * g_con_rn_thn * k_rn * k_thn
       + 2.0 * g_con_rn_phn * k_rn * k_phn + g_con_thn_thn * k_thn * k_thn
       + 2.0 * g_con_thn_phn * k_thn * k_phn + g_con_phn_phn * k_phn * k_phn);
@@ -141,33 +141,33 @@ void GeodesicIntegrator::InitializeCamera()
 
   // Calculate Jacobian of transformation
   double rr2 = cam_x[1] * cam_x[1] + cam_x[2] * cam_x[2] + cam_x[3] * cam_x[3];
-  double dr_dx = image_r * cam_x[1] / (2.0 * r2 - rr2 + a2);
-  double dr_dy = image_r * cam_x[2] / (2.0 * r2 - rr2 + a2);
-  double dr_dz = (image_r * cam_x[3] + a2 * cam_x[3] / image_r) / (2.0 * r2 - rr2 + a2);
+  double dr_dx = camera_r * cam_x[1] / (2.0 * r2 - rr2 + a2);
+  double dr_dy = camera_r * cam_x[2] / (2.0 * r2 - rr2 + a2);
+  double dr_dz = (camera_r * cam_x[3] + a2 * cam_x[3] / camera_r) / (2.0 * r2 - rr2 + a2);
   double dth_dx = cam_x[3] * dr_dx / (r2 * sth);
   double dth_dy = cam_x[3] * dr_dy / (r2 * sth);
-  double dth_dz = (cam_x[3] * dr_dz - image_r) / (r2 * sth);
+  double dth_dz = (cam_x[3] * dr_dz - camera_r) / (r2 * sth);
   double dph_dx =
       -cam_x[2] / (cam_x[1] * cam_x[1] + cam_x[2] * cam_x[2]) + bh_a / (r2 + a2) * dr_dx;
   double dph_dy = cam_x[1] / (cam_x[1] * cam_x[1] + cam_x[2] * cam_x[2]) + bh_a / (r2 + a2) * dr_dy;
   double dph_dz = bh_a / (r2 + a2) * dr_dz;
   if (ray_flat)
   {
-    dr_dx = cam_x[1] / image_r;
-    dr_dy = cam_x[2] / image_r;
-    dr_dz = cam_x[3] / image_r;
-    dth_dx = cth * cph / image_r;
-    dth_dy = cth * sph / image_r;
-    dth_dz = -sth / image_r;
-    dph_dx = -sph / (image_r * sth);
-    dph_dy = cph / (image_r * sth);
+    dr_dx = cam_x[1] / camera_r;
+    dr_dy = cam_x[2] / camera_r;
+    dr_dz = cam_x[3] / camera_r;
+    dth_dx = cth * cph / camera_r;
+    dth_dy = cth * sph / camera_r;
+    dth_dz = -sth / camera_r;
+    dph_dx = -sph / (camera_r * sth);
+    dph_dy = cph / (camera_r * sth);
     dph_dz = 0.0;
   }
 
   // Calculate photon momentum
-  double k_x = dr_dx * image_k_r + dth_dx * image_k_th + dph_dx * image_k_ph;
-  double k_y = dr_dy * image_k_r + dth_dy * image_k_th + dph_dy * image_k_ph;
-  double k_z = dr_dz * image_k_r + dth_dz * image_k_th + dph_dz * image_k_ph;
+  double k_x = dr_dx * camera_k_r + dth_dx * camera_k_th + dph_dx * camera_k_ph;
+  double k_y = dr_dy * camera_k_r + dth_dy * camera_k_th + dph_dy * camera_k_ph;
+  double k_z = dr_dz * camera_k_r + dth_dz * camera_k_th + dph_dz * camera_k_ph;
   double k_tc = u_con[0] * k_t + u_con[1] * k_x + u_con[2] * k_y + u_con[3] * k_z;
 
   // Calculate momentum normalization
@@ -295,29 +295,29 @@ void GeodesicIntegrator::InitializeCamera()
   camera_dir.Allocate(camera_num_pix, 4);
 
   // Initialize position and direction for plane-parallel camera
-  if (image_camera == Camera::plane)
+  if (camera_type == Camera::plane)
   {
     #pragma omp parallel for schedule(static)
     for (int ind = 0; ind < camera_num_pix; ind++)
     {
-      int m = ind / image_resolution;
-      int l = ind % image_resolution;
-      double u_ind = (l - image_resolution / 2.0 + 0.5) / image_resolution;
-      double v_ind = (m - image_resolution / 2.0 + 0.5) / image_resolution;
+      int m = ind / camera_resolution;
+      int l = ind % camera_resolution;
+      double u_ind = (l - camera_resolution / 2.0 + 0.5) / camera_resolution;
+      double v_ind = (m - camera_resolution / 2.0 + 0.5) / camera_resolution;
       SetPixelPlane(u_ind, v_ind, ind, camera_pos, camera_dir);
     }
   }
 
   // Initialize position and direction for pinhole camera
-  if (image_camera == Camera::pinhole)
+  if (camera_type == Camera::pinhole)
   {
     #pragma omp parallel for schedule(static)
     for (int ind = 0; ind < camera_num_pix; ind++)
     {
-      int m = ind / image_resolution;
-      int l = ind % image_resolution;
-      double u_ind = (l - image_resolution / 2.0 + 0.5) / image_resolution;
-      double v_ind = (m - image_resolution / 2.0 + 0.5) / image_resolution;
+      int m = ind / camera_resolution;
+      int l = ind % camera_resolution;
+      double u_ind = (l - camera_resolution / 2.0 + 0.5) / camera_resolution;
+      double v_ind = (m - camera_resolution / 2.0 + 0.5) / camera_resolution;
       SetPixelPinhole(u_ind, v_ind, ind, camera_pos, camera_dir);
     }
   }
@@ -344,7 +344,7 @@ void GeodesicIntegrator::AugmentCamera()
 
   // Prepare to go through blocks
   int block_count_old = block_counts[adaptive_current_level-1];
-  int effective_resolution = image_resolution;
+  int effective_resolution = camera_resolution;
   for (int n = 1; n <= adaptive_current_level; n++)
     effective_resolution *= 2;
   Array<double> camera_pos_local;
@@ -373,7 +373,7 @@ void GeodesicIntegrator::AugmentCamera()
           int l_offset = block_u * adaptive_block_size;
 
           // Initialize position and direction for plane-parallel camera
-          if (image_camera == Camera::plane)
+          if (camera_type == Camera::plane)
           {
             #pragma omp parallel for schedule(static)
             for (int ind = 0; ind < block_num_pix; ind++)
@@ -389,7 +389,7 @@ void GeodesicIntegrator::AugmentCamera()
           }
 
           // Initialize position and direction for pinhole camera
-          if (image_camera == Camera::pinhole)
+          if (camera_type == Camera::pinhole)
           {
             #pragma omp parallel for schedule(static)
             for (int ind = 0; ind < block_num_pix; ind++)
@@ -425,8 +425,8 @@ void GeodesicIntegrator::SetPixelPlane(double u_ind, double v_ind, int ind, Arra
     Array<double> &direction)
 {
   // Set pixel position
-  double u = u_ind * bh_m * image_width;
-  double v = v_ind * bh_m * image_width;
+  double u = u_ind * bh_m * camera_width;
+  double v = v_ind * bh_m * camera_width;
   double dtc = u * hor_con_c[0] + v * vert_con_c[0];
   double dxc = u * hor_con_c[1] + v * vert_con_c[1];
   double dyc = u * hor_con_c[2] + v * vert_con_c[2];
@@ -470,10 +470,10 @@ void GeodesicIntegrator::SetPixelPinhole(double u_ind, double v_ind, int ind,
   position(ind,3) = cam_x[3];
 
   // Set pixel direction
-  double u = u_ind * bh_m * image_width;
-  double v = v_ind * bh_m * image_width;
-  double normalization = std::hypot(u, v, image_r);
-  double frac_norm = image_r / normalization;
+  double u = u_ind * bh_m * camera_width;
+  double v = v_ind * bh_m * camera_width;
+  double normalization = std::hypot(u, v, camera_r);
+  double frac_norm = camera_r / normalization;
   double frac_hor = -u / normalization;
   double frac_vert = -v / normalization;
   double dir_con_tc = norm_con_c[0];

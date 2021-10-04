@@ -33,20 +33,22 @@ struct GeodesicIntegrator
   bool checkpoint_geodesic_load;
   std::string checkpoint_geodesic_file;
 
+  // Input data - camera parameters
+  Camera camera_type;
+  double camera_r;
+  double camera_th;
+  double camera_ph;
+  double camera_urn;
+  double camera_uthn;
+  double camera_uphn;
+  double camera_k_r;
+  double camera_k_th;
+  double camera_k_ph;
+  double camera_rotation;
+  double camera_width;
+  int camera_resolution;
+
   // Input data - image parameters
-  Camera image_camera;
-  double image_r;
-  double image_th;
-  double image_ph;
-  double image_urn;
-  double image_uthn;
-  double image_uphn;
-  double image_k_r;
-  double image_k_th;
-  double image_k_ph;
-  double image_rotation;
-  double image_width;
-  int image_resolution;
   double image_frequency;
   FrequencyNormalization image_normalization;
   bool image_pole;

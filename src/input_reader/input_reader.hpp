@@ -98,20 +98,22 @@ struct InputReader
   std::optional<float> fallback_pgas;
   std::optional<float> fallback_kappa;
 
+  // Data - camera parameters
+  std::optional<Camera> camera_type;
+  std::optional<double> camera_r;
+  std::optional<double> camera_th;
+  std::optional<double> camera_ph;
+  std::optional<double> camera_urn;
+  std::optional<double> camera_uthn;
+  std::optional<double> camera_uphn;
+  std::optional<double> camera_k_r;
+  std::optional<double> camera_k_th;
+  std::optional<double> camera_k_ph;
+  std::optional<double> camera_rotation;
+  std::optional<double> camera_width;
+  std::optional<int> camera_resolution;
+
   // Data - image parameters
-  std::optional<Camera> image_camera;
-  std::optional<double> image_r;
-  std::optional<double> image_th;
-  std::optional<double> image_ph;
-  std::optional<double> image_urn;
-  std::optional<double> image_uthn;
-  std::optional<double> image_uphn;
-  std::optional<double> image_k_r;
-  std::optional<double> image_k_th;
-  std::optional<double> image_k_ph;
-  std::optional<double> image_rotation;
-  std::optional<double> image_width;
-  std::optional<int> image_resolution;
   std::optional<double> image_frequency;
   std::optional<FrequencyNormalization> image_normalization;
   std::optional<bool> image_polarization;

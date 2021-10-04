@@ -50,10 +50,12 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   if (model_type == ModelType::simulation)
     simulation_multiple = p_input_reader->simulation_multiple.value();
 
-  // Copy image parameters
+  // Copy camera parameters
   if (output_format == OutputFormat::npz and output_camera)
-    image_camera = p_input_reader->image_camera.value();
-  image_resolution = p_input_reader->image_resolution.value();
+    camera_type = p_input_reader->camera_type.value();
+  camera_resolution = p_input_reader->camera_resolution.value();
+
+  // Copy image parameters
   image_polarization = p_input_reader->image_polarization.value();
   if (image_polarization and
       not (output_format == OutputFormat::npz or output_format == OutputFormat::npy))
@@ -63,7 +65,7 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
     image_width_array.Allocate(1);
     image_frequency_array.Allocate(1);
     mass_msun_array.Allocate(1);
-    image_width_array(0) = p_input_reader->image_width.value();
+    image_width_array(0) = p_input_reader->camera_width.value();
     image_frequency_array(0) = p_input_reader->image_frequency.value();
     mass_msun_array(0) = p_radiation_integrator->mass_msun;
   }
@@ -79,17 +81,17 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   }
 
   // Make shallow copies of camera data, reshaping the arrays
-  if (output_format == OutputFormat::npz and output_camera and image_camera == Camera::plane)
+  if (output_format == OutputFormat::npz and output_camera and camera_type == Camera::plane)
   {
     camera_pos = p_geodesic_integrator->camera_pos;
-    camera_pos.n3 = image_resolution;
-    camera_pos.n2 = image_resolution;
+    camera_pos.n3 = camera_resolution;
+    camera_pos.n2 = camera_resolution;
   }
-  if (output_format == OutputFormat::npz and output_camera and image_camera == Camera::pinhole)
+  if (output_format == OutputFormat::npz and output_camera and camera_type == Camera::pinhole)
   {
     camera_dir = p_geodesic_integrator->camera_dir;
-    camera_dir.n3 = image_resolution;
-    camera_dir.n2 = image_resolution;
+    camera_dir.n3 = camera_resolution;
+    camera_dir.n2 = camera_resolution;
   }
 
   // Allocate space for shallow copies of adaptive data
@@ -139,8 +141,8 @@ void OutputWriter::Write(int snapshot)
   {
     image = p_radiation_integrator->image;
     image.n3 = image.n2;
-    image.n2 = image_resolution;
-    image.n1 = image_resolution;
+    image.n2 = camera_resolution;
+    image.n1 = camera_resolution;
   }
 
   // Make shallow copy of adaptive image data
@@ -164,7 +166,7 @@ void OutputWriter::Write(int snapshot)
   if (adaptive_on)
     for (int level = 1; level <= adaptive_num_levels_array(0); level++)
       camera_loc_adaptive[level] = p_geodesic_integrator->camera_loc_adaptive[level];
-  if (adaptive_on and output_camera and image_camera == Camera::plane)
+  if (adaptive_on and output_camera and camera_type == Camera::plane)
     for (int level = 1; level <= adaptive_num_levels_array(0); level++)
     {
       camera_pos_adaptive[level] = p_geodesic_integrator->camera_pos_adaptive[level];
@@ -172,7 +174,7 @@ void OutputWriter::Write(int snapshot)
       camera_pos_adaptive[level].n3 = adaptive_block_size;
       camera_pos_adaptive[level].n2 = adaptive_block_size;
     }
-  if (adaptive_on and output_camera and image_camera == Camera::pinhole)
+  if (adaptive_on and output_camera and camera_type == Camera::pinhole)
     for (int level = 1; level <= adaptive_num_levels_array(0); level++)
     {
       camera_dir_adaptive[level] = p_geodesic_integrator->camera_dir_adaptive[level];

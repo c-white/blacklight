@@ -50,20 +50,22 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   if (checkpoint_geodesic_save or checkpoint_geodesic_load)
     checkpoint_geodesic_file = p_input_reader->checkpoint_geodesic_file.value();
 
+  // Copy camera parameters
+  camera_type = p_input_reader->camera_type.value();
+  camera_r = p_input_reader->camera_r.value();
+  camera_th = p_input_reader->camera_th.value();
+  camera_ph = p_input_reader->camera_ph.value();
+  camera_urn = p_input_reader->camera_urn.value();
+  camera_uthn = p_input_reader->camera_uthn.value();
+  camera_uphn = p_input_reader->camera_uphn.value();
+  camera_k_r = p_input_reader->camera_k_r.value();
+  camera_k_th = p_input_reader->camera_k_th.value();
+  camera_k_ph = p_input_reader->camera_k_ph.value();
+  camera_rotation = p_input_reader->camera_rotation.value();
+  camera_width = p_input_reader->camera_width.value();
+  camera_resolution = p_input_reader->camera_resolution.value();
+
   // Copy image parameters
-  image_camera = p_input_reader->image_camera.value();
-  image_r = p_input_reader->image_r.value();
-  image_th = p_input_reader->image_th.value();
-  image_ph = p_input_reader->image_ph.value();
-  image_urn = p_input_reader->image_urn.value();
-  image_uthn = p_input_reader->image_uthn.value();
-  image_uphn = p_input_reader->image_uphn.value();
-  image_k_r = p_input_reader->image_k_r.value();
-  image_k_th = p_input_reader->image_k_th.value();
-  image_k_ph = p_input_reader->image_k_ph.value();
-  image_rotation = p_input_reader->image_rotation.value();
-  image_width = p_input_reader->image_width.value();
-  image_resolution = p_input_reader->image_resolution.value();
   image_frequency = p_input_reader->image_frequency.value();
   image_normalization = p_input_reader->image_normalization.value();
   image_pole = p_input_reader->image_pole.value();
@@ -89,8 +91,8 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
     adaptive_block_size = p_input_reader->adaptive_block_size.value();
     if (adaptive_block_size <= 0)
       throw BlacklightException("Must have positive adaptive_block_size.");
-    if (image_resolution % adaptive_block_size != 0)
-      throw BlacklightException("Must have adaptive_block_size divide image_resolution.");
+    if (camera_resolution % adaptive_block_size != 0)
+      throw BlacklightException("Must have adaptive_block_size divide camera_resolution.");
     adaptive_max_level = p_input_reader->adaptive_max_level.value();
     if (adaptive_max_level < 1)
       throw BlacklightException("Must have at least one allowed refinement level.");
@@ -118,12 +120,12 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   }
 
   // Calculate number of pixels
-  camera_num_pix = image_resolution * image_resolution;
+  camera_num_pix = camera_resolution * camera_resolution;
 
   // Allocate space for calculating adaptive refinement
   if (adaptive_on)
   {
-    linear_root_blocks = image_resolution / adaptive_block_size;
+    linear_root_blocks = camera_resolution / adaptive_block_size;
     block_num_pix = adaptive_block_size * adaptive_block_size;
     camera_loc_adaptive = new Array<int>[adaptive_max_level+1];
     camera_pos_adaptive = new Array<double>[adaptive_max_level+1];

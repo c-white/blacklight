@@ -41,20 +41,22 @@ slow_light_on = false  # flag indicating slow light should be used
 # Fallback parameters
 fallback_nan = true  # flag indicating any fallback should result in NaN for that ray
 
+# Camera parameters
+camera_type       = plane  # type of camera (plane, pinhole)
+camera_r          = 50.0   # KS radial coordinate r of camera in gravitational units
+camera_th         = 45.0   # KS polar coordinate theta of camera in degrees (0/180 for N/S)
+camera_ph         = 0.0    # KS azimuthal coordinate phi of camera in degrees
+camera_urn        = 0.0    # contravariant KS normal r-velocity of camera
+camera_uthn       = 0.0    # contravariant KS normal theta-velocity of camera (using radians)
+camera_uphn       = 0.0    # contravariant KS normal ph-velocity of camera (using radians)
+camera_k_r        = 1.0    # covariant KS r-momentum of received photons
+camera_k_th       = 0.0    # covariant KS theta-momentum of received photons (using radians)
+camera_k_ph       = 0.0    # covariant KS phi-momentum of received photons (using radians)
+camera_rotation   = 0.0    # rotation of camera in degrees (0/90 for north up/left)
+camera_width      = 24.0   # full width of image in gravitational units
+camera_resolution = 64     # number of pixels per side
+
 # Image parameters
-image_camera        = plane     # type of camera (plane, pinhole)
-image_r             = 50.0      # KS radial coordinate r of camera in gravitational units
-image_th            = 45.0      # KS polar coordinate theta of camera in degrees (0/180 for N/S)
-image_ph            = 0.0       # KS azimuthal coordinate phi of camera in degrees
-image_urn           = 0.0       # contravariant KS normal r-velocity of camera
-image_uthn          = 0.0       # contravariant KS normal theta-velocity of camera (using radians)
-image_uphn          = 0.0       # contravariant KS normal ph-velocity of camera (using radians)
-image_k_r           = 1.0       # covariant KS r-momentum of received photons
-image_k_th          = 0.0       # covariant KS theta-momentum of received photons (using radians)
-image_k_ph          = 0.0       # covariant KS phi-momentum of received photons (using radians)
-image_rotation      = 0.0       # rotation of camera in degrees (0/90 for north up/left)
-image_width         = 24.0      # full width of image in gravitational units
-image_resolution    = 64        # number of pixels per side
 image_frequency     = 2.3e11    # frequency of observation in Hz
 image_normalization = infinity  # image_frequency location (infinity [rest], camera [w/ velocity])
 image_polarization  = true      # flag indicating transport should be polarized

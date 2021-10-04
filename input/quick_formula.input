@@ -28,22 +28,24 @@ formula_beta  = 2.5      # source index
 # Fallback parameters
 fallback_nan = true  # flag indicating any fallback should result in NaN for that ray
 
+# Camera parameters
+camera_type       = plane                 # type of camera (plane, pinhole)
+camera_r          = 1000.0                # KS radial coordinate r in gravitational units
+camera_th         = 60.0                  # KS polar coordinate theta in degrees (0/180 for N/S)
+camera_ph         = 0.0                   # KS azimuthal coordinate phi in degrees
+camera_urn        = 0.001998006586832549  # contravariant KS normal r-velocity
+camera_uthn       = 0.0                   # contravariant KS normal theta-velocity (using radians)
+camera_uphn       = 0.0                   # contravariant KS normal ph-velocity (using radians)
+camera_k_r        = 1.0                   # covariant KS r-momentum of photons
+camera_k_th       = 0.0                   # covariant KS theta-momentum of photons (using radians)
+camera_k_ph       = 0.0                   # covariant KS phi-momentum of photons (using radians)
+camera_rotation   = 0.0                   # rotation of camera in degrees (0/90 for north up/left)
+camera_width      = 30.0                  # full width of image in gravitational units
+camera_resolution = 128                   # number of pixels per side
+
 # Image parameters
-image_camera        = plane                 # type of camera (plane, pinhole)
-image_r             = 1000.0                # KS radial coordinate r in gravitational units
-image_th            = 60.0                  # KS polar coordinate theta in degrees (0/180 for N/S)
-image_ph            = 0.0                   # KS azimuthal coordinate phi in degrees
-image_urn           = 0.001998006586832549  # contravariant KS normal r-velocity
-image_uthn          = 0.0                   # contravariant KS normal theta-velocity (using radians)
-image_uphn          = 0.0                   # contravariant KS normal ph-velocity (using radians)
-image_k_r           = 1.0                   # covariant KS r-momentum of photons
-image_k_th          = 0.0                   # covariant KS theta-momentum of photons (using radians)
-image_k_ph          = 0.0                   # covariant KS phi-momentum of photons (using radians)
-image_rotation      = 0.0                   # rotation of camera in degrees (0/90 for north up/left)
-image_width         = 30.0                  # full width of image in gravitational units
-image_resolution    = 128                   # number of pixels per side
-image_frequency     = 2.3e11                # frequency of observation in Hz
-image_normalization = camera                # image_frequency location (infinity, camera)
+image_frequency     = 2.3e11  # frequency of observation in Hz
+image_normalization = camera  # image_frequency location (infinity, camera)
 
 # Ray-tracing parameters
 ray_flat        = false     # flag indicating ray tracing should assume flat spacetime

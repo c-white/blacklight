@@ -82,9 +82,11 @@ struct RadiationIntegrator
   float fallback_pgas;
   float fallback_kappa;
 
+  // Input data - camera parameters
+  double camera_r;
+  int camera_resolution;
+
   // Input data - image parameters
-  double image_r;
-  int image_resolution;
   double image_frequency;
   bool image_polarization;
 

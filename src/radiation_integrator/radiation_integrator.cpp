@@ -154,9 +154,11 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       fallback_kappa = p_input_reader->fallback_kappa.value();
   }
 
+  // Copy camera parameters
+  camera_r = p_input_reader->camera_r.value();
+  camera_resolution = p_input_reader->camera_resolution.value();
+
   // Copy image parameters
-  image_r = p_input_reader->image_r.value();
-  image_resolution = p_input_reader->image_resolution.value();
   image_frequency = p_input_reader->image_frequency.value();
   if (model_type == ModelType::simulation)
     image_polarization = p_input_reader->image_polarization.value();
@@ -182,8 +184,8 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     adaptive_block_size = p_input_reader->adaptive_block_size.value();
     if (adaptive_block_size <= 0)
       throw BlacklightException("Must have positive adaptive_block_size.");
-    if (image_resolution % adaptive_block_size != 0)
-      throw BlacklightException("Must have adaptive_block_size divide image_resolution.");
+    if (camera_resolution % adaptive_block_size != 0)
+      throw BlacklightException("Must have adaptive_block_size divide camera_resolution.");
     adaptive_max_level = p_input_reader->adaptive_max_level.value();
     if (adaptive_max_level < 1)
       throw BlacklightException("Must have at least one allowed refinement level.");
@@ -266,7 +268,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   // Allocate space for calculating adaptive refinement
   if (adaptive_on)
   {
-    linear_root_blocks = image_resolution / adaptive_block_size;
+    linear_root_blocks = camera_resolution / adaptive_block_size;
     block_num_pix = adaptive_block_size * adaptive_block_size;
     block_counts = new int[adaptive_max_level+1];
     block_counts[0] = linear_root_blocks * linear_root_blocks;

@@ -188,33 +188,35 @@ int InputReader::Read()
     else if (key == "fallback_kappa")
       fallback_kappa = std::stof(val);
 
+    // Store camera parameters
+    else if (key == "camera_type")
+      camera_type = ReadCamera(val);
+    else if (key == "camera_r")
+      camera_r = std::stod(val);
+    else if (key == "camera_th")
+      camera_th = ReadPole(val, &image_pole) * math::pi / 180.0;
+    else if (key == "camera_ph")
+      camera_ph = std::stod(val) * math::pi / 180.0;
+    else if (key == "camera_urn")
+      camera_urn = std::stod(val);
+    else if (key == "camera_uthn")
+      camera_uthn = std::stod(val);
+    else if (key == "camera_uphn")
+      camera_uphn = std::stod(val);
+    else if (key == "camera_k_r")
+      camera_k_r = std::stod(val);
+    else if (key == "camera_k_th")
+      camera_k_th = std::stod(val);
+    else if (key == "camera_k_ph")
+      camera_k_ph = std::stod(val);
+    else if (key == "camera_rotation")
+      camera_rotation = std::stod(val) * math::pi / 180.0;
+    else if (key == "camera_width")
+      camera_width = std::stod(val);
+    else if (key == "camera_resolution")
+      camera_resolution = std::stoi(val);
+
     // Store image parameters
-    else if (key == "image_camera")
-      image_camera = ReadCamera(val);
-    else if (key == "image_r")
-      image_r = std::stod(val);
-    else if (key == "image_th")
-      image_th = ReadPole(val, &image_pole) * math::pi / 180.0;
-    else if (key == "image_ph")
-      image_ph = std::stod(val) * math::pi / 180.0;
-    else if (key == "image_urn")
-      image_urn = std::stod(val);
-    else if (key == "image_uthn")
-      image_uthn = std::stod(val);
-    else if (key == "image_uphn")
-      image_uphn = std::stod(val);
-    else if (key == "image_k_r")
-      image_k_r = std::stod(val);
-    else if (key == "image_k_th")
-      image_k_th = std::stod(val);
-    else if (key == "image_k_ph")
-      image_k_ph = std::stod(val);
-    else if (key == "image_rotation")
-      image_rotation = std::stod(val) * math::pi / 180.0;
-    else if (key == "image_width")
-      image_width = std::stod(val);
-    else if (key == "image_resolution")
-      image_resolution = std::stoi(val);
     else if (key == "image_frequency")
       image_frequency = std::stod(val);
     else if (key == "image_normalization")

@@ -96,7 +96,7 @@ void RadiationIntegrator::CalculateFormulaCoefficients()
 
       // Calculate coordinates and skip coupling if outside camera radius
       double r = RadialGeodesicCoordinate(x, y, z);
-      if (r > image_r)
+      if (r > camera_r)
         continue;
       double rr = std::sqrt(r * r - z * z);
       double cth = z / r;

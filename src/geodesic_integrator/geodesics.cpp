@@ -416,7 +416,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
 
         // Check termination
         sample_num_local(m) += num_steps;
-        bool terminate_outer = r_new > image_r and r_new > r;
+        bool terminate_outer = r_new > camera_r and r_new > r;
         bool terminate_inner = r_new < r_terminate;
         if (terminate_outer or terminate_inner)
           break;
@@ -443,7 +443,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
           double r_old = r_new;
           r_new = RadialGeodesicCoordinate(geodesic_pos(m,n,1), geodesic_pos(m,n,2),
               geodesic_pos(m,n,3));
-          bool terminate_outer = r_new > image_r and r_new > r_old;
+          bool terminate_outer = r_new > camera_r and r_new > r_old;
           bool terminate_inner = r_new < r_terminate;
           if (terminate_outer or terminate_inner)
           {

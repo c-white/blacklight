@@ -87,13 +87,13 @@ void OutputWriter::WriteNpz()
   // Write root camera data and metadata to buffers
   if (output_camera)
   {
-    if (image_camera == Camera::plane)
+    if (camera_type == Camera::plane)
     {
       data_lengths[array_offset] = GenerateNpyFromArray(camera_pos, 3, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], "positions", &local_header_buffers[array_offset]);
     }
-    else if (image_camera == Camera::pinhole)
+    else if (camera_type == Camera::pinhole)
     {
       data_lengths[array_offset] = GenerateNpyFromArray(camera_dir, 3, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
@@ -145,7 +145,7 @@ void OutputWriter::WriteNpz()
     // Write adaptive camera data and metadata to buffers
     if (output_camera)
     {
-      if (image_camera == Camera::plane)
+      if (camera_type == Camera::plane)
       {
         data_lengths[array_offset] =
             GenerateNpyFromArray(camera_pos_adaptive[level], 4, &data_buffers[array_offset]);
@@ -155,7 +155,7 @@ void OutputWriter::WriteNpz()
         local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
             data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       }
-      else if (image_camera == Camera::pinhole)
+      else if (camera_type == Camera::pinhole)
       {
         data_lengths[array_offset] =
             GenerateNpyFromArray(camera_dir_adaptive[level], 4, &data_buffers[array_offset]);

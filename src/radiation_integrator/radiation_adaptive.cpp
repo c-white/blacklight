@@ -50,7 +50,7 @@ bool RadiationIntegrator::CheckAdaptiveRefinement()
           for (int j = 0, j_full = j_full_start; j < adaptive_block_size; j++, j_full++)
             for (int i = 0, i_full = i_full_start; i < adaptive_block_size; i++, i_full++)
             {
-              int m = j_full * image_resolution + i_full;
+              int m = j_full * camera_resolution + i_full;
               image_blocks[thread](s,j,i) = image(s,m);
             }
         refinement_flags[0](block) = EvaluateBlock(thread);

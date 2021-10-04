@@ -317,7 +317,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
 
         // Skip coupling if outside camera radius
         double r = RadialGeodesicCoordinate(x1, x2, x3);
-        if (r > image_r)
+        if (r > camera_r)
           continue;
 
         // Extract model variables
