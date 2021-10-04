@@ -223,7 +223,7 @@ void GeodesicIntegrator::InitializeCamera()
   double up_con_xc = 0.0;
   double up_con_yc = 0.0;
   double up_con_zc = 1.0;
-  if (image_pole)
+  if (camera_pole)
   {
     up_con_yc = 1.0;
     up_con_zc = 0.0;

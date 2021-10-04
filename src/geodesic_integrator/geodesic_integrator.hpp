@@ -47,11 +47,11 @@ struct GeodesicIntegrator
   double camera_rotation;
   double camera_width;
   int camera_resolution;
+  bool camera_pole;
 
   // Input data - image parameters
   double image_frequency;
   FrequencyNormalization image_normalization;
-  bool image_pole;
 
   // Input data - ray-tracing parameters
   bool ray_flat;

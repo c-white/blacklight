@@ -194,7 +194,7 @@ int InputReader::Read()
     else if (key == "camera_r")
       camera_r = std::stod(val);
     else if (key == "camera_th")
-      camera_th = ReadPole(val, &image_pole) * math::pi / 180.0;
+      camera_th = ReadPole(val, &camera_pole) * math::pi / 180.0;
     else if (key == "camera_ph")
       camera_ph = std::stod(val) * math::pi / 180.0;
     else if (key == "camera_urn")

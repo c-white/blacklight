@@ -64,11 +64,11 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   camera_rotation = p_input_reader->camera_rotation.value();
   camera_width = p_input_reader->camera_width.value();
   camera_resolution = p_input_reader->camera_resolution.value();
+  camera_pole = p_input_reader->camera_pole.value();
 
   // Copy image parameters
   image_frequency = p_input_reader->image_frequency.value();
   image_normalization = p_input_reader->image_normalization.value();
-  image_pole = p_input_reader->image_pole.value();
 
   // Copy ray-tracing parameters
   ray_flat = p_input_reader->ray_flat.value();
