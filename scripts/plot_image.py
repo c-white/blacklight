@@ -247,14 +247,13 @@ def main(**kwargs):
 
   # Calculate named quantity parameters
   if kwargs['name'] is not None:
-    label_mid = {'time': r'\mathrm{min}(t)', 'length': r'l', 'lambda': r'\lambda', 'tau': r'\tau',
-        'emission': r'\int j_\nu \nu^{-2}\ \mathrm{d}\lambda',
-        'rho': r'\rho', 'n_e': r'n_\mathrm{e}', 'p_gas': r'p_\mathrm{gas}',
-        'Theta_e': r'\Theta_\mathrm{e}', 'B': r'B', 'sigma': r'\sigma',
-        'beta_inverse': r'\beta^{-1}'}
+    label_mid = {'time': r'\mathrm{min}(t)', 'length': r'l', 'lambda': r'\lambda',
+        'emission': r'\int j_\nu \nu^{-2}\ \mathrm{d}\lambda', 'tau': r'\tau', 'rho': r'\rho',
+        'n_e': r'n_\mathrm{e}', 'p_gas': r'p_\mathrm{gas}', 'Theta_e': r'\Theta_\mathrm{e}',
+        'B': r'B', 'sigma': r'\sigma', 'beta_inverse': r'\beta^{-1}'}
     label_unit = {'time': r' ($\mathrm{s}$)', 'length': r' ($\mathrm{cm}$)',
-        'lambda': r' ($\mathrm{s\ cm}$)', 'tau': r'',
-        'emission': r' ($\mathrm{erg\ s^2\ cm^{-2}\ sr^{-1}\ Hz^{-1}}$)',
+        'lambda': r' ($\mathrm{s\ cm}$)',
+        'emission': r' ($\mathrm{erg\ s^2\ cm^{-2}\ sr^{-1}\ Hz^{-1}}$)', 'tau': r'',
         'rho': r' ($\mathrm{g\ cm^{-3}}$)', 'n_e': r' ($\mathrm{cm^{-3}}$)',
         'p_gas': r' ($\mathrm{dyne\ cm^{-2}}$)', 'Theta_e': r'', 'B': r' ($\mathrm{gauss}$)',
         'sigma': r'', 'beta_inverse': r''}
@@ -262,15 +261,15 @@ def main(**kwargs):
       if kwargs['name'] in ('time', 'length', 'lambda', 'tau', 'emission'):
         key_mid = kwargs['name']
         label = r'$' + label_mid[kwargs['name']] + r'$'
-      elif kwargs['name'][:9] == 'path_ave_':
-        key_mid = kwargs['name'][9:]
+      elif kwargs['name'][:11] == 'lambda_ave_':
+        key_mid = kwargs['name'][11:]
         label = r'$\langle ' + label_mid[key_mid] + r' \rangle_\lambda$'
-      elif kwargs['name'][:8] == 'tau_int_':
-        key_mid = kwargs['name'][8:]
-        label = r'$\langle ' + label_mid[key_mid] + r' \rangle_\tau$'
       elif kwargs['name'][:13] == 'emission_ave_':
         key_mid = kwargs['name'][13:]
         label = r'$\langle ' + label_mid[key_mid] + r' \rangle_{j_\nu / \nu^2}$'
+      elif kwargs['name'][:8] == 'tau_int_':
+        key_mid = kwargs['name'][8:]
+        label = r'$\langle ' + label_mid[key_mid] + r' \rangle_\tau$'
       else:
         raise KeyError
       label += label_unit[key_mid]
