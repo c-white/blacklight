@@ -87,8 +87,17 @@ struct RadiationIntegrator
   int camera_resolution;
 
   // Input data - image parameters
+  bool image_light;
   double image_frequency;
   bool image_polarization;
+  bool image_time;
+  bool image_length;
+  bool image_lambda;
+  bool image_emission;
+  bool image_tau;
+  bool image_lambda_ave;
+  bool image_emission_ave;
+  bool image_tau_int;
 
   // Input data - ray-tracing parameters
   bool ray_flat;
@@ -166,9 +175,20 @@ struct RadiationIntegrator
   Array<double> j_i, j_q, j_v;
   Array<double> alpha_i, alpha_q, alpha_v;
   Array<double> rho_q, rho_v;
+  Array<double> cell_values;
 
   // Image data
   Array<double> image;
+  const int image_num_cell_values = 7;
+  int image_num_quantities = 0;
+  int image_offset_time = 0;
+  int image_offset_length = 0;
+  int image_offset_lambda = 0;
+  int image_offset_emission = 0;
+  int image_offset_tau = 0;
+  int image_offset_lambda_ave = 0;
+  int image_offset_emission_ave = 0;
+  int image_offset_tau_int = 0;
 
   // Adaptive data
   int adaptive_current_level = 0;
@@ -194,6 +214,7 @@ struct RadiationIntegrator
   Array<double> j_i_adaptive, j_q_adaptive, j_v_adaptive;
   Array<double> alpha_i_adaptive, alpha_q_adaptive, alpha_v_adaptive;
   Array<double> rho_q_adaptive, rho_v_adaptive;
+  Array<double> cell_values_adaptive;
   Array<double> *image_adaptive;
   Array<double> *image_blocks;
 

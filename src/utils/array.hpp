@@ -70,6 +70,7 @@ struct Array
   void Swap(Array<type> &other);
   void Slice(int dimension, int index);
   void Zero();
+  void SetNaN();
   std::size_t GetNumBytes() const;
 };
 

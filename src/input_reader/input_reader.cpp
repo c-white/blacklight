@@ -217,12 +217,30 @@ int InputReader::Read()
       camera_resolution = std::stoi(val);
 
     // Store image parameters
+    else if (key == "image_light")
+      image_light = ReadBool(val);
     else if (key == "image_frequency")
       image_frequency = std::stod(val);
     else if (key == "image_normalization")
       image_normalization = ReadFrequencyNormalization(val);
     else if (key == "image_polarization")
       image_polarization = ReadBool(val);
+    else if (key == "image_time")
+      image_time = ReadBool(val);
+    else if (key == "image_length")
+      image_length = ReadBool(val);
+    else if (key == "image_lambda")
+      image_lambda = ReadBool(val);
+    else if (key == "image_emission")
+      image_emission = ReadBool(val);
+    else if (key == "image_tau")
+      image_tau = ReadBool(val);
+    else if (key == "image_lambda_ave")
+      image_lambda_ave = ReadBool(val);
+    else if (key == "image_emission_ave")
+      image_emission_ave = ReadBool(val);
+    else if (key == "image_tau_int")
+      image_tau_int = ReadBool(val);
 
     // Store ray-tracing parameters
     else if (key == "ray_flat")
@@ -280,7 +298,7 @@ int InputReader::Read()
     else
     {
       std::ostringstream message;
-      message << "Unknown key (" << val << ") in input file.";
+      message << "Unknown key (" << key << ") in input file.";
       throw BlacklightException(message.str().c_str());
     }
   }

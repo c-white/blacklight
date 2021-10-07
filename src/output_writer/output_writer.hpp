@@ -50,7 +50,25 @@ struct OutputWriter
   int camera_resolution;
 
   // Input data - image parameters
+  bool image_light;
   bool image_polarization;
+  bool image_time;
+  bool image_length;
+  bool image_lambda;
+  bool image_emission;
+  bool image_tau;
+  bool image_lambda_ave;
+  bool image_emission_ave;
+  bool image_tau_int;
+  int image_num_cell_values;
+  int image_offset_time;
+  int image_offset_length;
+  int image_offset_lambda;
+  int image_offset_emission;
+  int image_offset_tau;
+  int image_offset_lambda_ave;
+  int image_offset_emission_ave;
+  int image_offset_tau_int;
 
   // Input data - adaptive parameters
   bool adaptive_on;
@@ -67,7 +85,7 @@ struct OutputWriter
   Array<double> image;
   Array<double> camera_pos;
   Array<double> camera_dir;
-  Array<double> image_width_array;
+  Array<double> camera_width_array;
   Array<double> image_frequency_array;
   Array<double> mass_msun_array;
 
@@ -78,6 +96,11 @@ struct OutputWriter
   Array<int> *camera_loc_adaptive;
   Array<double> *camera_pos_adaptive;
   Array<double> *camera_dir_adaptive;
+
+  // Name data
+  static constexpr int num_cell_names = 7;
+  const char *cell_names[num_cell_names] =
+      {"rho", "n_e", "p_gas", "Theta_e", "B", "sigma", "beta_inverse"};
 
   // External function
   void Write(int snapshot);

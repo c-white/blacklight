@@ -4,6 +4,7 @@
 #include <complex>  // complex
 #include <cstddef>  // size_t
 #include <cstring>  // memcpy
+#include <limits>   // numeric_limits
 
 // Library headers
 #include <omp.h>  // pragmas
@@ -547,6 +548,7 @@ void Array<type>::Slice(int dimension, int index)
       if (index < 0 or index >= n1)
         throw BlacklightException("Attempting to slice outside array bounds.");
       data += index;
+      n1 = 1;
       n2 = 1;
       n3 = 1;
       n4 = 1;
@@ -560,6 +562,7 @@ void Array<type>::Slice(int dimension, int index)
       if (index < 0 or index >= n2)
         throw BlacklightException("Attempting to slice outside array bounds.");
       data += index * n1;
+      n2 = 1;
       n3 = 1;
       n4 = 1;
       n5 = 1;
@@ -572,6 +575,7 @@ void Array<type>::Slice(int dimension, int index)
       if (index < 0 or index >= n3)
         throw BlacklightException("Attempting to slice outside array bounds.");
       data += index * n2 * n1;
+      n3 = 1;
       n4 = 1;
       n5 = 1;
       break;
@@ -625,6 +629,40 @@ void Array<type>::Zero()
     #pragma omp parallel for schedule(static)
     for (int n = 0; n < n_tot; n++)
       data[n] = static_cast<type>(0);
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Multidimensional float array NaN-initializing
+// Inputs: (none)
+// Outputs: (none)
+// Notes:
+//   Sets any allocated array to be NaN.
+template<>
+void Array<float>::SetNaN()
+{
+  if (allocated)
+    #pragma omp parallel for schedule(static)
+    for (int n = 0; n < n_tot; n++)
+      data[n] = std::numeric_limits<float>::quiet_NaN();
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Multidimensional double array NaN-initializing
+// Inputs: (none)
+// Outputs: (none)
+// Notes:
+//   Sets any allocated array to be NaN.
+template<>
+void Array<double>::SetNaN()
+{
+  if (allocated)
+    #pragma omp parallel for schedule(static)
+    for (int n = 0; n < n_tot; n++)
+      data[n] = std::numeric_limits<double>::quiet_NaN();
   return;
 }
 

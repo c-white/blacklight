@@ -159,20 +159,41 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   camera_resolution = p_input_reader->camera_resolution.value();
 
   // Copy image parameters
-  image_frequency = p_input_reader->image_frequency.value();
-  if (model_type == ModelType::simulation)
-    image_polarization = p_input_reader->image_polarization.value();
+  image_light = p_input_reader->image_light.value();
+  if (image_light)
+  {
+    image_frequency = p_input_reader->image_frequency.value();
+    if (model_type == ModelType::simulation)
+      image_polarization = p_input_reader->image_polarization.value();
+    else if (p_input_reader->image_polarization.has_value()
+        and p_input_reader->image_polarization.value())
+      BlacklightWarning("Ignoring image_polarization selection.");
+    if (model_type == ModelType::simulation and image_polarization and plasma_kappa_frac != 0.0)
+    {
+      if (plasma_kappa < 3.5 or plasma_kappa > 5.0)
+        throw BlacklightException("Polarized transport only supports kappa in [3.5, 5].");
+      else if (plasma_kappa != 3.5 and plasma_kappa != 4.0 and plasma_kappa != 4.5
+          and plasma_kappa != 5.0)
+        BlacklightWarning("Polarized transport will interpolate formulas based on kappa.");
+    }
+  }
   else if (p_input_reader->image_polarization.has_value()
       and p_input_reader->image_polarization.value())
     BlacklightWarning("Ignoring image_polarization selection.");
-  if (image_polarization and model_type == ModelType::simulation and plasma_kappa_frac != 0.0)
-  {
-    if (plasma_kappa < 3.5 or plasma_kappa > 5.0)
-      throw BlacklightException("Polarized transport only supports kappa in [3.5, 5].");
-    else if (plasma_kappa != 3.5 and plasma_kappa != 4.0 and plasma_kappa != 4.5
-        and plasma_kappa != 5.0)
-      BlacklightWarning("Polarized transport will interpolate formulas based on kappa.");
-  }
+  image_time = p_input_reader->image_time.value();
+  image_length = p_input_reader->image_length.value();
+  image_lambda = p_input_reader->image_lambda.value();
+  image_emission = p_input_reader->image_emission.value();
+  image_tau = p_input_reader->image_tau.value();
+  image_lambda_ave = p_input_reader->image_lambda_ave.value();
+  image_emission_ave = p_input_reader->image_emission_ave.value();
+  image_tau_int = p_input_reader->image_tau_int.value();
+  if (not (image_light or image_time or image_length or image_lambda or image_emission or image_tau
+      or image_lambda_ave or image_emission_ave or image_tau_int))
+    throw BlacklightException("No image type selected.");
+  if (model_type == ModelType::formula
+      and (image_lambda_ave or image_emission_ave or image_tau_int))
+    throw BlacklightException("Cell quantities not defined for formula.");
 
   // Copy ray-tracing parameters
   ray_flat = p_input_reader->ray_flat.value();
@@ -181,6 +202,8 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   adaptive_on = p_input_reader->adaptive_on.value();
   if (adaptive_on)
   {
+    if (not image_light)
+      throw BlacklightException("Adaptive ray tracing requires image_light.");
     adaptive_block_size = p_input_reader->adaptive_block_size.value();
     if (adaptive_block_size <= 0)
       throw BlacklightException("Must have positive adaptive_block_size.");
@@ -233,7 +256,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   // Copy adaptive geodesic data
   if (adaptive_on)
   {
-    if (image_polarization)
+    if (model_type == ModelType::simulation and image_polarization)
     {
       camera_pos_adaptive = p_geodesic_integrator->camera_pos_adaptive;
       camera_dir_adaptive = p_geodesic_integrator->camera_dir_adaptive;
@@ -264,6 +287,78 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       break;
     }
   }
+
+  // Calculate number of simultaneous images and their offsets
+  if (image_light)
+  {
+    image_num_quantities += model_type == ModelType::simulation and image_polarization ? 4 : 1;
+    image_offset_time = image_num_quantities;
+    image_offset_length = image_num_quantities;
+    image_offset_lambda = image_num_quantities;
+    image_offset_emission = image_num_quantities;
+    image_offset_tau = image_num_quantities;
+    image_offset_lambda_ave = image_num_quantities;
+    image_offset_emission_ave = image_num_quantities;
+    image_offset_tau_int = image_num_quantities;
+  }
+  if (image_time)
+  {
+    image_num_quantities++;
+    image_offset_length = image_num_quantities;
+    image_offset_lambda = image_num_quantities;
+    image_offset_emission = image_num_quantities;
+    image_offset_tau = image_num_quantities;
+    image_offset_lambda_ave = image_num_quantities;
+    image_offset_emission_ave = image_num_quantities;
+    image_offset_tau_int = image_num_quantities;
+  }
+  if (image_length)
+  {
+    image_num_quantities++;
+    image_offset_lambda = image_num_quantities;
+    image_offset_emission = image_num_quantities;
+    image_offset_tau = image_num_quantities;
+    image_offset_lambda_ave = image_num_quantities;
+    image_offset_emission_ave = image_num_quantities;
+    image_offset_tau_int = image_num_quantities;
+  }
+  if (image_lambda)
+  {
+    image_num_quantities++;
+    image_offset_emission = image_num_quantities;
+    image_offset_tau = image_num_quantities;
+    image_offset_lambda_ave = image_num_quantities;
+    image_offset_emission_ave = image_num_quantities;
+    image_offset_tau_int = image_num_quantities;
+  }
+  if (image_emission)
+  {
+    image_num_quantities++;
+    image_offset_tau = image_num_quantities;
+    image_offset_lambda_ave = image_num_quantities;
+    image_offset_emission_ave = image_num_quantities;
+    image_offset_tau_int = image_num_quantities;
+  }
+  if (image_tau)
+  {
+    image_num_quantities++;
+    image_offset_lambda_ave = image_num_quantities;
+    image_offset_emission_ave = image_num_quantities;
+    image_offset_tau_int = image_num_quantities;
+  }
+  if (image_lambda_ave)
+  {
+    image_num_quantities += image_num_cell_values;
+    image_offset_emission_ave = image_num_quantities;
+    image_offset_tau_int = image_num_quantities;
+  }
+  if (image_emission_ave)
+  {
+    image_num_quantities += image_num_cell_values;
+    image_offset_tau_int = image_num_quantities;
+  }
+  if (image_tau_int)
+    image_num_quantities += image_num_cell_values;
 
   // Allocate space for calculating adaptive refinement
   if (adaptive_on)
@@ -354,7 +449,7 @@ bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double 
   {
     time_integrate_start = time_sample_end;
     CalculateSimulationCoefficients();
-    if (image_polarization)
+    if (image_light and image_polarization)
       IntegratePolarizedRadiation();
     else
       IntegrateUnpolarizedRadiation();

@@ -88,9 +88,18 @@ camera_width      = 24.0   # full width of image in gravitational units
 camera_resolution = 64     # number of pixels per side
 
 # Image parameters
+image_light         = true      # flag indicating real image of radiation should be produced
 image_frequency     = 2.3e11    # frequency of observation in Hz
 image_normalization = infinity  # image_frequency location (infinity [rest], camera [w/ velocity])
 image_polarization  = false     # flag indicating transport should be polarized
+image_time          = false     # flag indicating image of geodesic times should be produced
+image_length        = false     # flag indicating image of geodesic lengths should be produced
+image_lambda        = false     # flag indicating image of affine path lengths should be produced
+image_emission      = false     # flag indicating image of emission coefficients should be produced
+image_tau           = false     # flag indicating image of optical depths should be produced
+image_lambda_ave    = false     # flag indicating path-averaged images should be produced
+image_emission_ave  = false     # flag indicating emission-averaged images should be produced
+image_tau_int       = false     # flag indicating tau-integrated images should be produced
 
 # Ray-tracing parameters
 ray_flat        = false           # flag indicating ray tracing should assume flat spacetime

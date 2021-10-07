@@ -115,9 +115,18 @@ struct InputReader
   std::optional<bool> camera_pole;
 
   // Data - image parameters
+  std::optional<bool> image_light;
   std::optional<double> image_frequency;
   std::optional<FrequencyNormalization> image_normalization;
   std::optional<bool> image_polarization;
+  std::optional<bool> image_time;
+  std::optional<bool> image_length;
+  std::optional<bool> image_lambda;
+  std::optional<bool> image_emission;
+  std::optional<bool> image_tau;
+  std::optional<bool> image_lambda_ave;
+  std::optional<bool> image_emission_ave;
+  std::optional<bool> image_tau_int;
 
   // Data - ray-tracing parameters
   std::optional<bool> ray_flat;

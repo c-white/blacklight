@@ -44,6 +44,11 @@ void RadiationIntegrator::CalculateFormulaCoefficients()
     j_i.Zero();
     alpha_i.Zero();
   }
+  else
+  {
+    j_i.Zero();
+    alpha_i.Zero();
+  }
 
   // Alias arrays
   Array<bool> sample_flags_local = sample_flags;

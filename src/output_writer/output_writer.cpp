@@ -56,19 +56,36 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   camera_resolution = p_input_reader->camera_resolution.value();
 
   // Copy image parameters
-  image_polarization = p_input_reader->image_polarization.value();
-  if (image_polarization and
-      not (output_format == OutputFormat::npz or output_format == OutputFormat::npy))
-    throw BlacklightException("Only npz or npy outputs support polarization.");
-  if (output_format == OutputFormat::npz and output_params)
+  image_light = p_input_reader->image_light.value();
+  if (image_light and model_type == ModelType::simulation)
   {
-    image_width_array.Allocate(1);
-    image_frequency_array.Allocate(1);
-    mass_msun_array.Allocate(1);
-    image_width_array(0) = p_input_reader->camera_width.value();
-    image_frequency_array(0) = p_input_reader->image_frequency.value();
-    mass_msun_array(0) = p_radiation_integrator->mass_msun;
+    image_polarization = p_input_reader->image_polarization.value();
+    if (image_polarization
+        and not (output_format == OutputFormat::npz or output_format == OutputFormat::npy))
+      throw BlacklightException("Only npz or npy outputs support polarization.");
   }
+  image_time = p_input_reader->image_time.value();
+  image_length = p_input_reader->image_length.value();
+  image_lambda = p_input_reader->image_lambda.value();
+  image_emission = p_input_reader->image_emission.value();
+  image_tau = p_input_reader->image_tau.value();
+  image_lambda_ave = p_input_reader->image_lambda_ave.value();
+  image_emission_ave = p_input_reader->image_emission_ave.value();
+  image_tau_int = p_input_reader->image_tau_int.value();
+  if ((image_time or image_length or image_lambda or image_emission or image_tau or image_lambda_ave
+      or image_emission_ave or image_tau_int) and not (output_format == OutputFormat::npz))
+    throw BlacklightException("Only npz outputs support non-light images.");
+  image_num_cell_values = p_radiation_integrator->image_num_cell_values;
+  if (image_num_cell_values != num_cell_names)
+    throw BlacklightException("Unexpected number of cell values.");
+  image_offset_time = p_radiation_integrator->image_offset_time;
+  image_offset_length = p_radiation_integrator->image_offset_length;
+  image_offset_lambda = p_radiation_integrator->image_offset_lambda;
+  image_offset_emission = p_radiation_integrator->image_offset_emission;
+  image_offset_tau = p_radiation_integrator->image_offset_tau;
+  image_offset_lambda_ave = p_radiation_integrator->image_offset_lambda_ave;
+  image_offset_emission_ave = p_radiation_integrator->image_offset_emission_ave;
+  image_offset_tau_int = p_radiation_integrator->image_offset_tau_int;
 
   // Copy adaptive parameters
   adaptive_on = p_input_reader->adaptive_on.value();
@@ -78,6 +95,17 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
       throw BlacklightException("Only npz outputs support adaptive ray tracing.");
     adaptive_block_size = p_input_reader->adaptive_block_size.value();
     adaptive_max_level = p_input_reader->adaptive_max_level.value();
+  }
+
+  // Copy scalar parameters to arrays
+  if (output_format == OutputFormat::npz and output_params)
+  {
+    camera_width_array.Allocate(1);
+    image_frequency_array.Allocate(1);
+    mass_msun_array.Allocate(1);
+    camera_width_array(0) = p_input_reader->camera_width.value();
+    image_frequency_array(0) = p_input_reader->image_frequency.value();
+    mass_msun_array(0) = p_radiation_integrator->mass_msun;
   }
 
   // Make shallow copies of camera data, reshaping the arrays

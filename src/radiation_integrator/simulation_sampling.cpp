@@ -148,6 +148,11 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
     sample_nan.Zero();
     sample_fallback.Zero();
   }
+  else
+  {
+    sample_nan.Zero();
+    sample_fallback.Zero();
+  }
 
   // Alias arrays
   Array<bool> sample_flags_local = sample_flags;

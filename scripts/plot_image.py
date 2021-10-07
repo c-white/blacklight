@@ -21,8 +21,12 @@ def main(**kwargs):
   data_format = np.float64
 
   # Plotting parameters
-  cmap_names = ('inferno', 'PuOr', 'PiYG', 'RdBu_r')
-  cmap_name_level = 'viridis'
+  cmap_i = 'inferno'
+  cmap_q = 'PuOr'
+  cmap_u = 'PiYG'
+  cmap_v = 'RdBu_r'
+  cmap_level = 'plasma'
+  cmap_name = 'viridis'
   nan_color = 'gray'
   interpolation = 'none'
   labelpad = 5
@@ -36,15 +40,11 @@ def main(**kwargs):
   import matplotlib.pyplot as plt
   from matplotlib.colors import LinearSegmentedColormap
 
-  # Determine Stokes parameter
-  if sum((kwargs['stokes_q'], kwargs['stokes_u'], kwargs['stokes_v'], kwargs['refinement_level'])) \
-      > 1:
-    raise RuntimeError('Can have at most one of Stokes Q/U/V or refinement level selected.')
-  stokes = 0
-  stokes = 1 if kwargs['stokes_q'] else stokes
-  stokes = 2 if kwargs['stokes_u'] else stokes
-  stokes = 3 if kwargs['stokes_v'] else stokes
-  stokes = None if kwargs['refinement_level'] else stokes
+  # Verify input
+  if sum((kwargs['stokes_q'], kwargs['stokes_u'], kwargs['stokes_v'], kwargs['refinement_level'],
+      kwargs['name'] is not None)) > 1:
+    raise RuntimeError('Can have at most one of Stokes Q/U/V, refinement level, or named quantity' \
+        + ' selected.')
 
   # Prepare metadata
   width_rg = kwargs['width']
@@ -57,13 +57,31 @@ def main(**kwargs):
     with np.load(kwargs['filename_data']) as f:
 
       # Read root image
-      polarization = f['image'].shape[0] == 4
-      if not polarization and stokes != 0:
-        raise RuntimeError('No polarization data in file.')
-      if stokes is not None:
-        image = f['image'][stokes,:,:]
+      if kwargs['name'] is not None:
+        try:
+          image = f[kwargs['name']][:]
+        except:
+          raise RuntimeError('{0} not found in file.'.format(kwargs['name']))
+      elif kwargs['refinement_level']:
+        try:
+          image = np.zeros_like(f['I_nu'][:])
+        except KeyError:
+          raise RuntimeError('No intensity data in file.')
+      elif not (kwargs['stokes_q'] or kwargs['stokes_u'] or kwargs['stokes_v']):
+        try:
+          image = f['I_nu'][:]
+        except KeyError:
+          raise RuntimeError('No intensity data in file.')
       else:
-        image = np.zeros_like(f['image'][0,:,:])
+        try:
+          if kwargs['stokes_q']:
+            image = f['Q_nu'][:]
+          elif kwargs['stokes_u']:
+            image = f['U_nu'][:]
+          else:
+            image = f['V_nu'][:]
+        except KeyError:
+          raise RuntimeError('No polarization data in file.')
 
       # Read adaptive image
       if max_level is None:
@@ -78,11 +96,19 @@ def main(**kwargs):
         for level in range(1, max_level + 1):
           num_blocks[level] = f['adaptive_num_blocks'][level]
           block_locs[level] = f['adaptive_block_locs_{0}'.format(level)][:]
-          if stokes is not None:
-            image_adaptive[level] = f['adaptive_image_{0}'.format(level)][stokes,:,:,:]
-          else:
+          if kwargs['name'] is not None:
+            image_adaptive[level] = f['adaptive_{0}_{1}'.format(kwargs['name'], level)][:,:,:]
+          elif kwargs['refinement_level']:
             image_adaptive[level] = \
-                level * np.ones_like(f['adaptive_image_{0}'.format(level)][0,:,:,:])
+                level * np.ones_like(f['adaptive_I_nu_{0}'.format(level)][:,:,:])
+          elif kwargs['stokes_q']:
+            image_adaptive[level] = f['adaptive_Q_nu_{0}'.format(level)][:,:,:]
+          elif kwargs['stokes_u']:
+            image_adaptive[level] = f['adaptive_U_nu_{0}'.format(level)][:,:,:]
+          elif kwargs['stokes_v']:
+            image_adaptive[level] = f['adaptive_V_nu_{0}'.format(level)][:,:,:]
+          else:
+            image_adaptive[level] = f['adaptive_I_nu_{0}'.format(level)][:,:,:]
 
       # Read metadata
       if 'width' in f.keys():
@@ -100,20 +126,31 @@ def main(**kwargs):
 
   # Read image data from .npy file
   elif kwargs['filename_data'][-4:] == '.npy':
-    if stokes is None:
+    if kwargs['name'] is not None:
+      raise RuntimeError('Arbitrary named quantities not supported by npy format.')
+    if kwargs['refinement_level']:
       raise RuntimeError('Adaptive refinement not supported by npy format.')
     image = np.load(kwargs['filename_data'])
     polarization = image.shape[0] == 4
-    if not polarization and stokes != 0:
+    if not polarization and (kwargs['stokes_q'] or kwargs['stokes_u'] or kwargs['stokes_v']):
       raise RuntimeError('No polarization data in file.')
-    image = image[stokes,:,:]
+    if kwargs['stokes_q']:
+      image = image[1,:,:]
+    elif kwargs['stokes_u']:
+      image = image[2,:,:]
+    elif kwargs['stokes_v']:
+      image = image[3,:,:]
+    else:
+      image = image[0,:,:]
     max_level = 0
 
   # Read image data from raw file
   else:
-    if stokes is None:
+    if kwargs['name'] is not None:
+      raise RuntimeError('Arbitrary named quantities not supported by raw format.')
+    if kwargs['refinement_level']:
       raise RuntimeError('Adaptive refinement not supported by raw format.')
-    if stokes != 0:
+    if kwargs['stokes_q'] or kwargs['stokes_u'] or kwargs['stokes_v']:
       raise RuntimeError('No polarization data in file.')
     image = np.fromfile(kwargs['filename_data'], dtype=data_format)
     pix_num = len(image)
@@ -208,16 +245,66 @@ def main(**kwargs):
         extent_adaptive[level][block,2] = extent[2] + y_loc * block_width_level
         extent_adaptive[level][block,3] = extent[2] + (y_loc + 1) * block_width_level
 
-  # Calculate intensity scale
-  if stokes is not None:
+  # Calculate named quantity parameters
+  if kwargs['name'] is not None:
+    label_mid = {'time': r'\mathrm{min}(t)', 'length': r'l', 'lambda': r'\lambda', 'tau': r'\tau',
+        'emission': r'\int j_\nu \nu^{-2}\ \mathrm{d}\lambda',
+        'rho': r'\rho', 'n_e': r'n_\mathrm{e}', 'p_gas': r'p_\mathrm{gas}',
+        'Theta_e': r'\Theta_\mathrm{e}', 'B': r'B', 'sigma': r'\sigma',
+        'beta_inverse': r'\beta^{-1}'}
+    label_unit = {'time': r' ($\mathrm{s}$)', 'length': r' ($\mathrm{cm}$)',
+        'lambda': r' ($\mathrm{s\ cm}$)', 'tau': r'',
+        'emission': r' ($\mathrm{erg\ s^2\ cm^{-2}\ sr^{-1}\ Hz^{-1}}$)',
+        'rho': r' ($\mathrm{g\ cm^{-3}}$)', 'n_e': r' ($\mathrm{cm^{-3}}$)',
+        'p_gas': r' ($\mathrm{dyne\ cm^{-2}}$)', 'Theta_e': r'', 'B': r' ($\mathrm{gauss}$)',
+        'sigma': r'', 'beta_inverse': r''}
+    try:
+      if kwargs['name'] in ('time', 'length', 'lambda', 'tau', 'emission'):
+        key_mid = kwargs['name']
+        label = r'$' + label_mid[kwargs['name']] + r'$'
+      elif kwargs['name'][:9] == 'path_ave_':
+        key_mid = kwargs['name'][9:]
+        label = r'$\langle ' + label_mid[key_mid] + r' \rangle_\lambda$'
+      elif kwargs['name'][:8] == 'tau_int_':
+        key_mid = kwargs['name'][8:]
+        label = r'$\langle ' + label_mid[key_mid] + r' \rangle_\tau$'
+      elif kwargs['name'][:13] == 'emission_ave_':
+        key_mid = kwargs['name'][13:]
+        label = r'$\langle ' + label_mid[key_mid] + r' \rangle_{j_\nu / \nu^2}$'
+      else:
+        raise KeyError
+      label += label_unit[key_mid]
+    except KeyError:
+      underscore = '_' if kwargs['notex'] else r'\_'
+      label = ''.join([c if c != '_' else underscore for c in kwargs['name']])
+    vmin = min(np.nanmin(image), 0.0)
+    vmax = np.nanmax(image)
+    tick_locs = None
+    cmap = plt.get_cmap(cmap_name)
+    cmap.set_bad(nan_color)
+    bounds = None
+
+  # Calculate refinement parameters
+  elif kwargs['refinement_level']:
+    label = 'level'
+    vmin = -0.5
+    vmax = max_level + 0.5
+    tick_locs = np.arange(0, max_level + 1)
+    cmap_continuous = plt.get_cmap(cmap_level)
+    cmap_vals = [cmap_continuous(float(x) / max_level) for x in tick_locs]
+    cmap = LinearSegmentedColormap.from_list('levels', cmap_vals, max_level + 1)
+    bounds = np.linspace(vmin, vmax, max_level + 2)
+
+  # Calculate intensity parameters
+  else:
     vmax = np.nanmax(np.abs(image))
     for level in range(1, max_level + 1):
       vmax_adaptive = np.nanmax(np.abs(image_adaptive[level]))
       vmax = np.nanmax((vmax, vmax_adaptive))
-    if stokes == 0:
-      vmin = 0.0
-    else:
+    if kwargs['stokes_q'] or kwargs['stokes_u'] or kwargs['stokes_v']:
       vmin = -vmax
+    else:
+      vmin = 0.0
     scale_exponent = int('{0:24.16e}'.format(vmax).split('e')[1])
     scale = 10.0 ** scale_exponent
     vmin /= scale
@@ -225,10 +312,18 @@ def main(**kwargs):
     image /= scale
     for level in range(1, max_level + 1):
       image_adaptive[level] /= scale
-    stokes_str = 'I'
-    stokes_str = 'Q' if kwargs['stokes_q'] else stokes_str
-    stokes_str = 'U' if kwargs['stokes_u'] else stokes_str
-    stokes_str = 'V' if kwargs['stokes_v'] else stokes_str
+    if kwargs['stokes_q']:
+      stokes_str = 'Q'
+      cmap = plt.get_cmap(cmap_q)
+    elif kwargs['stokes_u']:
+      stokes_str = 'U'
+      cmap = plt.get_cmap(cmap_u)
+    elif kwargs['stokes_v']:
+      stokes_str = 'V'
+      cmap = plt.get_cmap(cmap_v)
+    else:
+      stokes_str = 'I'
+      cmap = plt.get_cmap(cmap_i)
     if scale_exponent == 0:
       label = r'$' + stokes_str + r'_\nu$ ($\mathrm{erg\ s^{-1}\ cm^{-2}\ sr^{-1}\ Hz^{-1}}$)'
     elif scale_exponent == 1:
@@ -237,24 +332,8 @@ def main(**kwargs):
       label = r'$' + stokes_str + r'_\nu$ ($10^{' + repr(scale_exponent) \
           + r'}\ \mathrm{erg\ s^{-1}\ cm^{-2}\ sr^{-1}\ Hz^{-1}}$)'
     tick_locs = None
-
-  # Calculate refinement scale
-  else:
-    vmin = -0.5
-    vmax = max_level + 0.5
-    label = 'level'
-    tick_locs = np.arange(0, max_level + 1)
-
-  # Define colormap
-  if stokes is not None:
-    cmap = plt.get_cmap(cmap_names[stokes])
     cmap.set_bad(nan_color)
     bounds = None
-  else:
-    cmap_continuous = plt.get_cmap(cmap_name_level)
-    cmap_vals = [cmap_continuous(float(x) / max_level) for x in tick_locs]
-    cmap = LinearSegmentedColormap.from_list('levels', cmap_vals, max_level + 1)
-    bounds = np.linspace(vmin, vmax, max_level + 2)
 
   # Plot root image
   plt.imshow(image, cmap=cmap, vmin=vmin, vmax=vmax, aspect='equal', origin='lower', extent=extent,
@@ -271,7 +350,7 @@ def main(**kwargs):
   # Make colorbar
   cb = plt.colorbar(ticks=tick_locs, boundaries=bounds)
   cb.set_label(label, labelpad=labelpad)
-  if stokes is None:
+  if kwargs['refinement_level']:
     cb.ax.tick_params(length=0)
 
   # Adjust axes
@@ -299,6 +378,7 @@ if __name__ == '__main__':
       help='flag indicating Stokes V_nu should be plotted')
   parser.add_argument('-r', '--refinement_level', action='store_true',
       help='flag indicating refinement level should be plotted')
+  parser.add_argument('-n', '--name', help='name of quantity to be plotted')
   parser.add_argument('-w', '--width', type=float,
       help='full width of figure in gravitational radii')
   parser.add_argument('-m', '--mass', type=float, help='black hole mass in solar masses')

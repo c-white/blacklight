@@ -31,8 +31,16 @@ def main(**kwargs):
     with np.load(kwargs['filename_data']) as f:
 
       # Read root image
-      image = f['image'][:]
-      polarization = image.shape[0] == 4
+      try:
+        i_nu = f['I_nu'][:]
+      except KeyError:
+        raise RuntimeError('No intensity data in file.')
+      try:
+        image = np.array((i_nu, f['Q_nu'], f['U_nu'], f['V_nu']))
+        polarization = True
+      except KeyError:
+        image = i_nu[None,:,:]
+        polarization = False
 
       # Read adaptive image
       if max_level is None:
@@ -47,7 +55,15 @@ def main(**kwargs):
         for level in range(1, max_level + 1):
           num_blocks[level] = f['adaptive_num_blocks'][level]
           block_locs[level] = f['adaptive_block_locs_{0}'.format(level)][:]
-          image_adaptive[level] = f['adaptive_image_{0}'.format(level)][:]
+          if polarization:
+            key_i = 'adaptive_I_nu_{0}'.format(level)
+            key_q = 'adaptive_Q_nu_{0}'.format(level)
+            key_u = 'adaptive_U_nu_{0}'.format(level)
+            key_v = 'adaptive_V_nu_{0}'.format(level)
+            image_adaptive[level] = np.array((f[key_i], f[key_q], f[key_u], f[key_v]))
+          else:
+            key_i = 'adaptive_I_nu_{0}'.format(level)
+            image_adaptive[level] = f[key_i][None,:,:,:]
 
       # Read metadata
       if 'width' in f.keys():
