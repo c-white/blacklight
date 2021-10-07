@@ -595,11 +595,12 @@ void GeodesicIntegrator::ReverseGeodesics()
 //   gcon: components set
 //   dgcon: components set
 // Notes:
-//   Integrates following equations:
-//     d(x^mu) / d(lambda) = g^{mu nu} p_nu
-//     d(p_0) / d(lambda) = 0
-//     d(p_i) / d(lambda) = -1/2 * d(g^{mu nu}) / d(x^i) p_mu p_nu
-//     d(s) / d(lambda) = (g_{i j} g^{i mu} g^{j nu} p_mu p_nu)^(1/2)
+//   Integrates the following equations:
+//     d(x^mu) / d(lambda) = g^{mu nu} p_nu,
+//     d(p_0) / d(lambda) = 0,
+//     d(p_i) / d(lambda) = -1/2 * d(g^{mu nu}) / d(x^i) p_mu p_nu,
+//     d(s) / d(lambda) = -(g_{i j} (g^{i mu} - g^{0 i} g^{0 mu} / g^{0 0}) p_mu
+//         (g^{j nu} - g^{0 j} g^{0 nu} / g^{0 0}) p_nu)^(1/2).
 //   Assumes x^0 is ignorable.
 void GeodesicIntegrator::GeodesicSubstep(double y[9], double k[9], Array<double> &gcov,
     Array<double> &gcon, Array<double> &dgcon)
@@ -620,7 +621,8 @@ void GeodesicIntegrator::GeodesicSubstep(double y[9], double k[9], Array<double>
     for (int b = 1; b < 4; b++)
       for (int mu = 0; mu < 4; mu++)
         for (int nu = 0; nu < 4; nu++)
-          k[8] += gcov(a,b) * gcon(a,mu) * gcon(b,nu) * y[4+mu] * y[4+nu];
+          k[8] += gcov(a,b) * (gcon(a,mu) - gcon(0,a) * gcon(0,mu) / gcon(0,0))
+              * (gcon(b,nu) - gcon(0,b) * gcon(0,nu) / gcon(0,0)) * y[4+mu] * y[4+nu];
   k[8] = -std::sqrt(k[8]);
   return;
 }
