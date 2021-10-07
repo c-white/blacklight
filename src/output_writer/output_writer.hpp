@@ -39,7 +39,6 @@ struct OutputWriter
   // Input data - output parameters
   OutputFormat output_format;
   std::string output_file;
-  bool output_params;
   bool output_camera;
 
   // Input data - simulation parameters

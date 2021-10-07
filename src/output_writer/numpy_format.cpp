@@ -53,8 +53,7 @@ void OutputWriter::WriteNpz()
       + (image_lambda_ave ? image_num_cell_values : 0)
       + (image_emission_ave ? image_num_cell_values : 0)
       + (image_tau_int ? image_num_cell_values : 0);
-  int num_arrays = num_image_arrays + (output_params ? 3 : 0) + (output_camera ? 1 : 0) + 1
-      + (adaptive_on ? 1 : 0)
+  int num_arrays = num_image_arrays + 3 + (output_camera ? 1 : 0) + 1 + (adaptive_on ? 1 : 0)
       + adaptive_num_levels_array(0) * (1 + num_image_arrays + (output_camera ? 1 : 0));
   const int max_name_length = 128;
   char *name_buffer = new char[max_name_length];
@@ -185,24 +184,21 @@ void OutputWriter::WriteNpz()
     }
 
   // Write output parameters and metadata to buffers
-  if (output_params)
-  {
-    data_lengths[array_offset] =
-        GenerateNpyFromArray(camera_width_array, 1, &data_buffers[array_offset]);
-    local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
-        data_lengths[array_offset], "width", &local_header_buffers[array_offset]);
-    array_offset++;
-    data_lengths[array_offset] =
-        GenerateNpyFromArray(image_frequency_array, 1, &data_buffers[array_offset]);
-    local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
-        data_lengths[array_offset], "frequency", &local_header_buffers[array_offset]);
-    array_offset++;
-    data_lengths[array_offset] =
-        GenerateNpyFromArray(mass_msun_array, 1, &data_buffers[array_offset]);
-    local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
-        data_lengths[array_offset], "mass_msun", &local_header_buffers[array_offset]);
-    array_offset++;
-  }
+  data_lengths[array_offset] =
+      GenerateNpyFromArray(camera_width_array, 1, &data_buffers[array_offset]);
+  local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
+      data_lengths[array_offset], "width", &local_header_buffers[array_offset]);
+  array_offset++;
+  data_lengths[array_offset] =
+      GenerateNpyFromArray(image_frequency_array, 1, &data_buffers[array_offset]);
+  local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
+      data_lengths[array_offset], "frequency", &local_header_buffers[array_offset]);
+  array_offset++;
+  data_lengths[array_offset] =
+      GenerateNpyFromArray(mass_msun_array, 1, &data_buffers[array_offset]);
+  local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
+      data_lengths[array_offset], "mass_msun", &local_header_buffers[array_offset]);
+  array_offset++;
 
   // Write root camera data and metadata to buffers
   if (output_camera)

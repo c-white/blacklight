@@ -41,10 +41,7 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   output_format = p_input_reader->output_format.value();
   output_file = p_input_reader->output_file.value();
   if (output_format == OutputFormat::npz)
-  {
-    output_params = p_input_reader->output_params.value();
     output_camera = p_input_reader->output_camera.value();
-  }
 
   // Copy simulation parameters
   if (model_type == ModelType::simulation)
@@ -98,7 +95,7 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   }
 
   // Copy scalar parameters to arrays
-  if (output_format == OutputFormat::npz and output_params)
+  if (output_format == OutputFormat::npz)
   {
     camera_width_array.Allocate(1);
     image_frequency_array.Allocate(1);

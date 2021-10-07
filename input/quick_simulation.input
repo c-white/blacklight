@@ -5,7 +5,6 @@ num_threads = 4           # number of threads to use in parallel
 # Output parameters
 output_format = npz                          # format of output file (raw, npy, npz)
 output_file   = output/quick_simulation.npz  # file to be (over)written with image data
-output_params = true                         # flag for saving camera parameters
 output_camera = false                        # flag for saving camera details
 
 # Checkpoint parameters
