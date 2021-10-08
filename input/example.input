@@ -100,6 +100,26 @@ image_lambda_ave    = false     # flag indicating path-averaged images should be
 image_emission_ave  = false     # flag indicating emission-averaged images should be produced
 image_tau_int       = false     # flag indicating tau-integrated images should be produced
 
+# Rendering parameters
+render_num_images     = 0                # number of false-color renderings
+render_1_num_features = 3                # image 1: number of features
+render_1_1_quantity   = sigma            # image 1, feature 1: quantity to use
+render_1_1_type       = rise             # image 1, feature 1: type of feature (rise, fall, fill)
+render_1_1_thresh     = 1.0              # image 1, feature 1: threshold
+render_1_1_opacity    = 0.5              # image 1, feature 1: opacity in [0,1]
+render_1_1_rgb        = 255,0,0          # image 1, feature 1: RGB colors in [0,255]
+render_1_2_quantity   = sigma            # image 1, feature 2: quantity to use
+render_1_2_type       = fall             # image 1, feature 2: type of feature (rise, fall, fill)
+render_1_2_thresh     = 1.0              # image 1, feature 2: threshold
+render_1_2_opacity    = 0.5              # image 1, feature 2: opacity in [0,1]
+render_1_2_rgb        = 255,0,0          # image 1, feature 2: RGB colors in [0,255]
+render_1_3_quantity   = rho              # image 1, feature 3: quantity to use
+render_1_3_type       = fill             # image 1, feature 3: type of feature (rise, fall, fill)
+render_1_3_min        = 1.0e-17          # image 1, feature 3: lower cutoff
+render_1_3_max        = inf              # image 1, feature 3: upper cutoff
+render_1_3_tau_scale  = 1.0e13           # image 1, feature 3: optical depth length scale
+render_1_3_xyz        = 0.18,0.072,0.95  # image 1, feature 3: XYZ colors in [0,1]
+
 # Ray-tracing parameters
 ray_flat        = false           # flag indicating ray tracing should assume flat spacetime
 ray_terminate   = multiplicative  # termination condition (photon, multiplicative, additive)

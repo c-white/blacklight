@@ -5,7 +5,7 @@
 
 // Blacklight headers
 #include "radiation_integrator.hpp"
-#include "../blacklight.hpp"         // math, enums
+#include "../blacklight.hpp"         // Math, enums
 #include "../utils/array.hpp"        // Array
 
 //--------------------------------------------------------------------------------------------------
@@ -42,8 +42,8 @@ void RadiationIntegrator::CKSToSKS(double *p_x1, double *p_x2, double *p_x3)
   double r = std::sqrt(r2);
   double th = std::acos(z / r);
   double ph = std::atan2(y, x) - std::atan(bh_a / r);
-  ph += ph < 0.0 ? 2.0 * math::pi : 0.0;
-  ph -= ph >= 2.0 * math::pi ? 2.0 * math::pi : 0.0;
+  ph += ph < 0.0 ? 2.0 * Math::pi : 0.0;
+  ph -= ph >= 2.0 * Math::pi ? 2.0 * Math::pi : 0.0;
   *p_x1 = r;
   *p_x2 = th;
   *p_x3 = ph;

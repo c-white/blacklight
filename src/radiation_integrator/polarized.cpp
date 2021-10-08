@@ -10,7 +10,7 @@
 
 // Blacklight headers
 #include "radiation_integrator.hpp"
-#include "../blacklight.hpp"         // math, physics
+#include "../blacklight.hpp"         // Math, Physics, enums
 #include "../utils/array.hpp"        // Array
 
 //--------------------------------------------------------------------------------------------------
@@ -36,7 +36,8 @@
 //   Dealllocates sample_uu1_adaptive, sample_uu2_adaptive, sample_uu3_adaptive,
 //       sample_bb1_adaptive, sample_bb2_adaptive, sample_bb3_adaptive, j_i_adaptive, j_q_adaptive,
 //       j_v_adaptive, alpha_i_adaptive, alpha_q_adaptive, alpha_v_adaptive, rho_q_adaptive, and
-//       rho_v_adaptive,
+//       rho_v_adaptive.
+//   Deallocates cell_values_adaptive if render_num_images <= 0.
 //   References grtrans paper 2016 MNRAS 462 115 (G)
 //   References symphony paper 2016 ApJ 822 34 (S).
 //     J_V in (S 31) has an overall sign error that is corrected here and in the symphony code.
@@ -120,8 +121,8 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
   }
 
   // Calculate units
-  double x_unit = physics::gg_msun * mass_msun / (physics::c * physics::c);
-  double t_unit = x_unit / physics::c;
+  double x_unit = Physics::gg_msun * mass_msun / (Physics::c * Physics::c);
+  double t_unit = x_unit / Physics::c;
 
   // Work in parallel
   #pragma omp parallel
@@ -359,10 +360,10 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         if (image_tau)
           image_local(image_offset_tau,m) += delta_tau;
         if (image_lambda_ave and not std::isnan(cell_values_local(0,m,n)))
-          for (int a = 0; a < image_num_cell_values; a++)
+          for (int a = 0; a < CellValues::num_cell_values; a++)
             image_local(image_offset_lambda_ave+a,m) += cell_values_local(a,m,n) * delta_lambda_cgs;
         if (image_emission_ave and not std::isnan(cell_values_local(0,m,n)))
-          for (int a = 0; a < image_num_cell_values; a++)
+          for (int a = 0; a < CellValues::num_cell_values; a++)
             image_local(image_offset_emission_ave+a,m) +=
                 cell_values_local(a,m,n) * j_s[0] * delta_lambda_cgs;
         if (image_tau_int and not std::isnan(cell_values_local(0,m,n)))
@@ -371,12 +372,12 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
           {
             double exp_neg = std::exp(-delta_tau);
             double expm1 = std::expm1(delta_tau);
-            for (int a = 0; a < image_num_cell_values; a++)
+            for (int a = 0; a < CellValues::num_cell_values; a++)
               image_local(image_offset_tau_int+a,m) = exp_neg
                   * (image_local(image_offset_tau_int+a,m) + cell_values_local(a,m,n) * expm1);
           }
           else
-            for (int a = 0; a < image_num_cell_values; a++)
+            for (int a = 0; a < CellValues::num_cell_values; a++)
               image_local(image_offset_tau_int+a,m) = cell_values_local(a,m,n);
         }
 
@@ -595,8 +596,8 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         nn_tet_con.Zero();
         nn_tet_con(1,1) = ss_end[0] + ss_end[1];
         nn_tet_con(2,2) = ss_end[0] - ss_end[1];
-        nn_tet_con(1,2) = ss_end[2] - math::i * ss_end[3];
-        nn_tet_con(2,1) = ss_end[2] + math::i * ss_end[3];
+        nn_tet_con(1,2) = ss_end[2] - Math::i * ss_end[3];
+        nn_tet_con(2,1) = ss_end[2] + Math::i * ss_end[3];
 
         // Transform N into coordinate frame
         for (int mu = 0; mu < 4; mu++)
@@ -641,10 +642,10 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
 
       // Normalize integrated quantities
       if (image_lambda_ave)
-        for (int a = 0; a < image_num_cell_values; a++)
+        for (int a = 0; a < CellValues::num_cell_values; a++)
           image_local(image_offset_lambda_ave+a,m) /= integrated_lambda;
       if (image_emission_ave)
-        for (int a = 0; a < image_num_cell_values; a++)
+        for (int a = 0; a < CellValues::num_cell_values; a++)
           image_local(image_offset_emission_ave+a,m) /= integrated_emission;
     }
 
@@ -725,6 +726,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
   alpha_v_adaptive.Deallocate();
   rho_q_adaptive.Deallocate();
   rho_v_adaptive.Deallocate();
-  cell_values_adaptive.Deallocate();
+  if (render_num_images <= 0)
+    cell_values_adaptive.Deallocate();
   return;
 }

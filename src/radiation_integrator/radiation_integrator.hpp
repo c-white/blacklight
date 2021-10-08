@@ -99,6 +99,20 @@ struct RadiationIntegrator
   bool image_emission_ave;
   bool image_tau_int;
 
+  // Input data - rendering parameters
+  int render_num_images;
+  int *render_num_features = nullptr;
+  int **render_quantities = nullptr;
+  RenderType **render_types = nullptr;
+  double **render_thresh_vals = nullptr;
+  double **render_min_vals = nullptr;
+  double **render_max_vals = nullptr;
+  double **render_opacities = nullptr;
+  double **render_tau_scales = nullptr;
+  double **render_x_vals = nullptr;
+  double **render_y_vals = nullptr;
+  double **render_z_vals = nullptr;
+
   // Input data - ray-tracing parameters
   bool ray_flat;
 
@@ -179,7 +193,6 @@ struct RadiationIntegrator
 
   // Image data
   Array<double> image;
-  const int image_num_cell_values = 7;
   int image_num_quantities = 0;
   int image_offset_time = 0;
   int image_offset_length = 0;
@@ -189,6 +202,9 @@ struct RadiationIntegrator
   int image_offset_lambda_ave = 0;
   int image_offset_emission_ave = 0;
   int image_offset_tau_int = 0;
+
+  // Rendering data
+  Array<double> render;
 
   // Adaptive data
   int adaptive_current_level = 0;
@@ -217,6 +233,7 @@ struct RadiationIntegrator
   Array<double> cell_values_adaptive;
   Array<double> *image_adaptive;
   Array<double> *image_blocks;
+  Array<double> *render_adaptive;
 
   // Precalculated values
   double power_jj, power_jj_q, power_jj_v;
@@ -266,6 +283,9 @@ struct RadiationIntegrator
 
   // Internal functions - polarized.cpp
   void IntegratePolarizedRadiation();
+
+  // Internal functions - rendering.cpp
+  void Render();
 
   // Internal functions - radiation_adaptive.cpp
   bool CheckAdaptiveRefinement();

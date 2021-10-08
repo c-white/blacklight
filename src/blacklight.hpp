@@ -7,7 +7,7 @@
 #include <complex>
 
 // Mathematical constants
-namespace math
+namespace Math
 {
   constexpr double pi = 3.141592653589793;
   constexpr double sqrt2 = 1.4142135623730951;
@@ -15,7 +15,7 @@ namespace math
 }
 
 // Physical constants
-namespace physics
+namespace Physics
 {
   constexpr double c = 2.99792458e10;
   constexpr double h = 6.62607015e-27;
@@ -26,13 +26,20 @@ namespace physics
   constexpr double gg_msun = 1.32712440018e26;
 }
 
-// Enumerations
+// Unscoped enumerations
+namespace CellValues
+{
+  enum : int {rho, n_e, p_gas, theta_e, bb, sigma, beta_inv, num_cell_values};
+}
+
+// Scoped enumerations
 enum struct ModelType {simulation, formula};
 enum struct OutputFormat {raw, npy, npz};
 enum struct Coordinates {sph_ks, cart_ks};
 enum struct PlasmaModel {ti_te_beta, code_kappa};
 enum struct Camera {plane, pinhole};
 enum struct FrequencyNormalization {camera, infinity};
+enum struct RenderType {rise, fall, fill};
 enum struct RayTerminate {photon, multiplicative, additive};
 
 #endif

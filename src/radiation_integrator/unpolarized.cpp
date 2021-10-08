@@ -10,7 +10,7 @@
 
 // Blacklight headers
 #include "radiation_integrator.hpp"
-#include "../blacklight.hpp"         // physics
+#include "../blacklight.hpp"         // Physics, enums
 #include "../utils/array.hpp"        // Array
 
 //--------------------------------------------------------------------------------------------------
@@ -30,6 +30,7 @@
 //       image_emission_ave == true or image_tau_int == true.
 //   Allocates and initializes image (or image_adaptive[adaptive_current_level]).
 //   Deallocates j_i_adaptive and alpha_i_adaptive.
+//   Deallocates cell_values_adaptive if render_num_images <= 0.
 void RadiationIntegrator::IntegrateUnpolarizedRadiation()
 {
   // Allocate image array
@@ -70,8 +71,8 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
   }
 
   // Calculate units
-  double x_unit = physics::gg_msun * mass_msun / (physics::c * physics::c);
-  double t_unit = x_unit / physics::c;
+  double x_unit = Physics::gg_msun * mass_msun / (Physics::c * Physics::c);
+  double t_unit = x_unit / Physics::c;
 
   // Work in parallel
   #pragma omp parallel
@@ -155,20 +156,20 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
         if (image_tau)
           image_local(image_offset_tau,m) += delta_tau;
         if (image_lambda_ave and not std::isnan(cell_values_local(0,m,n)))
-          for (int a = 0; a < image_num_cell_values; a++)
+          for (int a = 0; a < CellValues::num_cell_values; a++)
             image_local(image_offset_lambda_ave+a,m) += cell_values_local(a,m,n) * delta_lambda_cgs;
         if (image_emission_ave and not std::isnan(cell_values_local(0,m,n)))
-          for (int a = 0; a < image_num_cell_values; a++)
+          for (int a = 0; a < CellValues::num_cell_values; a++)
             image_local(image_offset_emission_ave+a,m) +=
                 cell_values_local(a,m,n) * j * delta_lambda_cgs;
         if (image_tau_int and not std::isnan(cell_values_local(0,m,n)))
         {
           if (optically_thin)
-            for (int a = 0; a < image_num_cell_values; a++)
+            for (int a = 0; a < CellValues::num_cell_values; a++)
               image_local(image_offset_tau_int+a,m) = exp_neg
                   * (image_local(image_offset_tau_int+a,m) + cell_values_local(a,m,n) * expm1);
           else
-            for (int a = 0; a < image_num_cell_values; a++)
+            for (int a = 0; a < CellValues::num_cell_values; a++)
               image_local(image_offset_tau_int+a,m) = cell_values_local(a,m,n);
         }
       }
@@ -181,10 +182,10 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
 
       // Normalize integrated quantities
       if (image_lambda_ave)
-        for (int a = 0; a < image_num_cell_values; a++)
+        for (int a = 0; a < CellValues::num_cell_values; a++)
           image_local(image_offset_lambda_ave+a,m) /= integrated_lambda;
       if (image_emission_ave)
-        for (int a = 0; a < image_num_cell_values; a++)
+        for (int a = 0; a < CellValues::num_cell_values; a++)
           image_local(image_offset_emission_ave+a,m) /= integrated_emission;
     }
 
@@ -201,6 +202,7 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
   // Free memory
   j_i_adaptive.Deallocate();
   alpha_i_adaptive.Deallocate();
-  cell_values_adaptive.Deallocate();
+  if (render_num_images <= 0)
+    cell_values_adaptive.Deallocate();
   return;
 }

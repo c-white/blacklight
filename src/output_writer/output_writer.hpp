@@ -59,7 +59,6 @@ struct OutputWriter
   bool image_lambda_ave;
   bool image_emission_ave;
   bool image_tau_int;
-  int image_num_cell_values;
   int image_offset_time;
   int image_offset_length;
   int image_offset_lambda;
@@ -68,6 +67,9 @@ struct OutputWriter
   int image_offset_lambda_ave;
   int image_offset_emission_ave;
   int image_offset_tau_int;
+
+  // Input data - rendering parameters
+  int render_num_images;
 
   // Input data - adaptive parameters
   bool adaptive_on;
@@ -88,17 +90,20 @@ struct OutputWriter
   Array<double> image_frequency_array;
   Array<double> mass_msun_array;
 
+  // Render data
+  Array<double> render;
+
   // Adaptive data
   Array<int> adaptive_num_levels_array;
   Array<int> block_counts_array;
   Array<double> *image_adaptive;
+  Array<double> *render_adaptive;
   Array<int> *camera_loc_adaptive;
   Array<double> *camera_pos_adaptive;
   Array<double> *camera_dir_adaptive;
 
   // Name data
-  static constexpr int num_cell_names = 7;
-  const char *cell_names[num_cell_names] =
+  const char *cell_names[CellValues::num_cell_values] =
       {"rho", "n_e", "p_gas", "Theta_e", "B", "sigma", "beta_inverse"};
 
   // External function

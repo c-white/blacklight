@@ -19,7 +19,7 @@ struct InputReader
   InputReader(const std::string input_file_);
   InputReader(const InputReader &source) = delete;
   InputReader &operator=(const InputReader &source) = delete;
-  ~InputReader() {}
+  ~InputReader();
 
   // Input file
   const std::string input_file;
@@ -127,6 +127,20 @@ struct InputReader
   std::optional<bool> image_emission_ave;
   std::optional<bool> image_tau_int;
 
+  // Data - rendering parameters
+  std::optional<int> render_num_images;
+  std::optional<int> *render_num_features = nullptr;
+  std::optional<int> **render_quantities = nullptr;
+  std::optional<RenderType> **render_types = nullptr;
+  std::optional<double> **render_thresh_vals = nullptr;
+  std::optional<double> **render_min_vals = nullptr;
+  std::optional<double> **render_max_vals = nullptr;
+  std::optional<double> **render_opacities = nullptr;
+  std::optional<double> **render_tau_scales = nullptr;
+  std::optional<double> **render_x_vals = nullptr;
+  std::optional<double> **render_y_vals = nullptr;
+  std::optional<double> **render_z_vals = nullptr;
+
   // Data - ray-tracing parameters
   std::optional<bool> ray_flat;
   std::optional<RayTerminate> ray_terminate;
@@ -162,6 +176,7 @@ struct InputReader
   static bool RemoveableSpace(unsigned char c);
   double ReadPole(const std::string &string, std::optional<bool> *p_pole_flag);
   bool ReadBool(const std::string &string);
+  void ReadRender(const std::string &key, const std::string &val);
 
   // Internal functions - enum_readers.cpp
   ModelType ReadModelType(const std::string &string);

@@ -50,11 +50,12 @@ void OutputWriter::WriteNpz()
       + (image_light and model_type == ModelType::simulation and image_polarization ? 3 : 0)
       + (image_time ? 1 : 0) + (image_length ? 1 : 0) + (image_lambda ? 1 : 0)
       + (image_emission ? 1 : 0) + (image_tau ? 1 : 0)
-      + (image_lambda_ave ? image_num_cell_values : 0)
-      + (image_emission_ave ? image_num_cell_values : 0)
-      + (image_tau_int ? image_num_cell_values : 0);
-  int num_arrays = num_image_arrays + 3 + (output_camera ? 1 : 0) + 1 + (adaptive_on ? 1 : 0)
-      + adaptive_num_levels_array(0) * (1 + num_image_arrays + (output_camera ? 1 : 0));
+      + (image_lambda_ave ? CellValues::num_cell_values : 0)
+      + (image_emission_ave ? CellValues::num_cell_values : 0)
+      + (image_tau_int ? CellValues::num_cell_values : 0);
+  int num_arrays = num_image_arrays + (render_num_images > 0 ? 1 : 0) + 3 + (output_camera ? 1 : 0)
+      + 1 + (adaptive_on ? 1 : 0) + adaptive_num_levels_array(0) * (1 + num_image_arrays
+      + (render_num_images > 0 ? 1 : 0) + (output_camera ? 1 : 0));
   const int max_name_length = 128;
   char *name_buffer = new char[max_name_length];
   uint8_t **data_buffers = new uint8_t *[num_arrays];
@@ -143,7 +144,7 @@ void OutputWriter::WriteNpz()
     array_offset++;
   }
   if (image_lambda_ave)
-    for (int n = 0; n < image_num_cell_values; n++)
+    for (int n = 0; n < CellValues::num_cell_values; n++)
     {
       int num_written = std::snprintf(name_buffer, max_name_length, "lambda_ave_%s", cell_names[n]);
       if (num_written < 0 or num_written >= max_name_length)
@@ -156,7 +157,7 @@ void OutputWriter::WriteNpz()
       array_offset++;
     }
   if (image_emission_ave)
-    for (int n = 0; n < image_num_cell_values; n++)
+    for (int n = 0; n < CellValues::num_cell_values; n++)
     {
       int num_written =
           std::snprintf(name_buffer, max_name_length, "emission_ave_%s", cell_names[n]);
@@ -170,7 +171,7 @@ void OutputWriter::WriteNpz()
       array_offset++;
     }
   if (image_tau_int)
-    for (int n = 0; n < image_num_cell_values; n++)
+    for (int n = 0; n < CellValues::num_cell_values; n++)
     {
       int num_written = std::snprintf(name_buffer, max_name_length, "tau_int_%s", cell_names[n]);
       if (num_written < 0 or num_written >= max_name_length)
@@ -182,6 +183,15 @@ void OutputWriter::WriteNpz()
           data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       array_offset++;
     }
+
+  // Write root render data and metadata to buffers
+  if (render_num_images > 0)
+  {
+    data_lengths[array_offset] = GenerateNpyFromArray(render, 4, &data_buffers[array_offset]);
+    local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
+        data_lengths[array_offset], "rendering", &local_header_buffers[array_offset]);
+    array_offset++;
+  }
 
   // Write output parameters and metadata to buffers
   data_lengths[array_offset] =
@@ -355,7 +365,7 @@ void OutputWriter::WriteNpz()
       array_offset++;
     }
     if (image_lambda_ave)
-      for (int n = 0; n < image_num_cell_values; n++)
+      for (int n = 0; n < CellValues::num_cell_values; n++)
       {
         num_written = std::snprintf(name_buffer, max_name_length, "adaptive_lambda_ave_%s_%d",
             cell_names[n], level);
@@ -370,7 +380,7 @@ void OutputWriter::WriteNpz()
         array_offset++;
       }
     if (image_emission_ave)
-      for (int n = 0; n < image_num_cell_values; n++)
+      for (int n = 0; n < CellValues::num_cell_values; n++)
       {
         num_written = std::snprintf(name_buffer, max_name_length, "adaptive_emission_ave_%s_%d",
             cell_names[n], level);
@@ -385,7 +395,7 @@ void OutputWriter::WriteNpz()
         array_offset++;
       }
     if (image_tau_int)
-      for (int n = 0; n < image_num_cell_values; n++)
+      for (int n = 0; n < CellValues::num_cell_values; n++)
       {
         num_written = std::snprintf(name_buffer, max_name_length, "adaptive_tau_int_%s_%d",
             cell_names[n], level);
@@ -399,6 +409,19 @@ void OutputWriter::WriteNpz()
             data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
         array_offset++;
       }
+
+    // Write adaptive render data and metadata to buffers
+    if (render_num_images > 0)
+    {
+      num_written = std::snprintf(name_buffer, max_name_length, "adaptive_rendering_%d", level);
+      if (num_written < 0 or num_written >= max_name_length)
+        throw BlacklightException("Error naming output array.");
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(render_adaptive[level], 5, &data_buffers[array_offset]);
+      local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
+          data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
+      array_offset++;
+    }
 
     // Write adaptive camera data and metadata to buffers
     if (output_camera)

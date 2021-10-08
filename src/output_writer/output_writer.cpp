@@ -72,9 +72,6 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   if ((image_time or image_length or image_lambda or image_emission or image_tau or image_lambda_ave
       or image_emission_ave or image_tau_int) and not (output_format == OutputFormat::npz))
     throw BlacklightException("Only npz outputs support non-light images.");
-  image_num_cell_values = p_radiation_integrator->image_num_cell_values;
-  if (image_num_cell_values != num_cell_names)
-    throw BlacklightException("Unexpected number of cell values.");
   image_offset_time = p_radiation_integrator->image_offset_time;
   image_offset_length = p_radiation_integrator->image_offset_length;
   image_offset_lambda = p_radiation_integrator->image_offset_lambda;
@@ -83,6 +80,11 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   image_offset_lambda_ave = p_radiation_integrator->image_offset_lambda_ave;
   image_offset_emission_ave = p_radiation_integrator->image_offset_emission_ave;
   image_offset_tau_int = p_radiation_integrator->image_offset_tau_int;
+
+  // Copy rendering parameters
+  render_num_images = p_input_reader->render_num_images.value();
+  if (render_num_images > 0 and output_format != OutputFormat::npz)
+    throw BlacklightException("Only npz outputs support rendering.");
 
   // Copy adaptive parameters
   adaptive_on = p_input_reader->adaptive_on.value();
@@ -124,6 +126,7 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   if (adaptive_on)
   {
     image_adaptive = new Array<double>[adaptive_max_level+1];
+    render_adaptive = new Array<double>[adaptive_max_level+1];
     camera_loc_adaptive = new Array<int>[adaptive_max_level+1];
     camera_pos_adaptive = new Array<double>[adaptive_max_level+1];
     camera_dir_adaptive = new Array<double>[adaptive_max_level+1];
@@ -140,11 +143,13 @@ OutputWriter::~OutputWriter()
     for (int level = 0; level <= adaptive_max_level; level++)
     {
       image_adaptive[level].Deallocate();
+      render_adaptive[level].Deallocate();
       camera_loc_adaptive[level].Deallocate();
       camera_pos_adaptive[level].Deallocate();
       camera_dir_adaptive[level].Deallocate();
     }
     delete[] image_adaptive;
+    delete[] render_adaptive;
     delete[] camera_loc_adaptive;
     delete[] camera_pos_adaptive;
     delete[] camera_dir_adaptive;
@@ -162,12 +167,23 @@ OutputWriter::~OutputWriter()
 void OutputWriter::Write(int snapshot)
 {
   // Make shallow copy of root image data
-  if (first_time)
+  if (first_time and (image_light or image_time or image_length or image_lambda or image_emission
+      or image_tau or image_lambda_ave or image_emission_ave or image_tau_int))
   {
     image = p_radiation_integrator->image;
     image.n3 = image.n2;
     image.n2 = camera_resolution;
     image.n1 = camera_resolution;
+  }
+
+  // Make shallow copy of root render data
+  if (first_time and render_num_images > 0)
+  {
+    render = p_radiation_integrator->render;
+    render.n4 = render.n3;
+    render.n3 = render.n2;
+    render.n2 = camera_resolution;
+    render.n1 = camera_resolution;
   }
 
   // Make shallow copy of adaptive image data
@@ -186,6 +202,18 @@ void OutputWriter::Write(int snapshot)
       image_adaptive[level].n1 = adaptive_block_size;
     }
   }
+
+  // Make shallow copy of adaptive render data
+  if (adaptive_on)
+    for (int level = 1; level <= adaptive_num_levels_array(0); level++)
+    {
+      render_adaptive[level] = p_radiation_integrator->render_adaptive[level];
+      render_adaptive[level].n5 = render_adaptive[level].n3;
+      render_adaptive[level].n4 = render_adaptive[level].n2;
+      render_adaptive[level].n3 = block_counts_array(level);
+      render_adaptive[level].n2 = adaptive_block_size;
+      render_adaptive[level].n1 = adaptive_block_size;
+    }
 
   // Make shallow copy of adaptive camera data
   if (adaptive_on)

@@ -55,6 +55,9 @@ image_lambda_ave    = false   # flag indicating path-averaged images should be p
 image_emission_ave  = false   # flag indicating emission-averaged images should be produced
 image_tau_int       = false   # flag indicating tau-integrated images should be produced
 
+# Rendering parameters
+render_num_images = 0  # number of false-color renderings
+
 # Ray-tracing parameters
 ray_flat        = false     # flag indicating ray tracing should assume flat spacetime
 ray_terminate   = additive  # termination condition (photon, multiplicative, additive)

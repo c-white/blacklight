@@ -9,7 +9,7 @@
 
 // Blacklight headers
 #include "radiation_integrator.hpp"
-#include "../blacklight.hpp"                               // physics, enums
+#include "../blacklight.hpp"                               // Physics, enums
 #include "../athena_reader/athena_reader.hpp"              // AthenaReader
 #include "../geodesic_integrator/geodesic_integrator.hpp"  // GeodesicIntegrator
 #include "../input_reader/input_reader.hpp"                // InputReader
@@ -185,15 +185,90 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   image_lambda = p_input_reader->image_lambda.value();
   image_emission = p_input_reader->image_emission.value();
   image_tau = p_input_reader->image_tau.value();
-  image_lambda_ave = p_input_reader->image_lambda_ave.value();
-  image_emission_ave = p_input_reader->image_emission_ave.value();
-  image_tau_int = p_input_reader->image_tau_int.value();
+  if (model_type == ModelType::simulation)
+  {
+    image_lambda_ave = p_input_reader->image_lambda_ave.value();
+    image_emission_ave = p_input_reader->image_emission_ave.value();
+    image_tau_int = p_input_reader->image_tau_int.value();
+  }
+  else
+  {
+    if (p_input_reader->image_lambda_ave.has_value() and p_input_reader->image_lambda_ave.value())
+      BlacklightWarning("Ignoring image_lambda_ave selection.");
+    image_lambda_ave = false;
+    if (p_input_reader->image_emission_ave.has_value()
+        and p_input_reader->image_emission_ave.value())
+      BlacklightWarning("Ignoring image_emission_ave selection.");
+    image_emission_ave = false;
+    if (p_input_reader->image_tau_int.has_value() and p_input_reader->image_tau_int.value())
+      BlacklightWarning("Ignoring image_tau_int selection.");
+    image_tau_int = false;
+  }
+
+  // Copy rendering parameters
+  if (model_type == ModelType::simulation)
+    render_num_images = p_input_reader->render_num_images.value();
+  else
+  {
+    if (p_input_reader->render_num_images.has_value()
+        and p_input_reader->render_num_images.value() > 0)
+      BlacklightWarning("Ignoring request for rendering.");
+    render_num_images = 0;
+  }
+  if (render_num_images > 0)
+  {
+    render_num_features = new int[render_num_images];
+    render_quantities = new int *[render_num_images]();
+    render_types = new RenderType *[render_num_images]();
+    render_thresh_vals = new double *[render_num_images]();
+    render_min_vals = new double *[render_num_images]();
+    render_max_vals = new double *[render_num_images]();
+    render_opacities = new double *[render_num_images]();
+    render_tau_scales = new double *[render_num_images]();
+    render_x_vals = new double *[render_num_images]();
+    render_y_vals = new double *[render_num_images]();
+    render_z_vals = new double *[render_num_images]();
+    for (int n_i = 0; n_i < render_num_images; n_i++)
+    {
+      int num_features = p_input_reader->render_num_features[n_i].value();
+      if (num_features <= 0)
+        throw BlacklightException("Must have positive number of features for each rendered image.");
+      render_num_features[n_i] = num_features;
+      render_quantities[n_i] = new int[num_features];
+      render_types[n_i] = new RenderType[num_features];
+      render_thresh_vals[n_i] = new double[num_features];
+      render_min_vals[n_i] = new double[num_features];
+      render_max_vals[n_i] = new double[num_features];
+      render_opacities[n_i] = new double[num_features];
+      render_tau_scales[n_i] = new double[num_features];
+      render_x_vals[n_i] = new double[num_features];
+      render_y_vals[n_i] = new double[num_features];
+      render_z_vals[n_i] = new double[num_features];
+      for (int n_f = 0; n_f < num_features; n_f++)
+      {
+        render_quantities[n_i][n_f] = p_input_reader->render_quantities[n_i][n_f].value();
+        render_types[n_i][n_f] = p_input_reader->render_types[n_i][n_f].value();
+        if (render_types[n_i][n_f] == RenderType::rise
+            or render_types[n_i][n_f] == RenderType::fall)
+        {
+          render_thresh_vals[n_i][n_f] = p_input_reader->render_thresh_vals[n_i][n_f].value();
+          render_opacities[n_i][n_f] = p_input_reader->render_opacities[n_i][n_f].value();
+        }
+        if (render_types[n_i][n_f] == RenderType::fill)
+        {
+          render_min_vals[n_i][n_f] = p_input_reader->render_min_vals[n_i][n_f].value();
+          render_max_vals[n_i][n_f] = p_input_reader->render_max_vals[n_i][n_f].value();
+          render_tau_scales[n_i][n_f] = p_input_reader->render_tau_scales[n_i][n_f].value();
+        }
+        render_x_vals[n_i][n_f] = p_input_reader->render_x_vals[n_i][n_f].value();
+        render_y_vals[n_i][n_f] = p_input_reader->render_y_vals[n_i][n_f].value();
+        render_z_vals[n_i][n_f] = p_input_reader->render_z_vals[n_i][n_f].value();
+      }
+    }
+  }
   if (not (image_light or image_time or image_length or image_lambda or image_emission or image_tau
-      or image_lambda_ave or image_emission_ave or image_tau_int))
-    throw BlacklightException("No image type selected.");
-  if (model_type == ModelType::formula
-      and (image_lambda_ave or image_emission_ave or image_tau_int))
-    throw BlacklightException("Cell quantities not defined for formula.");
+      or image_lambda_ave or image_emission_ave or image_tau_int or render_num_images > 0))
+    throw BlacklightException("No image or rendering selected.");
 
   // Copy ray-tracing parameters
   ray_flat = p_input_reader->ray_flat.value();
@@ -283,7 +358,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     }
     case ModelType::formula:
     {
-      mass_msun = formula_mass * physics::c * physics::c / physics::gg_msun;
+      mass_msun = formula_mass * Physics::c * Physics::c / Physics::gg_msun;
       break;
     }
   }
@@ -348,17 +423,17 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   }
   if (image_lambda_ave)
   {
-    image_num_quantities += image_num_cell_values;
+    image_num_quantities += CellValues::num_cell_values;
     image_offset_emission_ave = image_num_quantities;
     image_offset_tau_int = image_num_quantities;
   }
   if (image_emission_ave)
   {
-    image_num_quantities += image_num_cell_values;
+    image_num_quantities += CellValues::num_cell_values;
     image_offset_tau_int = image_num_quantities;
   }
   if (image_tau_int)
-    image_num_quantities += image_num_cell_values;
+    image_num_quantities += CellValues::num_cell_values;
 
   // Allocate space for calculating adaptive refinement
   if (adaptive_on)
@@ -384,6 +459,30 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
 // Radiation integrator destructor
 RadiationIntegrator::~RadiationIntegrator()
 {
+  for (int n_i = 0; n_i < render_num_images; n_i++)
+  {
+    delete[] render_quantities[n_i];
+    delete[] render_types[n_i];
+    delete[] render_thresh_vals[n_i];
+    delete[] render_min_vals[n_i];
+    delete[] render_max_vals[n_i];
+    delete[] render_x_vals[n_i];
+    delete[] render_y_vals[n_i];
+    delete[] render_z_vals[n_i];
+    delete[] render_opacities[n_i];
+    delete[] render_tau_scales[n_i];
+  }
+  delete[] render_num_features;
+  delete[] render_quantities;
+  delete[] render_types;
+  delete[] render_thresh_vals;
+  delete[] render_min_vals;
+  delete[] render_max_vals;
+  delete[] render_x_vals;
+  delete[] render_y_vals;
+  delete[] render_z_vals;
+  delete[] render_opacities;
+  delete[] render_tau_scales;
   if (adaptive_on)
   {
     for (int level = 0; level <= adaptive_max_level; level++)
@@ -451,8 +550,11 @@ bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double 
     CalculateSimulationCoefficients();
     if (image_light and image_polarization)
       IntegratePolarizedRadiation();
-    else
+    else if (image_light or image_time or image_length or image_lambda or image_emission
+        or image_tau or image_lambda_ave or image_emission_ave or image_tau_int)
       IntegrateUnpolarizedRadiation();
+    if (render_num_images > 0)
+      Render();
   }
 
   // Integrate according to formula
