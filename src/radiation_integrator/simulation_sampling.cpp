@@ -84,15 +84,12 @@ void RadiationIntegrator::ObtainGridData()
 //   snapshot: index (starting at 0) of which snapshot is about to be processed
 // Outputs: (none)
 // Notes:
-//   Works on arrays appropriate for root level or adaptively refined regions.
-//   Assumes geodesic_num_steps (or geodesic_num_steps_adaptive[adaptive_current_level]),
-//       sample_flags (or sample_flags_adaptive[adaptive_current_level]), sample_num (or
-//       sample_num_adaptive[adaptive_current_level]), and sample_pos (or
-//       sample_pos_adaptive[adaptive_current_level]) have been set.
-//   Allocates and initializes sample_inds (or sample_inds_adaptive), sample_nan (or
-//       sample_nan_adaptive), and sample_fallback (or sample_fallback_adaptive).
-//   Allocates and initializes sample_fracs (or sample_fracs_adaptive) if simulation_interp == true
-//       or if slow_light_on == true and slow_interp == true.
+//   Assumes geodesic_num_steps[adaptive_level], sample_flags[adaptive_level],
+//       sample_num[adaptive_level], and sample_pos[adaptive_level] have been set.
+//   Allocates and initializes sample_inds[adaptive_level], sample_nan[adaptive_level], and
+//       sample_fallback[adaptive_level].
+//   Allocates and initializes sample_fracs[adaptive_level] if simulation_interp == true or if
+//       slow_light_on == true and slow_interp == true.
 //   If simulation_interp == false, locates cell containing geodesic sample point.
 //   If simulation_interp == true and simulation_block_interp == false, prepares trilinear
 //       interpolation to geodesic sample point from cell centers, using only data within the same
@@ -120,58 +117,24 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
     num_interp_fracs += 3;
   if (slow_light_on and slow_interp)
     num_interp_fracs++;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    num_pix = block_counts[adaptive_current_level] * block_num_pix;
-    int geodesic_num_steps_local = geodesic_num_steps_adaptive[adaptive_current_level];
-    if (simulation_interp and simulation_block_interp)
-      sample_inds_adaptive.Allocate(num_pix, geodesic_num_steps_local, 8, num_interp_inds);
-    else
-      sample_inds_adaptive.Allocate(num_pix, geodesic_num_steps_local, num_interp_inds);
-    if (num_interp_fracs > 0)
-      sample_fracs_adaptive.Allocate(num_pix, geodesic_num_steps_local, num_interp_fracs);
-    sample_nan_adaptive.Allocate(num_pix, geodesic_num_steps_local);
-    sample_fallback_adaptive.Allocate(num_pix, geodesic_num_steps_local);
-    sample_nan_adaptive.Zero();
-    sample_fallback_adaptive.Zero();
-  }
-  else if (first_time)
+  if (adaptive_level > 0)
+    num_pix = block_counts[adaptive_level] * block_num_pix;
+  if (first_time or adaptive_level > 0)
   {
     if (simulation_interp and simulation_block_interp)
-      sample_inds.Allocate(num_pix, geodesic_num_steps, 8, num_interp_inds);
+      sample_inds[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level], 8,
+          num_interp_inds);
     else
-      sample_inds.Allocate(num_pix, geodesic_num_steps, num_interp_inds);
+      sample_inds[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level],
+          num_interp_inds);
     if (num_interp_fracs > 0)
-      sample_fracs.Allocate(num_pix, geodesic_num_steps, num_interp_fracs);
-    sample_nan.Allocate(num_pix, geodesic_num_steps);
-    sample_fallback.Allocate(num_pix, geodesic_num_steps);
-    sample_nan.Zero();
-    sample_fallback.Zero();
+      sample_fracs[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level],
+          num_interp_fracs);
+    sample_nan[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
+    sample_fallback[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
   }
-  else
-  {
-    sample_nan.Zero();
-    sample_fallback.Zero();
-  }
-
-  // Alias arrays
-  Array<bool> sample_flags_local = sample_flags;
-  Array<int> sample_num_local = sample_num;
-  Array<double> sample_pos_local = sample_pos;
-  Array<int> sample_inds_local = sample_inds;
-  Array<double> sample_fracs_local = sample_fracs;
-  Array<bool> sample_nan_local = sample_nan;
-  Array<bool> sample_fallback_local = sample_fallback;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    sample_flags_local = sample_flags_adaptive[adaptive_current_level];
-    sample_num_local = sample_num_adaptive[adaptive_current_level];
-    sample_pos_local = sample_pos_adaptive[adaptive_current_level];
-    sample_inds_local = sample_inds_adaptive;
-    sample_fracs_local = sample_fracs_adaptive;
-    sample_nan_local = sample_nan_adaptive;
-    sample_fallback_local = sample_fallback_adaptive;
-  }
+  sample_nan[adaptive_level].Zero();
+  sample_fallback[adaptive_level].Zero();
 
   // Prepare bookkeeping for warnings and errors
   int num_extrap_camera_small = 0;
@@ -210,13 +173,13 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
     for (int m = 0; m < num_pix; m++)
     {
       // Extract number of steps along this geodesic
-      int num_steps = sample_num_local(m);
+      int num_steps = sample_num[adaptive_level](m);
 
       // Set NaN fallback values if geodesic poorly terminated
-      if (fallback_nan and sample_flags_local(m))
+      if (fallback_nan and sample_flags[adaptive_level](m))
       {
         for (int n = 0; n < num_steps; n++)
-          sample_nan_local(m,n) = true;
+          sample_nan[adaptive_level](m,n) = true;
         continue;
       }
 
@@ -234,10 +197,10 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
       for (int n = 0; n < num_steps; n++)
       {
         // Extract coordinates
-        double x0 = sample_pos_local(m,n,0) + snapshot_time;
-        double x1 = sample_pos_local(m,n,1);
-        double x2 = sample_pos_local(m,n,2);
-        double x3 = sample_pos_local(m,n,3);
+        double x0 = sample_pos[adaptive_level](m,n,0) + snapshot_time;
+        double x1 = sample_pos[adaptive_level](m,n,1);
+        double x2 = sample_pos[adaptive_level](m,n,2);
+        double x3 = sample_pos[adaptive_level](m,n,3);
 
         // Convert coordinates
         if (simulation_coord == Coordinates::sph_ks)
@@ -329,9 +292,9 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
           if (b_new == n_b)
           {
             if (fallback_nan)
-              sample_nan_local(m,n) = true;
+              sample_nan[adaptive_level](m,n) = true;
             else
-              sample_fallback_local(m,n) = true;
+              sample_fallback[adaptive_level](m,n) = true;
             continue;
           }
 
@@ -359,14 +322,14 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
         // Prepare to sample values without interpolation
         if (not simulation_interp)
         {
-          sample_inds_local(m,n,0) = b;
-          sample_inds_local(m,n,1) = k;
-          sample_inds_local(m,n,2) = j;
-          sample_inds_local(m,n,3) = i;
+          sample_inds[adaptive_level](m,n,0) = b;
+          sample_inds[adaptive_level](m,n,1) = k;
+          sample_inds[adaptive_level](m,n,2) = j;
+          sample_inds[adaptive_level](m,n,3) = i;
           if (slow_light_on)
-            sample_inds_local(m,n,4) = t_ind;
+            sample_inds[adaptive_level](m,n,4) = t_ind;
           if (slow_light_on and slow_interp)
-            sample_fracs_local(m,n,0) = t_frac;
+            sample_fracs[adaptive_level](m,n,0) = t_frac;
         }
 
         // Prepare to sample values with intrablock interpolation
@@ -381,17 +344,17 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
               / (static_cast<double>(x2v(b,j_m+1)) - static_cast<double>(x2v(b,j_m)));
           double f_k = (x3 - static_cast<double>(x3v(b,k_m)))
               / (static_cast<double>(x3v(b,k_m+1)) - static_cast<double>(x3v(b,k_m)));
-          sample_inds_local(m,n,0) = b;
-          sample_inds_local(m,n,1) = k_m;
-          sample_inds_local(m,n,2) = j_m;
-          sample_inds_local(m,n,3) = i_m;
+          sample_inds[adaptive_level](m,n,0) = b;
+          sample_inds[adaptive_level](m,n,1) = k_m;
+          sample_inds[adaptive_level](m,n,2) = j_m;
+          sample_inds[adaptive_level](m,n,3) = i_m;
           if (slow_light_on)
-            sample_inds_local(m,n,4) = t_ind;
-          sample_fracs_local(m,n,0) = f_k;
-          sample_fracs_local(m,n,1) = f_j;
-          sample_fracs_local(m,n,2) = f_i;
+            sample_inds[adaptive_level](m,n,4) = t_ind;
+          sample_fracs[adaptive_level](m,n,0) = f_k;
+          sample_fracs[adaptive_level](m,n,1) = f_j;
+          sample_fracs[adaptive_level](m,n,2) = f_i;
           if (slow_light_on and slow_interp)
-            sample_fracs_local(m,n,3) = t_frac;
+            sample_fracs[adaptive_level](m,n,3) = t_frac;
         }
 
         // Prepare to sample values with interblock interpolation
@@ -437,15 +400,15 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
           for (int p = 0; p < 8; p++)
           {
             for (int q = 0; q < 4; q++)
-              sample_inds_local(m,n,p,q) = inds[p][q];
+              sample_inds[adaptive_level](m,n,p,q) = inds[p][q];
             if (slow_light_on)
-              sample_inds_local(m,n,p,4) = t_ind;
+              sample_inds[adaptive_level](m,n,p,4) = t_ind;
           }
-          sample_fracs_local(m,n,0) = f_k;
-          sample_fracs_local(m,n,1) = f_j;
-          sample_fracs_local(m,n,2) = f_i;
+          sample_fracs[adaptive_level](m,n,0) = f_k;
+          sample_fracs[adaptive_level](m,n,1) = f_j;
+          sample_fracs[adaptive_level](m,n,2) = f_i;
           if (slow_light_on and slow_interp)
-            sample_fracs_local(m,n,3) = t_frac;
+            sample_fracs[adaptive_level](m,n,3) = t_frac;
         }
       }
 
@@ -517,85 +480,35 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Works on arrays appropriate for root level or adaptively refined regions.
-//   Assumes geodesic_num_steps (or geodesic_num_steps_adaptive[adaptive_current_level]), sample_num
-//       (or sample_num_adaptive[adaptive_current_level]), sample_inds (or sample_inds_adaptive),
-//       sample_nan (or sample_nan_adaptive), and sample_fallback (or sample_fallback_adaptive) have
-//       been set.
-//   Assumes sample_fracs (or sample_fracs_adaptive) has been set if simulation_interp == true.
-//   Allocates and initializes sample_rho (or sample_rho_adaptive), sample_pgas (or
-//       sample_pgas_adaptive) or sample_kappa (or sample_kappa_adaptive), sample_uu1 (or
-//       sample_uu1_adaptive), sample_uu2 (or sample_uu2_adaptive), sample_uu3 (or
-//       sample_uu3_adaptive), sample_bb1 (or sample_bb1_adaptive), sample_bb2 (or
-//       sample_bb2_adaptive), and sample_bb3 (or sample_bb3_adaptive).
-//   Deallocates sample_inds_adaptive, sample_fracs_adaptive, sample_nan_adaptive, and
-//       sample_fallback_adaptive.
+//   Assumes geodesic_num_steps[adaptive_level], sample_num[adaptive_level],
+//       sample_inds[adaptive_level], sample_nan[adaptive_level], and
+//       sample_fallback[adaptive_level] have been set.
+//   Assumes sample_fracs[adaptive_level] has been set if simulation_interp == true.
+//   Allocates and initializes sample_rho[adaptive_level], sample_pgas[adaptive_level] or
+//       sample_kappa[adaptive_level], sample_uu1[adaptive_level], sample_uu2[adaptive_level],
+//       sample_uu3[adaptive_level], sample_bb1[adaptive_level], sample_bb2[adaptive_level], and
+//       sample_bb3[adaptive_level].
+//   Deallocates sample_inds[adaptive_level], sample_fracs[adaptive_level],
+//       sample_nan[adaptive_level], and sample_fallback[adaptive_level] if adaptive_level > 0.
 void RadiationIntegrator::SampleSimulation()
 {
   // Allocate arrays
   int num_pix = camera_num_pix;
-  if (adaptive_on and adaptive_current_level > 0)
+  if (adaptive_level > 0)
+    num_pix = block_counts[adaptive_level] * block_num_pix;
+  if (first_time or adaptive_level > 0)
   {
-    num_pix = block_counts[adaptive_current_level] * block_num_pix;
-    int geodesic_num_steps_local = geodesic_num_steps_adaptive[adaptive_current_level];
-    sample_rho_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+    sample_rho[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
     if (plasma_model == PlasmaModel::ti_te_beta)
-      sample_pgas_adaptive.Allocate(num_pix, geodesic_num_steps_local);
+      sample_pgas[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
     if (plasma_model == PlasmaModel::code_kappa)
-      sample_kappa_adaptive.Allocate(num_pix, geodesic_num_steps_local);
-    sample_uu1_adaptive.Allocate(num_pix, geodesic_num_steps_local);
-    sample_uu2_adaptive.Allocate(num_pix, geodesic_num_steps_local);
-    sample_uu3_adaptive.Allocate(num_pix, geodesic_num_steps_local);
-    sample_bb1_adaptive.Allocate(num_pix, geodesic_num_steps_local);
-    sample_bb2_adaptive.Allocate(num_pix, geodesic_num_steps_local);
-    sample_bb3_adaptive.Allocate(num_pix, geodesic_num_steps_local);
-  }
-  else if (first_time)
-  {
-    sample_rho.Allocate(num_pix, geodesic_num_steps);
-    if (plasma_model == PlasmaModel::ti_te_beta)
-      sample_pgas.Allocate(num_pix, geodesic_num_steps);
-    if (plasma_model == PlasmaModel::code_kappa)
-      sample_kappa.Allocate(num_pix, geodesic_num_steps);
-    sample_uu1.Allocate(num_pix, geodesic_num_steps);
-    sample_uu2.Allocate(num_pix, geodesic_num_steps);
-    sample_uu3.Allocate(num_pix, geodesic_num_steps);
-    sample_bb1.Allocate(num_pix, geodesic_num_steps);
-    sample_bb2.Allocate(num_pix, geodesic_num_steps);
-    sample_bb3.Allocate(num_pix, geodesic_num_steps);
-  }
-
-  // Alias arrays
-  Array<int> sample_num_local = sample_num;
-  Array<int> sample_inds_local = sample_inds;
-  Array<double> sample_fracs_local = sample_fracs;
-  Array<bool> sample_nan_local = sample_nan;
-  Array<bool> sample_fallback_local = sample_fallback;
-  Array<float> sample_rho_local = sample_rho;
-  Array<float> sample_pgas_local = sample_pgas;
-  Array<float> sample_kappa_local = sample_kappa;
-  Array<float> sample_uu1_local = sample_uu1;
-  Array<float> sample_uu2_local = sample_uu2;
-  Array<float> sample_uu3_local = sample_uu3;
-  Array<float> sample_bb1_local = sample_bb1;
-  Array<float> sample_bb2_local = sample_bb2;
-  Array<float> sample_bb3_local = sample_bb3;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    sample_num_local = sample_num_adaptive[adaptive_current_level];
-    sample_inds_local = sample_inds_adaptive;
-    sample_fracs_local = sample_fracs_adaptive;
-    sample_nan_local = sample_nan_adaptive;
-    sample_fallback_local = sample_fallback_adaptive;
-    sample_rho_local = sample_rho_adaptive;
-    sample_pgas_local = sample_pgas_adaptive;
-    sample_kappa_local = sample_kappa_adaptive;
-    sample_uu1_local = sample_uu1_adaptive;
-    sample_uu2_local = sample_uu2_adaptive;
-    sample_uu3_local = sample_uu3_adaptive;
-    sample_bb1_local = sample_bb1_adaptive;
-    sample_bb2_local = sample_bb2_adaptive;
-    sample_bb3_local = sample_bb3_adaptive;
+      sample_kappa[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
+    sample_uu1[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
+    sample_uu2[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
+    sample_uu3[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
+    sample_bb1[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
+    sample_bb2[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
+    sample_bb3[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
   }
 
   // Resample cell data onto geodesics in parallel
@@ -603,69 +516,69 @@ void RadiationIntegrator::SampleSimulation()
   for (int m = 0; m < num_pix; m++)
   {
     // Extract number of steps along this geodesic
-    int num_steps = sample_num_local(m);
+    int num_steps = sample_num[adaptive_level](m);
 
     // Go along geodesic
     for (int n = 0; n < num_steps; n++)
     {
       // Set NaN values
-      if (sample_nan_local(m,n))
+      if (sample_nan[adaptive_level](m,n))
       {
-        sample_rho_local(m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_rho[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
         if (plasma_model == PlasmaModel::ti_te_beta)
-          sample_pgas_local(m,n) = std::numeric_limits<float>::quiet_NaN();
+          sample_pgas[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
         if (plasma_model == PlasmaModel::code_kappa)
-          sample_kappa_local(m,n) = std::numeric_limits<float>::quiet_NaN();
-        sample_uu1_local(m,n) = std::numeric_limits<float>::quiet_NaN();
-        sample_uu2_local(m,n) = std::numeric_limits<float>::quiet_NaN();
-        sample_uu3_local(m,n) = std::numeric_limits<float>::quiet_NaN();
-        sample_bb1_local(m,n) = std::numeric_limits<float>::quiet_NaN();
-        sample_bb2_local(m,n) = std::numeric_limits<float>::quiet_NaN();
-        sample_bb3_local(m,n) = std::numeric_limits<float>::quiet_NaN();
+          sample_kappa[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_uu1[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_uu2[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_uu3[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_bb1[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_bb2[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_bb3[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
       }
 
       // Set fallback values
-      else if (sample_fallback_local(m,n))
+      else if (sample_fallback[adaptive_level](m,n))
       {
-        sample_rho_local(m,n) = fallback_rho;
+        sample_rho[adaptive_level](m,n) = fallback_rho;
         if (plasma_model == PlasmaModel::ti_te_beta)
-          sample_pgas_local(m,n) = fallback_pgas;
+          sample_pgas[adaptive_level](m,n) = fallback_pgas;
         if (plasma_model == PlasmaModel::code_kappa)
-          sample_kappa_local(m,n) = fallback_kappa;
-        sample_uu1_local(m,n) = fallback_uu1;
-        sample_uu2_local(m,n) = fallback_uu2;
-        sample_uu3_local(m,n) = fallback_uu3;
-        sample_bb1_local(m,n) = fallback_bb1;
-        sample_bb2_local(m,n) = fallback_bb2;
-        sample_bb3_local(m,n) = fallback_bb3;
+          sample_kappa[adaptive_level](m,n) = fallback_kappa;
+        sample_uu1[adaptive_level](m,n) = fallback_uu1;
+        sample_uu2[adaptive_level](m,n) = fallback_uu2;
+        sample_uu3[adaptive_level](m,n) = fallback_uu3;
+        sample_bb1[adaptive_level](m,n) = fallback_bb1;
+        sample_bb2[adaptive_level](m,n) = fallback_bb2;
+        sample_bb3[adaptive_level](m,n) = fallback_bb3;
       }
 
       // Set nearest values
       else if (not simulation_interp)
       {
         // Extract indices
-        int b = sample_inds_local(m,n,0);
-        int k = sample_inds_local(m,n,1);
-        int j = sample_inds_local(m,n,2);
-        int i = sample_inds_local(m,n,3);
+        int b = sample_inds[adaptive_level](m,n,0);
+        int k = sample_inds[adaptive_level](m,n,1);
+        int j = sample_inds[adaptive_level](m,n,2);
+        int i = sample_inds[adaptive_level](m,n,3);
         int t = 0;
         if (slow_light_on)
-          t = sample_inds_local(m,n,4);
+          t = sample_inds[adaptive_level](m,n,4);
 
         // Calculate values without temporal interpolation
         if (not (slow_light_on and slow_interp))
         {
-          sample_rho_local(m,n) = grid_prim[t](ind_rho,b,k,j,i);
+          sample_rho[adaptive_level](m,n) = grid_prim[t](ind_rho,b,k,j,i);
           if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas_local(m,n) = grid_prim[t](ind_pgas,b,k,j,i);
+            sample_pgas[adaptive_level](m,n) = grid_prim[t](ind_pgas,b,k,j,i);
           if (plasma_model == PlasmaModel::code_kappa)
-            sample_kappa_local(m,n) = grid_prim[t](ind_kappa,b,k,j,i);
-          sample_uu1_local(m,n) = grid_prim[t](ind_uu1,b,k,j,i);
-          sample_uu2_local(m,n) = grid_prim[t](ind_uu2,b,k,j,i);
-          sample_uu3_local(m,n) = grid_prim[t](ind_uu3,b,k,j,i);
-          sample_bb1_local(m,n) = grid_bb[t](ind_bb1,b,k,j,i);
-          sample_bb2_local(m,n) = grid_bb[t](ind_bb2,b,k,j,i);
-          sample_bb3_local(m,n) = grid_bb[t](ind_bb3,b,k,j,i);
+            sample_kappa[adaptive_level](m,n) = grid_prim[t](ind_kappa,b,k,j,i);
+          sample_uu1[adaptive_level](m,n) = grid_prim[t](ind_uu1,b,k,j,i);
+          sample_uu2[adaptive_level](m,n) = grid_prim[t](ind_uu2,b,k,j,i);
+          sample_uu3[adaptive_level](m,n) = grid_prim[t](ind_uu3,b,k,j,i);
+          sample_bb1[adaptive_level](m,n) = grid_bb[t](ind_bb1,b,k,j,i);
+          sample_bb2[adaptive_level](m,n) = grid_bb[t](ind_bb2,b,k,j,i);
+          sample_bb3[adaptive_level](m,n) = grid_bb[t](ind_bb3,b,k,j,i);
         }
 
         // Calculate values with temporal interpolation
@@ -702,19 +615,27 @@ void RadiationIntegrator::SampleSimulation()
           double bb3_2 = static_cast<double>(grid_prim[t+1](ind_bb3,b,k,j,i));
 
           // Assign interpolated values
-          double t_frac = sample_fracs_local(m,n,0);
-          sample_rho_local(m,n) = static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
+          double t_frac = sample_fracs[adaptive_level](m,n,0);
+          sample_rho[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
           if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas_local(m,n) = static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
+            sample_pgas[adaptive_level](m,n) =
+                static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
           if (plasma_model == PlasmaModel::code_kappa)
-            sample_kappa_local(m,n) =
+            sample_kappa[adaptive_level](m,n) =
                 static_cast<float>((1.0 - t_frac) * kappa_1 + t_frac * kappa_2);
-          sample_uu1_local(m,n) = static_cast<float>((1.0 - t_frac) * uu1_1 + t_frac * uu1_2);
-          sample_uu2_local(m,n) = static_cast<float>((1.0 - t_frac) * uu2_1 + t_frac * uu2_2);
-          sample_uu3_local(m,n) = static_cast<float>((1.0 - t_frac) * uu3_1 + t_frac * uu3_2);
-          sample_bb1_local(m,n) = static_cast<float>((1.0 - t_frac) * bb1_1 + t_frac * bb1_2);
-          sample_bb2_local(m,n) = static_cast<float>((1.0 - t_frac) * bb2_1 + t_frac * bb2_2);
-          sample_bb3_local(m,n) = static_cast<float>((1.0 - t_frac) * bb3_1 + t_frac * bb3_2);
+          sample_uu1[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * uu1_1 + t_frac * uu1_2);
+          sample_uu2[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * uu2_1 + t_frac * uu2_2);
+          sample_uu3[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * uu3_1 + t_frac * uu3_2);
+          sample_bb1[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * bb1_1 + t_frac * bb1_2);
+          sample_bb2[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * bb2_1 + t_frac * bb2_2);
+          sample_bb3[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * bb3_1 + t_frac * bb3_2);
         }
       }
 
@@ -722,16 +643,16 @@ void RadiationIntegrator::SampleSimulation()
       else if (not simulation_block_interp)
       {
         // Extract indices and coefficients
-        int b = sample_inds_local(m,n,0);
-        int k = sample_inds_local(m,n,1);
-        int j = sample_inds_local(m,n,2);
-        int i = sample_inds_local(m,n,3);
+        int b = sample_inds[adaptive_level](m,n,0);
+        int k = sample_inds[adaptive_level](m,n,1);
+        int j = sample_inds[adaptive_level](m,n,2);
+        int i = sample_inds[adaptive_level](m,n,3);
         int t = 0;
         if (slow_light_on)
-          t = sample_inds_local(m,n,4);
-        double f_k = sample_fracs_local(m,n,0);
-        double f_j = sample_fracs_local(m,n,1);
-        double f_i = sample_fracs_local(m,n,2);
+          t = sample_inds[adaptive_level](m,n,4);
+        double f_k = sample_fracs[adaptive_level](m,n,0);
+        double f_j = sample_fracs[adaptive_level](m,n,1);
+        double f_i = sample_fracs[adaptive_level](m,n,2);
 
         // Calculate values without temporal interpolation
         if (not (slow_light_on and slow_interp))
@@ -760,17 +681,17 @@ void RadiationIntegrator::SampleSimulation()
             kappa = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
 
           // Assign values
-          sample_rho_local(m,n) = static_cast<float>(rho);
+          sample_rho[adaptive_level](m,n) = static_cast<float>(rho);
           if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas_local(m,n) = static_cast<float>(pgas);
+            sample_pgas[adaptive_level](m,n) = static_cast<float>(pgas);
           if (plasma_model == PlasmaModel::code_kappa)
-            sample_kappa_local(m,n) = static_cast<float>(kappa);
-          sample_uu1_local(m,n) = static_cast<float>(uu1);
-          sample_uu2_local(m,n) = static_cast<float>(uu2);
-          sample_uu3_local(m,n) = static_cast<float>(uu3);
-          sample_bb1_local(m,n) = static_cast<float>(bb1);
-          sample_bb2_local(m,n) = static_cast<float>(bb2);
-          sample_bb3_local(m,n) = static_cast<float>(bb3);
+            sample_kappa[adaptive_level](m,n) = static_cast<float>(kappa);
+          sample_uu1[adaptive_level](m,n) = static_cast<float>(uu1);
+          sample_uu2[adaptive_level](m,n) = static_cast<float>(uu2);
+          sample_uu3[adaptive_level](m,n) = static_cast<float>(uu3);
+          sample_bb1[adaptive_level](m,n) = static_cast<float>(bb1);
+          sample_bb2[adaptive_level](m,n) = static_cast<float>(bb2);
+          sample_bb3[adaptive_level](m,n) = static_cast<float>(bb3);
         }
 
         // Calculate values with temporal interpolation
@@ -823,19 +744,27 @@ void RadiationIntegrator::SampleSimulation()
             kappa_2 = static_cast<double>(grid_prim[t+1](ind_kappa,b,k,j,i));
 
           // Assign interpolated values
-          double t_frac = sample_fracs_local(m,n,3);
-          sample_rho_local(m,n) = static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
+          double t_frac = sample_fracs[adaptive_level](m,n,3);
+          sample_rho[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
           if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas_local(m,n) = static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
+            sample_pgas[adaptive_level](m,n) =
+                static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
           if (plasma_model == PlasmaModel::code_kappa)
-            sample_kappa_local(m,n) =
+            sample_kappa[adaptive_level](m,n) =
                 static_cast<float>((1.0 - t_frac) * kappa_1 + t_frac * kappa_2);
-          sample_uu1_local(m,n) = static_cast<float>((1.0 - t_frac) * uu1_1 + t_frac * uu1_2);
-          sample_uu2_local(m,n) = static_cast<float>((1.0 - t_frac) * uu2_1 + t_frac * uu2_2);
-          sample_uu3_local(m,n) = static_cast<float>((1.0 - t_frac) * uu3_1 + t_frac * uu3_2);
-          sample_bb1_local(m,n) = static_cast<float>((1.0 - t_frac) * bb1_1 + t_frac * bb1_2);
-          sample_bb2_local(m,n) = static_cast<float>((1.0 - t_frac) * bb2_1 + t_frac * bb2_2);
-          sample_bb3_local(m,n) = static_cast<float>((1.0 - t_frac) * bb3_1 + t_frac * bb3_2);
+          sample_uu1[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * uu1_1 + t_frac * uu1_2);
+          sample_uu2[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * uu2_1 + t_frac * uu2_2);
+          sample_uu3[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * uu3_1 + t_frac * uu3_2);
+          sample_bb1[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * bb1_1 + t_frac * bb1_2);
+          sample_bb2[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * bb2_1 + t_frac * bb2_2);
+          sample_bb3[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * bb3_1 + t_frac * bb3_2);
         }
       }
 
@@ -845,7 +774,7 @@ void RadiationIntegrator::SampleSimulation()
         // Extract index
         int t = 0;
         if (slow_light_on)
-          t = sample_inds_local(m,n,4);
+          t = sample_inds[adaptive_level](m,n,4);
 
         // Calculate values without temporal interpolation
         if (not (slow_light_on and slow_interp))
@@ -866,10 +795,10 @@ void RadiationIntegrator::SampleSimulation()
           double bb3 = InterpolateAdvanced(grid_prim[t], ind_bb3, m, n);
 
           // Account for possible invalid values
-          int b = sample_inds_local(m,n,0,0);
-          int k = sample_inds_local(m,n,0,1);
-          int j = sample_inds_local(m,n,0,2);
-          int i = sample_inds_local(m,n,0,3);
+          int b = sample_inds[adaptive_level](m,n,0,0);
+          int k = sample_inds[adaptive_level](m,n,0,1);
+          int j = sample_inds[adaptive_level](m,n,0,2);
+          int i = sample_inds[adaptive_level](m,n,0,3);
           if (rho <= 0.0)
             rho = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
           if (plasma_model == PlasmaModel::ti_te_beta and pgas <= 0.0)
@@ -878,17 +807,17 @@ void RadiationIntegrator::SampleSimulation()
             kappa = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
 
           // Assign values
-          sample_rho_local(m,n) = static_cast<float>(rho);
+          sample_rho[adaptive_level](m,n) = static_cast<float>(rho);
           if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas_local(m,n) = static_cast<float>(pgas);
+            sample_pgas[adaptive_level](m,n) = static_cast<float>(pgas);
           if (plasma_model == PlasmaModel::code_kappa)
-            sample_kappa_local(m,n) = static_cast<float>(kappa);
-          sample_uu1_local(m,n) = static_cast<float>(uu1);
-          sample_uu2_local(m,n) = static_cast<float>(uu2);
-          sample_uu3_local(m,n) = static_cast<float>(uu3);
-          sample_bb1_local(m,n) = static_cast<float>(bb1);
-          sample_bb2_local(m,n) = static_cast<float>(bb2);
-          sample_bb3_local(m,n) = static_cast<float>(bb3);
+            sample_kappa[adaptive_level](m,n) = static_cast<float>(kappa);
+          sample_uu1[adaptive_level](m,n) = static_cast<float>(uu1);
+          sample_uu2[adaptive_level](m,n) = static_cast<float>(uu2);
+          sample_uu3[adaptive_level](m,n) = static_cast<float>(uu3);
+          sample_bb1[adaptive_level](m,n) = static_cast<float>(bb1);
+          sample_bb2[adaptive_level](m,n) = static_cast<float>(bb2);
+          sample_bb3[adaptive_level](m,n) = static_cast<float>(bb3);
         }
 
         // Calculate values with temporal interpolation
@@ -910,10 +839,10 @@ void RadiationIntegrator::SampleSimulation()
           double bb3_1 = InterpolateAdvanced(grid_prim[t], ind_bb3, m, n);
 
           // Account for possible invalid values
-          int b = sample_inds_local(m,n,0,0);
-          int k = sample_inds_local(m,n,0,1);
-          int j = sample_inds_local(m,n,0,2);
-          int i = sample_inds_local(m,n,0,3);
+          int b = sample_inds[adaptive_level](m,n,0,0);
+          int k = sample_inds[adaptive_level](m,n,0,1);
+          int j = sample_inds[adaptive_level](m,n,0,2);
+          int i = sample_inds[adaptive_level](m,n,0,3);
           if (rho_1 <= 0.0)
             rho_1 = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
           if (plasma_model == PlasmaModel::ti_te_beta and pgas_1 <= 0.0)
@@ -945,29 +874,40 @@ void RadiationIntegrator::SampleSimulation()
             kappa_2 = static_cast<double>(grid_prim[t+1](ind_kappa,b,k,j,i));
 
           // Assign interpolated values
-          double t_frac = sample_fracs_local(m,n,3);
-          sample_rho_local(m,n) = static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
+          double t_frac = sample_fracs[adaptive_level](m,n,3);
+          sample_rho[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
           if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas_local(m,n) = static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
+            sample_pgas[adaptive_level](m,n) =
+                static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
           if (plasma_model == PlasmaModel::code_kappa)
-            sample_kappa_local(m,n) =
+            sample_kappa[adaptive_level](m,n) =
                 static_cast<float>((1.0 - t_frac) * kappa_1 + t_frac * kappa_2);
-          sample_uu1_local(m,n) = static_cast<float>((1.0 - t_frac) * uu1_1 + t_frac * uu1_2);
-          sample_uu2_local(m,n) = static_cast<float>((1.0 - t_frac) * uu2_1 + t_frac * uu2_2);
-          sample_uu3_local(m,n) = static_cast<float>((1.0 - t_frac) * uu3_1 + t_frac * uu3_2);
-          sample_bb1_local(m,n) = static_cast<float>((1.0 - t_frac) * bb1_1 + t_frac * bb1_2);
-          sample_bb2_local(m,n) = static_cast<float>((1.0 - t_frac) * bb2_1 + t_frac * bb2_2);
-          sample_bb3_local(m,n) = static_cast<float>((1.0 - t_frac) * bb3_1 + t_frac * bb3_2);
+          sample_uu1[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * uu1_1 + t_frac * uu1_2);
+          sample_uu2[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * uu2_1 + t_frac * uu2_2);
+          sample_uu3[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * uu3_1 + t_frac * uu3_2);
+          sample_bb1[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * bb1_1 + t_frac * bb1_2);
+          sample_bb2[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * bb2_1 + t_frac * bb2_2);
+          sample_bb3[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * bb3_1 + t_frac * bb3_2);
         }
       }
     }
   }
 
   // Free memory
-  sample_inds_adaptive.Deallocate();
-  sample_fracs_adaptive.Deallocate();
-  sample_nan_adaptive.Deallocate();
-  sample_fallback_adaptive.Deallocate();
+  if (adaptive_level > 0)
+  {
+    sample_inds[adaptive_level].Deallocate();
+    sample_fracs[adaptive_level].Deallocate();
+    sample_nan[adaptive_level].Deallocate();
+    sample_fallback[adaptive_level].Deallocate();
+  }
   return;
 }
 
@@ -1284,22 +1224,22 @@ double RadiationIntegrator::InterpolateSimple(const Array<float> &grid_vals, int
 // Outputs:
 //   returned value: interpolated value from grid
 // Notes:
-//   Assumes sample_inds and sample_fracs have been set.
+//   Assumes sample_inds[adaptive_level] and sample_fracs[adaptive_level] have been set.
 double RadiationIntegrator::InterpolateAdvanced(const Array<float> &grid_vals, int grid_ind, int m,
     int n)
 {
   double vals[8] = {};
   for (int p = 0; p < 8; p++)
   {
-    int b = sample_inds(m,n,p,0);
-    int k = sample_inds(m,n,p,1);
-    int j = sample_inds(m,n,p,2);
-    int i = sample_inds(m,n,p,3);
+    int b = sample_inds[adaptive_level](m,n,p,0);
+    int k = sample_inds[adaptive_level](m,n,p,1);
+    int j = sample_inds[adaptive_level](m,n,p,2);
+    int i = sample_inds[adaptive_level](m,n,p,3);
     vals[p] = static_cast<double>(grid_vals(grid_ind,b,k,j,i));
   }
-  double f_k = sample_fracs(m,n,0);
-  double f_j = sample_fracs(m,n,1);
-  double f_i = sample_fracs(m,n,2);
+  double f_k = sample_fracs[adaptive_level](m,n,0);
+  double f_j = sample_fracs[adaptive_level](m,n,1);
+  double f_i = sample_fracs[adaptive_level](m,n,2);
   double val = (1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * vals[0]
       + (1.0 - f_k) * (1.0 - f_j) * f_i * vals[1] + (1.0 - f_k) * f_j * (1.0 - f_i) * vals[2]
       + (1.0 - f_k) * f_j * f_i * vals[3] + f_k * (1.0 - f_j) * (1.0 - f_i) * vals[4]

@@ -19,15 +19,15 @@
 bool RadiationIntegrator::CheckAdaptiveRefinement()
 {
   // Handle case where no further refinement can be done
-  if (adaptive_current_level >= adaptive_max_level)
+  if (adaptive_level >= adaptive_max_level)
     return true;
 
   // Ensure there is storage for refinement flags
-  if (not refinement_flags[adaptive_current_level].allocated
-      or refinement_flags[adaptive_current_level].n_tot < block_counts[adaptive_current_level])
+  if (not refinement_flags[adaptive_level].allocated
+      or refinement_flags[adaptive_level].n_tot < block_counts[adaptive_level])
   {
-    refinement_flags[adaptive_current_level].Deallocate();
-    refinement_flags[adaptive_current_level].Allocate(block_counts[adaptive_current_level]);
+    refinement_flags[adaptive_level].Deallocate();
+    refinement_flags[adaptive_level].Allocate(block_counts[adaptive_level]);
   }
 
   // Work in parallel
@@ -38,7 +38,7 @@ bool RadiationIntegrator::CheckAdaptiveRefinement()
     int thread = omp_get_thread_num();
 
     // Go through blocks at root level
-    if (adaptive_current_level == 0)
+    if (adaptive_level == 0)
     {
       #pragma omp for schedule(static)
       for (int block = 0; block < block_counts[0]; block++)
@@ -51,7 +51,7 @@ bool RadiationIntegrator::CheckAdaptiveRefinement()
             for (int i = 0, i_full = i_full_start; i < adaptive_block_size; i++, i_full++)
             {
               int m = j_full * camera_resolution + i_full;
-              image_blocks[thread](s,j,i) = image(s,m);
+              image_blocks[thread](s,j,i) = image[0](s,m);
             }
         refinement_flags[0](block) = EvaluateBlock(thread);
       }
@@ -61,27 +61,27 @@ bool RadiationIntegrator::CheckAdaptiveRefinement()
     else
     {
       #pragma omp for schedule(static)
-      for (int block = 0; block < block_counts[adaptive_current_level]; block++)
+      for (int block = 0; block < block_counts[adaptive_level]; block++)
       {
         int s_end = model_type == ModelType::simulation and image_polarization ? 4 : 1;
         int m_start = block * block_num_pix;
         for (int s = 0; s < s_end; s++)
           for (int j = 0, m = m_start; j < adaptive_block_size; j++)
             for (int i = 0; i < adaptive_block_size; i++, m++)
-              image_blocks[thread](s,j,i) = image_adaptive[adaptive_current_level](s,m);
-        refinement_flags[adaptive_current_level](block) = EvaluateBlock(thread);
+              image_blocks[thread](s,j,i) = image[adaptive_level](s,m);
+        refinement_flags[adaptive_level](block) = EvaluateBlock(thread);
       }
     }
 
     // Calculate number of blocks needed for next level
     #pragma omp for schedule(static) reduction(+: num_refined_blocks)
-    for (int block = 0; block < block_counts[adaptive_current_level]; block++)
-      if (refinement_flags[adaptive_current_level](block))
+    for (int block = 0; block < block_counts[adaptive_level]; block++)
+      if (refinement_flags[adaptive_level](block))
         num_refined_blocks++;
   }
 
   // Record number of blocks needed for next level
-  block_counts[adaptive_current_level+1] = num_refined_blocks * 4;
+  block_counts[adaptive_level+1] = num_refined_blocks * 4;
   return num_refined_blocks == 0;
 }
 

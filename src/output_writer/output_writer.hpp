@@ -72,35 +72,31 @@ struct OutputWriter
   int render_num_images;
 
   // Input data - adaptive parameters
-  bool adaptive_on;
-  int adaptive_block_size;
   int adaptive_max_level;
-
-  // Flag for tracking function calls
-  bool first_time = true;
+  int adaptive_block_size;
 
   // File data
   std::ofstream *p_output_stream;
 
-  // Image data
-  Array<double> image;
-  Array<double> camera_pos;
-  Array<double> camera_dir;
+  // Metadata
+  Array<double> mass_msun_array;
   Array<double> camera_width_array;
   Array<double> image_frequency_array;
-  Array<double> mass_msun_array;
+
+  // Camera data
+  Array<int> *camera_loc = nullptr;
+  Array<double> *camera_pos = nullptr;
+  Array<double> *camera_dir = nullptr;
+
+  // Image data
+  Array<double> *image = nullptr;
 
   // Render data
-  Array<double> render;
+  Array<double> *render = nullptr;
 
   // Adaptive data
   Array<int> adaptive_num_levels_array;
   Array<int> block_counts_array;
-  Array<double> *image_adaptive;
-  Array<double> *render_adaptive;
-  Array<int> *camera_loc_adaptive;
-  Array<double> *camera_pos_adaptive;
-  Array<double> *camera_dir_adaptive;
 
   // Name data
   const char *cell_names[CellValues::num_cell_values] =

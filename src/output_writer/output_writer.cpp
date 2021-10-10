@@ -87,50 +87,38 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
     throw BlacklightException("Only npz outputs support rendering.");
 
   // Copy adaptive parameters
-  adaptive_on = p_input_reader->adaptive_on.value();
-  if (adaptive_on)
+  adaptive_max_level = p_input_reader->adaptive_max_level.value();
+  if (adaptive_max_level > 0)
   {
     if (output_format != OutputFormat::npz)
       throw BlacklightException("Only npz outputs support adaptive ray tracing.");
     adaptive_block_size = p_input_reader->adaptive_block_size.value();
-    adaptive_max_level = p_input_reader->adaptive_max_level.value();
   }
 
-  // Copy scalar parameters to arrays
+  // Copy metadata arrays
   if (output_format == OutputFormat::npz)
   {
+    mass_msun_array.Allocate(1);
     camera_width_array.Allocate(1);
     image_frequency_array.Allocate(1);
-    mass_msun_array.Allocate(1);
+    mass_msun_array(0) = p_radiation_integrator->mass_msun;
     camera_width_array(0) = p_input_reader->camera_width.value();
     image_frequency_array(0) = p_input_reader->image_frequency.value();
-    mass_msun_array(0) = p_radiation_integrator->mass_msun;
   }
 
-  // Make shallow copies of camera data, reshaping the arrays
-  if (output_format == OutputFormat::npz and output_camera and camera_type == Camera::plane)
-  {
-    camera_pos = p_geodesic_integrator->camera_pos;
-    camera_pos.n3 = camera_resolution;
-    camera_pos.n2 = camera_resolution;
-  }
-  if (output_format == OutputFormat::npz and output_camera and camera_type == Camera::pinhole)
-  {
-    camera_dir = p_geodesic_integrator->camera_dir;
-    camera_dir.n3 = camera_resolution;
-    camera_dir.n2 = camera_resolution;
-  }
+  // Allocate space for camera data
+  camera_loc = new Array<int>[adaptive_max_level+1];
+  camera_pos = new Array<double>[adaptive_max_level+1];
+  camera_dir = new Array<double>[adaptive_max_level+1];
 
-  // Allocate space for shallow copies of adaptive data
+  // Allocate space for image data
+  image = new Array<double>[adaptive_max_level+1];
+
+  // Allocate space for render data
+  render = new Array<double>[adaptive_max_level+1];
+
+  // Allocate space for adaptive data
   adaptive_num_levels_array.Allocate(1);
-  if (adaptive_on)
-  {
-    image_adaptive = new Array<double>[adaptive_max_level+1];
-    render_adaptive = new Array<double>[adaptive_max_level+1];
-    camera_loc_adaptive = new Array<int>[adaptive_max_level+1];
-    camera_pos_adaptive = new Array<double>[adaptive_max_level+1];
-    camera_dir_adaptive = new Array<double>[adaptive_max_level+1];
-  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -138,22 +126,19 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
 // Output writer destructor
 OutputWriter::~OutputWriter()
 {
-  if (adaptive_on)
+  for (int level = 0; level <= adaptive_max_level; level++)
   {
-    for (int level = 0; level <= adaptive_max_level; level++)
-    {
-      image_adaptive[level].Deallocate();
-      render_adaptive[level].Deallocate();
-      camera_loc_adaptive[level].Deallocate();
-      camera_pos_adaptive[level].Deallocate();
-      camera_dir_adaptive[level].Deallocate();
-    }
-    delete[] image_adaptive;
-    delete[] render_adaptive;
-    delete[] camera_loc_adaptive;
-    delete[] camera_pos_adaptive;
-    delete[] camera_dir_adaptive;
+    camera_loc[level].Deallocate();
+    camera_pos[level].Deallocate();
+    camera_dir[level].Deallocate();
+    image[level].Deallocate();
+    render[level].Deallocate();
   }
+  delete[] camera_loc;
+  delete[] camera_pos;
+  delete[] camera_dir;
+  delete[] image;
+  delete[] render;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -166,75 +151,82 @@ OutputWriter::~OutputWriter()
 //   Opens and closes stream for reading.
 void OutputWriter::Write(int snapshot)
 {
-  // Make shallow copy of root image data
-  if (first_time and (image_light or image_time or image_length or image_lambda or image_emission
-      or image_tau or image_lambda_ave or image_emission_ave or image_tau_int))
-  {
-    image = p_radiation_integrator->image;
-    image.n3 = image.n2;
-    image.n2 = camera_resolution;
-    image.n1 = camera_resolution;
-  }
-
-  // Make shallow copy of root render data
-  if (first_time and render_num_images > 0)
-  {
-    render = p_radiation_integrator->render;
-    render.n4 = render.n3;
-    render.n3 = render.n2;
-    render.n2 = camera_resolution;
-    render.n1 = camera_resolution;
-  }
-
-  // Make shallow copy of adaptive image data
+  // Copy adaptive data
   adaptive_num_levels_array(0) = p_radiation_integrator->adaptive_num_levels;
-  if (adaptive_on)
+  if (adaptive_max_level > 0)
   {
     block_counts_array.Allocate(adaptive_num_levels_array(0) + 1);
     block_counts_array(0) = p_radiation_integrator->block_counts[0];
     for (int level = 1; level <= adaptive_num_levels_array(0); level++)
-    {
       block_counts_array(level) = p_radiation_integrator->block_counts[level];
-      image_adaptive[level] = p_radiation_integrator->image_adaptive[level];
-      image_adaptive[level].n4 = image_adaptive[level].n2;
-      image_adaptive[level].n3 = block_counts_array(level);
-      image_adaptive[level].n2 = adaptive_block_size;
-      image_adaptive[level].n1 = adaptive_block_size;
+  }
+
+  // Make shallow copies of camera data, reshaping the arrays
+  for (int level = 1; level <= adaptive_num_levels_array(0); level++)
+    camera_loc[level] = p_geodesic_integrator->camera_loc[level];
+  if (output_format == OutputFormat::npz and output_camera and camera_type == Camera::plane)
+  {
+    camera_pos[0] = p_geodesic_integrator->camera_pos[0];
+    camera_pos[0].n3 = camera_resolution;
+    camera_pos[0].n2 = camera_resolution;
+    for (int level = 1; level <= adaptive_num_levels_array(0); level++)
+    {
+      camera_pos[level] = p_geodesic_integrator->camera_pos[level];
+      camera_pos[level].n4 = block_counts_array(level);
+      camera_pos[level].n3 = adaptive_block_size;
+      camera_pos[level].n2 = adaptive_block_size;
+    }
+  }
+  if (output_format == OutputFormat::npz and output_camera and camera_type == Camera::pinhole)
+  {
+    camera_dir[0] = p_geodesic_integrator->camera_dir[0];
+    camera_dir[0].n3 = camera_resolution;
+    camera_dir[0].n2 = camera_resolution;
+    for (int level = 1; level <= adaptive_num_levels_array(0); level++)
+    {
+      camera_dir[level] = p_geodesic_integrator->camera_dir[level];
+      camera_dir[level].n4 = block_counts_array(level);
+      camera_dir[level].n3 = adaptive_block_size;
+      camera_dir[level].n2 = adaptive_block_size;
     }
   }
 
-  // Make shallow copy of adaptive render data
-  if (adaptive_on)
+  // Make shallow copies of image data, reshaping the arrays
+  if (image_light or image_time or image_length or image_lambda or image_emission or image_tau
+      or image_lambda_ave or image_emission_ave or image_tau_int)
+  {
+    image[0] = p_radiation_integrator->image[0];
+    image[0].n3 = image[0].n2;
+    image[0].n2 = camera_resolution;
+    image[0].n1 = camera_resolution;
     for (int level = 1; level <= adaptive_num_levels_array(0); level++)
     {
-      render_adaptive[level] = p_radiation_integrator->render_adaptive[level];
-      render_adaptive[level].n5 = render_adaptive[level].n3;
-      render_adaptive[level].n4 = render_adaptive[level].n2;
-      render_adaptive[level].n3 = block_counts_array(level);
-      render_adaptive[level].n2 = adaptive_block_size;
-      render_adaptive[level].n1 = adaptive_block_size;
+      image[level] = p_radiation_integrator->image[level];
+      image[level].n4 = image[level].n2;
+      image[level].n3 = block_counts_array(level);
+      image[level].n2 = adaptive_block_size;
+      image[level].n1 = adaptive_block_size;
     }
+  }
 
-  // Make shallow copy of adaptive camera data
-  if (adaptive_on)
-    for (int level = 1; level <= adaptive_num_levels_array(0); level++)
-      camera_loc_adaptive[level] = p_geodesic_integrator->camera_loc_adaptive[level];
-  if (adaptive_on and output_camera and camera_type == Camera::plane)
-    for (int level = 1; level <= adaptive_num_levels_array(0); level++)
-    {
-      camera_pos_adaptive[level] = p_geodesic_integrator->camera_pos_adaptive[level];
-      camera_pos_adaptive[level].n4 = block_counts_array(level);
-      camera_pos_adaptive[level].n3 = adaptive_block_size;
-      camera_pos_adaptive[level].n2 = adaptive_block_size;
-    }
-  if (adaptive_on and output_camera and camera_type == Camera::pinhole)
+  // Make shallow copies of render data, reshaping the arrays
+  if (render_num_images > 0)
+  {
+    render[0] = p_radiation_integrator->render[0];
+    render[0].n4 = render[0].n3;
+    render[0].n3 = render[0].n2;
+    render[0].n2 = camera_resolution;
+    render[0].n1 = camera_resolution;
     for (int level = 1; level <= adaptive_num_levels_array(0); level++)
     {
-      camera_dir_adaptive[level] = p_geodesic_integrator->camera_dir_adaptive[level];
-      camera_dir_adaptive[level].n4 = block_counts_array(level);
-      camera_dir_adaptive[level].n3 = adaptive_block_size;
-      camera_dir_adaptive[level].n2 = adaptive_block_size;
+      render[level] = p_radiation_integrator->render[level];
+      render[level].n5 = render[level].n3;
+      render[level].n4 = render[level].n2;
+      render[level].n3 = block_counts_array(level);
+      render[level].n2 = adaptive_block_size;
+      render[level].n1 = adaptive_block_size;
     }
+  }
 
   // Open output file
   std::string output_file_formatted = output_file;
@@ -267,9 +259,6 @@ void OutputWriter::Write(int snapshot)
 
   // Close output file
   delete p_output_stream;
-
-  // Update first time flag
-  first_time = false;
 
   // Free memory
   block_counts_array.Deallocate();

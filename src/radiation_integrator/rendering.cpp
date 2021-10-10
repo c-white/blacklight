@@ -18,48 +18,19 @@
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Works on arrays appropriate for root level or adaptively refined regions.
-//   Assumes sample_num (or sample_num_adaptive[adaptive_current_level]), sample_pos (or
-//       sample_pos_adaptive[adaptive_current_level]), sample_dir (or
-//       sample_dir_adaptive[adaptive_current_level]), sample_len (or
-//       sample_len_adaptive[adaptive_current_level]), and cell_values (or cell_values_adaptive)
-//       have been set.
-//   Allocates and initializes render (or render_adaptive[adaptive_current_level]).
-//   Deallocates cell_values_adaptive.
+//   Assumes sample_num[adaptive_level], sample_pos[adaptive_level], sample_dir[adaptive_level],
+//       sample_len[adaptive_level], and cell_values[adaptive_level] have been set.
+//   Allocates and initializes render[adaptive_level].
+//   Deallocates cell_values[adaptive_level] if adaptive_level > 0.
 void RadiationIntegrator::Render()
 {
   // Allocate rendering array
   int num_pix = camera_num_pix;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    num_pix = block_counts[adaptive_current_level] * block_num_pix;
-    render_adaptive[adaptive_current_level].Allocate(render_num_images, 3, num_pix);
-    render_adaptive[adaptive_current_level].Zero();
-  }
-  else if (first_time)
-  {
-    render.Allocate(render_num_images, 3, num_pix);
-    render.Zero();
-  }
-  else
-    render.Zero();
-
-  // Alias arrays
-  Array<int> sample_num_local = sample_num;
-  Array<double> sample_pos_local = sample_pos;
-  Array<double> sample_dir_local = sample_dir;
-  Array<double> sample_len_local = sample_len;
-  Array<double> cell_values_local = cell_values;
-  Array<double> render_local = render;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    sample_num_local = sample_num_adaptive[adaptive_current_level];
-    sample_pos_local = sample_pos_adaptive[adaptive_current_level];
-    sample_dir_local = sample_dir_adaptive[adaptive_current_level];
-    sample_len_local = sample_len_adaptive[adaptive_current_level];
-    cell_values_local = cell_values_adaptive;
-    render_local = render_adaptive[adaptive_current_level];
-  }
+  if (adaptive_level > 0)
+    num_pix = block_counts[adaptive_level] * block_num_pix;
+  if (first_time or adaptive_level > 0)
+    render[adaptive_level].Allocate(render_num_images, 3, num_pix);
+  render[adaptive_level].Zero();
 
   // Determine if fills are present
   bool fill_present = false;
@@ -86,7 +57,7 @@ void RadiationIntegrator::Render()
     for (int m = 0; m < num_pix; m++)
     {
       // Extract number of steps
-      int num_steps = sample_num_local(m);
+      int num_steps = sample_num[adaptive_level](m);
 
       // Prepare cell values
       double previous_values[CellValues::num_cell_values];
@@ -98,17 +69,17 @@ void RadiationIntegrator::Render()
       for (int n = 0; n < num_steps; n++)
       {
         // Extract useful values
-        double delta_lambda = sample_len_local(m,n);
-        double x1 = sample_pos_local(m,n,1);
-        double x2 = sample_pos_local(m,n,2);
-        double x3 = sample_pos_local(m,n,3);
+        double delta_lambda = sample_len[adaptive_level](m,n);
+        double x1 = sample_pos[adaptive_level](m,n,1);
+        double x2 = sample_pos[adaptive_level](m,n,2);
+        double x3 = sample_pos[adaptive_level](m,n,3);
         double kcov[4];
-        kcov[0] = sample_dir_local(m,n,0);
-        kcov[1] = sample_dir_local(m,n,1);
-        kcov[2] = sample_dir_local(m,n,2);
-        kcov[3] = sample_dir_local(m,n,3);
+        kcov[0] = sample_dir[adaptive_level](m,n,0);
+        kcov[1] = sample_dir[adaptive_level](m,n,1);
+        kcov[2] = sample_dir[adaptive_level](m,n,2);
+        kcov[3] = sample_dir[adaptive_level](m,n,3);
         for (int n_v = 0; n_v < CellValues::num_cell_values; n_v++)
-          current_values[n_v] = cell_values_local(n_v,m,n);
+          current_values[n_v] = cell_values[adaptive_level](n_v,m,n);
 
         // Calculate length
         double delta_length = 0.0;
@@ -149,12 +120,12 @@ void RadiationIntegrator::Render()
                 and current_value <= render_thresh_vals[n_i][n_f]))
             {
               double opacity = render_opacities[n_i][n_f];
-              render_local(n_i,0,m) =
-                  (1.0 - opacity) * render_local(n_i,0,m) + opacity * render_x_vals[n_i][n_f];
-              render_local(n_i,1,m) =
-                  (1.0 - opacity) * render_local(n_i,1,m) + opacity * render_y_vals[n_i][n_f];
-              render_local(n_i,2,m) =
-                  (1.0 - opacity) * render_local(n_i,2,m) + opacity * render_z_vals[n_i][n_f];
+              render[adaptive_level](n_i,0,m) = (1.0 - opacity) * render[adaptive_level](n_i,0,m)
+                  + opacity * render_x_vals[n_i][n_f];
+              render[adaptive_level](n_i,1,m) = (1.0 - opacity) * render[adaptive_level](n_i,1,m)
+                  + opacity * render_y_vals[n_i][n_f];
+              render[adaptive_level](n_i,2,m) = (1.0 - opacity) * render[adaptive_level](n_i,2,m)
+                  + opacity * render_z_vals[n_i][n_f];
             }
 
             // Calculate effect of passing through filling region
@@ -168,18 +139,18 @@ void RadiationIntegrator::Render()
               {
                 double exp_neg = std::exp(-delta_tau);
                 double expm1 = std::expm1(delta_tau);
-                render_local(n_i,0,m) =
-                    exp_neg * (render_local(n_i,0,m) + render_x_vals[n_i][n_f] * expm1);
-                render_local(n_i,1,m) =
-                    exp_neg * (render_local(n_i,1,m) + render_y_vals[n_i][n_f] * expm1);
-                render_local(n_i,2,m) =
-                    exp_neg * (render_local(n_i,2,m) + render_z_vals[n_i][n_f] * expm1);
+                render[adaptive_level](n_i,0,m) =
+                    exp_neg * (render[adaptive_level](n_i,0,m) + render_x_vals[n_i][n_f] * expm1);
+                render[adaptive_level](n_i,1,m) =
+                    exp_neg * (render[adaptive_level](n_i,1,m) + render_y_vals[n_i][n_f] * expm1);
+                render[adaptive_level](n_i,2,m) =
+                    exp_neg * (render[adaptive_level](n_i,2,m) + render_z_vals[n_i][n_f] * expm1);
               }
               else
               {
-                render_local(n_i,0,m) = render_x_vals[n_i][n_f];
-                render_local(n_i,1,m) = render_y_vals[n_i][n_f];
-                render_local(n_i,2,m) = render_z_vals[n_i][n_f];
+                render[adaptive_level](n_i,0,m) = render_x_vals[n_i][n_f];
+                render[adaptive_level](n_i,1,m) = render_y_vals[n_i][n_f];
+                render[adaptive_level](n_i,2,m) = render_z_vals[n_i][n_f];
               }
             }
           }
@@ -193,6 +164,7 @@ void RadiationIntegrator::Render()
   }
 
   // Free memory
-  cell_values_adaptive.Deallocate();
+  if (adaptive_level > 0)
+    cell_values[adaptive_level].Deallocate();
   return;
 }

@@ -155,9 +155,8 @@ struct InputReader
   std::optional<double> ray_max_factor;
 
   // Data - adaptive parameters
-  std::optional<bool> adaptive_on;
-  std::optional<int> adaptive_block_size;
   std::optional<int> adaptive_max_level;
+  std::optional<int> adaptive_block_size;
   std::optional<double> adaptive_val_cut;
   std::optional<double> adaptive_val_frac;
   std::optional<double> adaptive_abs_grad_cut;

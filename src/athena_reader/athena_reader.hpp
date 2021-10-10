@@ -77,7 +77,8 @@ struct AthenaReader
   Array<float> x1f, x2f, x3f;
   Array<float> x1v, x2v, x3v;
   float *time;
-  Array<float> *prim, *bb;
+  Array<float> *prim;
+  Array<float> *bb;
 
   // External function
   double Read(int snapshot);

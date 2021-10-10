@@ -302,12 +302,10 @@ int InputReader::Read()
       ray_max_factor = std::stod(val);
 
     // Store adaptive parameters
-    else if (key == "adaptive_on")
-      adaptive_on = ReadBool(val);
-    else if (key == "adaptive_block_size")
-      adaptive_block_size = std::stoi(val);
     else if (key == "adaptive_max_level")
       adaptive_max_level = std::stoi(val);
+    else if (key == "adaptive_block_size")
+      adaptive_block_size = std::stoi(val);
     else if (key == "adaptive_val_cut")
       adaptive_val_cut = std::stod(val);
     else if (key == "adaptive_val_frac")

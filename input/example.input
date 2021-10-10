@@ -4,7 +4,7 @@ num_threads = 4        # number of threads to use in parallel
 
 # Output parameters
 output_format = npz                 # format of output file (raw, npy, npz)
-output_file   = output/example.npz  # file to be (over)written with image data
+output_file   = output/example.npz  # file to be (over)written with output data
 output_camera = false               # flag for saving camera details (output_format == npz)
 
 # Checkpoint parameters
@@ -96,29 +96,35 @@ image_length        = false     # flag indicating image of geodesic lengths shou
 image_lambda        = false     # flag indicating image of affine path lengths should be produced
 image_emission      = false     # flag indicating image of emission coefficients should be produced
 image_tau           = false     # flag indicating image of optical depths should be produced
-image_lambda_ave    = false     # flag indicating path-averaged images should be produced
+image_lambda_ave    = false     # flag indicating lambda-averaged images should be produced
 image_emission_ave  = false     # flag indicating emission-averaged images should be produced
 image_tau_int       = false     # flag indicating tau-integrated images should be produced
 
 # Rendering parameters
-render_num_images     = 0                # number of false-color renderings
-render_1_num_features = 3                # image 1: number of features
-render_1_1_quantity   = sigma            # image 1, feature 1: quantity to use
-render_1_1_type       = rise             # image 1, feature 1: type of feature (rise, fall, fill)
-render_1_1_thresh     = 1.0              # image 1, feature 1: threshold
-render_1_1_opacity    = 0.5              # image 1, feature 1: opacity in [0,1]
-render_1_1_rgb        = 255,0,0          # image 1, feature 1: RGB colors in [0,255]
-render_1_2_quantity   = sigma            # image 1, feature 2: quantity to use
-render_1_2_type       = fall             # image 1, feature 2: type of feature (rise, fall, fill)
-render_1_2_thresh     = 1.0              # image 1, feature 2: threshold
-render_1_2_opacity    = 0.5              # image 1, feature 2: opacity in [0,1]
-render_1_2_rgb        = 255,0,0          # image 1, feature 2: RGB colors in [0,255]
-render_1_3_quantity   = rho              # image 1, feature 3: quantity to use
-render_1_3_type       = fill             # image 1, feature 3: type of feature (rise, fall, fill)
-render_1_3_min        = 1.0e-17          # image 1, feature 3: lower cutoff
-render_1_3_max        = inf              # image 1, feature 3: upper cutoff
-render_1_3_tau_scale  = 1.0e13           # image 1, feature 3: optical depth length scale
-render_1_3_xyz        = 0.18,0.072,0.95  # image 1, feature 3: XYZ colors in [0,1]
+render_num_images     = 0                 # number of false-color renderings
+render_1_num_features = 4                 # image 1: number of features
+render_1_1_quantity   = sigma             # image 1, feature 1: quantity to use
+render_1_1_type       = fill              # image 1, feature 1: type of feature (rise, fall, fill)
+render_1_1_min        = 1.0               # image 1, feature 1: lower cutoff
+render_1_1_max        = inf               # image 1, feature 1: upper cutoff
+render_1_1_tau_scale  = 1.5e13            # image 1, feature 1: opacity in [0,1]
+render_1_1_rgb        = 222,12,98         # image 1, feature 1: RGB colors in [0,255]
+render_1_2_quantity   = beta_inverse      # image 1, feature 2: quantity to use
+render_1_2_type       = rise              # image 1, feature 2: type of feature (rise, fall, fill)
+render_1_2_thresh     = 1.0               # image 1, feature 2: threshold
+render_1_2_opacity    = 0.2               # image 1, feature 2: opacity in [0,1]
+render_1_2_rgb        = 133,197,38        # image 1, feature 2: RGB colors in [0,255]
+render_1_3_quantity   = beta_inverse      # image 1, feature 3: quantity to use
+render_1_3_type       = fall              # image 1, feature 3: type of feature (rise, fall, fill)
+render_1_3_thresh     = 1.0               # image 1, feature 3: threshold
+render_1_3_opacity    = 0.2               # image 1, feature 3: opacity in [0,1]
+render_1_3_rgb        = 133,197,38        # image 1, feature 3: RGB colors in [0,255]
+render_1_4_quantity   = rho               # image 1, feature 4: quantity to use
+render_1_4_type       = fill              # image 1, feature 4: type of feature (rise, fall, fill)
+render_1_4_min        = 1.0e-17           # image 1, feature 4: lower cutoff
+render_1_4_max        = inf               # image 1, feature 4: upper cutoff
+render_1_4_tau_scale  = 1.5e13            # image 1, feature 4: optical depth length scale
+render_1_4_xyz        = 0.296,0.235,0.91  # image 1, feature 4: XYZ colors in [0,1]
 
 # Ray-tracing parameters
 ray_flat        = false           # flag indicating ray tracing should assume flat spacetime
@@ -134,9 +140,8 @@ ray_min_factor  = 0.2             # minimum ratio of new to old step size
 ray_max_factor  = 10.0            # maximum ratio of new to old step size
 
 # Adaptive parameters
-adaptive_on            = false   # flag indicating adaptive ray tracing should be used
+adaptive_max_level     = 0       # maximum number of adaptive levels beyond root
 adaptive_block_size    = 8       # linear size of adaptively refined blocks of pixels
-adaptive_max_level     = 1       # maximum number of adaptive levels beyond root
 adaptive_val_cut       = 4.0e-4  # absolute value minimum for signaling refinement
 adaptive_val_frac      = 0.0     # minimum fraction of cells exceeding cut for triggering refinement
 adaptive_abs_grad_cut  = 0.0     # absolute gradient minimum for signaling refinement

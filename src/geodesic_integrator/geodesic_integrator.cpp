@@ -85,17 +85,14 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   ray_max_factor = p_input_reader->ray_max_factor.value();
 
   // Copy adaptive parameters
-  adaptive_on = p_input_reader->adaptive_on.value();
-  if (adaptive_on)
+  adaptive_max_level = p_input_reader->adaptive_max_level.value();
+  if (adaptive_max_level > 0)
   {
     adaptive_block_size = p_input_reader->adaptive_block_size.value();
     if (adaptive_block_size <= 0)
       throw BlacklightException("Must have positive adaptive_block_size.");
     if (camera_resolution % adaptive_block_size != 0)
       throw BlacklightException("Must have adaptive_block_size divide camera_resolution.");
-    adaptive_max_level = p_input_reader->adaptive_max_level.value();
-    if (adaptive_max_level < 1)
-      throw BlacklightException("Must have at least one allowed refinement level.");
   }
 
   // Calculate termination radii
@@ -122,31 +119,30 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   // Calculate number of pixels
   camera_num_pix = camera_resolution * camera_resolution;
 
-  // Allocate space for calculating adaptive refinement
-  if (adaptive_on)
+  // Allocate space for camera data
+  camera_loc = new Array<int>[adaptive_max_level+1];
+  camera_pos = new Array<double>[adaptive_max_level+1];
+  camera_dir = new Array<double>[adaptive_max_level+1];
+
+  // Allocate space for geodesic data
+  geodesic_num_steps = new int[adaptive_max_level+1];
+  sample_flags = new Array<bool>[adaptive_max_level+1];
+  sample_num = new Array<int>[adaptive_max_level+1];
+  sample_pos = new Array<double>[adaptive_max_level+1];
+  sample_dir = new Array<double>[adaptive_max_level+1];
+  sample_len = new Array<double>[adaptive_max_level+1];
+
+  // Prepare bookkeeping for adaptive refinement
+  if (adaptive_max_level > 0)
   {
     linear_root_blocks = camera_resolution / adaptive_block_size;
     block_num_pix = adaptive_block_size * adaptive_block_size;
-    camera_loc_adaptive = new Array<int>[adaptive_max_level+1];
-    camera_pos_adaptive = new Array<double>[adaptive_max_level+1];
-    camera_dir_adaptive = new Array<double>[adaptive_max_level+1];
-    geodesic_num_steps_adaptive = new int[adaptive_max_level+1];
-    sample_flags_adaptive = new Array<bool>[adaptive_max_level+1];
-    sample_num_adaptive = new Array<int>[adaptive_max_level+1];
-    sample_pos_adaptive = new Array<double>[adaptive_max_level+1];
-    sample_dir_adaptive = new Array<double>[adaptive_max_level+1];
-    sample_len_adaptive = new Array<double>[adaptive_max_level+1];
-  }
-
-  // Initialize locations of root blocks
-  if (adaptive_on)
-  {
-    camera_loc_adaptive[0].Allocate(linear_root_blocks * linear_root_blocks, 2);
+    camera_loc[0].Allocate(linear_root_blocks * linear_root_blocks, 2);
     for (int block_v = 0, block = 0; block_v < linear_root_blocks; block_v++)
       for (int block_u = 0; block_u < linear_root_blocks; block_u++, block++)
       {
-        camera_loc_adaptive[0](block,0) = block_v;
-        camera_loc_adaptive[0](block,1) = block_u;
+        camera_loc[0](block,0) = block_v;
+        camera_loc[0](block,1) = block_u;
       }
   }
 }
@@ -156,29 +152,26 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
 // Geodesic integrator destructor
 GeodesicIntegrator::~GeodesicIntegrator()
 {
-  if (adaptive_on)
+  for (int level = 0; level <= adaptive_max_level; level++)
   {
-    for (int level = 0; level <= adaptive_max_level; level++)
-    {
-      camera_loc_adaptive[level].Deallocate();
-      camera_pos_adaptive[level].Deallocate();
-      camera_dir_adaptive[level].Deallocate();
-      sample_flags_adaptive[level].Deallocate();
-      sample_num_adaptive[level].Deallocate();
-      sample_pos_adaptive[level].Deallocate();
-      sample_dir_adaptive[level].Deallocate();
-      sample_len_adaptive[level].Deallocate();
-    }
-    delete[] camera_loc_adaptive;
-    delete[] camera_pos_adaptive;
-    delete[] camera_dir_adaptive;
-    delete[] geodesic_num_steps_adaptive;
-    delete[] sample_flags_adaptive;
-    delete[] sample_num_adaptive;
-    delete[] sample_pos_adaptive;
-    delete[] sample_dir_adaptive;
-    delete[] sample_len_adaptive;
+    camera_loc[level].Deallocate();
+    camera_pos[level].Deallocate();
+    camera_dir[level].Deallocate();
+    sample_flags[level].Deallocate();
+    sample_num[level].Deallocate();
+    sample_pos[level].Deallocate();
+    sample_dir[level].Deallocate();
+    sample_len[level].Deallocate();
   }
+  delete[] camera_loc;
+  delete[] camera_pos;
+  delete[] camera_dir;
+  delete[] geodesic_num_steps;
+  delete[] sample_flags;
+  delete[] sample_num;
+  delete[] sample_pos;
+  delete[] sample_dir;
+  delete[] sample_len;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -193,7 +186,7 @@ double GeodesicIntegrator::Integrate()
   double time_start = omp_get_wtime();
 
   // Reset adaptive level counter
-  adaptive_current_level = 0;
+  adaptive_level = 0;
 
   // Load data from checkpoint
   if (checkpoint_geodesic_load)
@@ -231,7 +224,7 @@ double GeodesicIntegrator::AddGeodesics(const RadiationIntegrator *p_radiation_i
   double time_start = omp_get_wtime();
 
   // Increment adaptive level counter
-  adaptive_current_level++;
+  adaptive_level++;
 
   // Acquire refinement data
   block_counts = p_radiation_integrator->block_counts;

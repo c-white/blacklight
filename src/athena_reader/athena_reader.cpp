@@ -102,7 +102,6 @@ AthenaReader::AthenaReader(const InputReader *p_input_reader_)
 // Athena++ reader destructor
 AthenaReader::~AthenaReader()
 {
-  // Free memory
   if (num_dataset_names > 0)
     delete[] dataset_names;
   if (num_variable_names > 0)

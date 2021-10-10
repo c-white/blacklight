@@ -19,25 +19,22 @@
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Assumes camera_pos (or camera_pos_adaptive[adaptive_current_level]), camera_dir (or
-//       camera_dir_adaptive[adaptive_current_level]), sample_num (or
-//       sample_num_adaptive[adaptive_current_level]), sample_pos (or
-//       sample_pos_adaptive[adaptive_current_level]), sample_dir (or
-//       sample_dir_adaptive[adaptive_current_level]), sample_len (or
-//       sample_len_adaptive[adaptive_current_level]), sample_uu1 (or sample_uu1_adaptive),
-//       sample_uu2 (or sample_uu2_adaptive), sample_uu3 (or sample_uu3_adaptive), sample_bb1 (or
-//       sample_bb1_adaptive), sample_bb2 (or sample_bb2_adaptive), sample_bb3 (or
-//       sample_bb3_adaptive), j_i (or j_i_adaptive), j_q (or j_q_adaptive), j_v (or j_v_adaptive),
-//       alpha_i (or alpha_i_adaptive), alpha_q (or alpha_q_adaptive), alpha_v (or
-//       alpha_v_adaptive), rho_q (or rho_q_adaptive), and rho_v (or rho_v_adaptive) have been set.
-//   Assumes cell_values (or cell_values_adaptive) has been set if image_lambda_ave == true or
+//   Assumes camera_pos[adaptive_level], camera_dir[adaptive_level], sample_num[adaptive_level],
+//       sample_pos[adaptive_level], sample_dir[adaptive_level], sample_len[adaptive_level],
+//       sample_uu1[adaptive_level], sample_uu2[adaptive_level], sample_uu3[adaptive_level],
+//       sample_bb1[adaptive_level], sample_bb2[adaptive_level], sample_bb3[adaptive_level],
+//       j_i[adaptive_level], j_q[adaptive_level], j_v[adaptive_level], alpha_i[adaptive_level],
+//       alpha_q[adaptive_level], alpha_v[adaptive_level], rho_q[adaptive_level], and
+//       rho_v[adaptive_level] have been set.
+//   Assumes cell_values[adaptive_level] has been set if image_lambda_ave == true or
 //       image_emission_ave == true or image_tau_int == true.
-//   Allocates and initializes image (or image_adaptive[adaptive_current_level]).
-//   Dealllocates sample_uu1_adaptive, sample_uu2_adaptive, sample_uu3_adaptive,
-//       sample_bb1_adaptive, sample_bb2_adaptive, sample_bb3_adaptive, j_i_adaptive, j_q_adaptive,
-//       j_v_adaptive, alpha_i_adaptive, alpha_q_adaptive, alpha_v_adaptive, rho_q_adaptive, and
-//       rho_v_adaptive.
-//   Deallocates cell_values_adaptive if render_num_images <= 0.
+//   Allocates and initializes image[adaptive_level].
+//   Dealllocates sample_uu1[adaptive_level], sample_uu2[adaptive_level],
+//       sample_uu3[adaptive_level], sample_bb1[adaptive_level], sample_bb2[adaptive_level],
+//       sample_bb3[adaptive_level], j_i[adaptive_level], j_q[adaptive_level], j_v[adaptive_level],
+//       alpha_i[adaptive_level], alpha_q[adaptive_level], alpha_v[adaptive_level],
+//       rho_q[adaptive_level], and rho_v[adaptive_level] if adaptive_level > 0.
+//   Deallocates cell_values[adaptive_level] if render_num_images <= 0 and adaptive_level > 0.
 //   References grtrans paper 2016 MNRAS 462 115 (G)
 //   References symphony paper 2016 ApJ 822 34 (S).
 //     J_V in (S 31) has an overall sign error that is corrected here and in the symphony code.
@@ -53,72 +50,15 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
 {
   // Allocate image array
   int num_pix = camera_num_pix;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    num_pix = block_counts[adaptive_current_level] * block_num_pix;
-    image_adaptive[adaptive_current_level].Allocate(image_num_quantities, num_pix);
-    image_adaptive[adaptive_current_level].Zero();
-  }
-  else if (first_time)
-  {
-    image.Allocate(image_num_quantities, num_pix);
-    image.Zero();
-  }
-  else
-    image.Zero();
+  if (adaptive_level > 0)
+    num_pix = block_counts[adaptive_level] * block_num_pix;
+  if (first_time or adaptive_level > 0)
+    image[adaptive_level].Allocate(image_num_quantities, num_pix);
+  image[adaptive_level].Zero();
 
   // Allocate and initialize coherency tensor array
   Array<std::complex<double>> nn_con(num_pix, 4, 4);
   nn_con.Zero();
-
-  // Alias arrays
-  Array<double> camera_pos_local = camera_pos;
-  Array<double> camera_dir_local = camera_dir;
-  Array<int> sample_num_local = sample_num;
-  Array<double> sample_pos_local = sample_pos;
-  Array<double> sample_dir_local = sample_dir;
-  Array<double> sample_len_local = sample_len;
-  Array<float> sample_uu1_local = sample_uu1;
-  Array<float> sample_uu2_local = sample_uu2;
-  Array<float> sample_uu3_local = sample_uu3;
-  Array<float> sample_bb1_local = sample_bb1;
-  Array<float> sample_bb2_local = sample_bb2;
-  Array<float> sample_bb3_local = sample_bb3;
-  Array<double> j_i_local = j_i;
-  Array<double> j_q_local = j_q;
-  Array<double> j_v_local = j_v;
-  Array<double> alpha_i_local = alpha_i;
-  Array<double> alpha_q_local = alpha_q;
-  Array<double> alpha_v_local = alpha_v;
-  Array<double> rho_q_local = rho_q;
-  Array<double> rho_v_local = rho_v;
-  Array<double> cell_values_local = cell_values;
-  Array<double> image_local = image;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    camera_pos_local = camera_pos_adaptive[adaptive_current_level];
-    camera_dir_local = camera_dir_adaptive[adaptive_current_level];
-    sample_num_local = sample_num_adaptive[adaptive_current_level];
-    sample_pos_local = sample_pos_adaptive[adaptive_current_level];
-    sample_dir_local = sample_dir_adaptive[adaptive_current_level];
-    sample_len_local = sample_len_adaptive[adaptive_current_level];
-    sample_uu1_local = sample_uu1_adaptive;
-    sample_uu2_local = sample_uu2_adaptive;
-    sample_uu3_local = sample_uu3_adaptive;
-    sample_bb1_local = sample_bb1_adaptive;
-    sample_bb2_local = sample_bb2_adaptive;
-    sample_bb3_local = sample_bb3_adaptive;
-    j_i_local = j_i_adaptive;
-    j_q_local = j_q_adaptive;
-    j_v_local = j_v_adaptive;
-    alpha_i_local = alpha_i_adaptive;
-    alpha_q_local = alpha_q_adaptive;
-    alpha_v_local = alpha_v_adaptive;
-    rho_q_local = rho_q_adaptive;
-    rho_v_local = rho_v_adaptive;
-    cell_values_local = cell_values_adaptive;
-    image_local = image_adaptive[adaptive_current_level];
-  }
 
   // Calculate units
   double x_unit = Physics::gg_msun * mass_msun / (Physics::c * Physics::c);
@@ -147,7 +87,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
     for (int m = 0; m < num_pix; m++)
     {
       // Check number of steps
-      int num_steps = sample_num_local(m);
+      int num_steps = sample_num[adaptive_level](m);
       if (num_steps <= 0)
         continue;
 
@@ -163,30 +103,30 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
       for (int n = 0; n < num_steps; n++)
       {
         // Extract affine step size
-        double delta_lambda = sample_len_local(m,n);
+        double delta_lambda = sample_len[adaptive_level](m,n);
         double delta_lambda_new = delta_lambda;
         if (n < num_steps - 1)
-          delta_lambda_new = sample_len_local(m,n+1);
+          delta_lambda_new = sample_len[adaptive_level](m,n+1);
         double delta_lambda_cgs = delta_lambda * x_unit / momentum_factor;
 
         // Extract geodesic position and covariant momentum
-        double t_cgs = sample_pos_local(m,n,0) * t_unit;
-        double x1 = sample_pos_local(m,n,1);
-        double x2 = sample_pos_local(m,n,2);
-        double x3 = sample_pos_local(m,n,3);
+        double t_cgs = sample_pos[adaptive_level](m,n,0) * t_unit;
+        double x1 = sample_pos[adaptive_level](m,n,1);
+        double x2 = sample_pos[adaptive_level](m,n,2);
+        double x3 = sample_pos[adaptive_level](m,n,3);
         double kcov[4];
-        kcov[0] = sample_dir_local(m,n,0);
-        kcov[1] = sample_dir_local(m,n,1);
-        kcov[2] = sample_dir_local(m,n,2);
-        kcov[3] = sample_dir_local(m,n,3);
+        kcov[0] = sample_dir[adaptive_level](m,n,0);
+        kcov[1] = sample_dir[adaptive_level](m,n,1);
+        kcov[2] = sample_dir[adaptive_level](m,n,2);
+        kcov[3] = sample_dir[adaptive_level](m,n,3);
 
         // Extract model variables
-        double uu1_sim = sample_uu1_local(m,n);
-        double uu2_sim = sample_uu2_local(m,n);
-        double uu3_sim = sample_uu3_local(m,n);
-        double bb1_sim = sample_bb1_local(m,n);
-        double bb2_sim = sample_bb2_local(m,n);
-        double bb3_sim = sample_bb3_local(m,n);
+        double uu1_sim = sample_uu1[adaptive_level](m,n);
+        double uu2_sim = sample_uu2[adaptive_level](m,n);
+        double uu3_sim = sample_uu3[adaptive_level](m,n);
+        double bb1_sim = sample_bb1[adaptive_level](m,n);
+        double bb2_sim = sample_bb2[adaptive_level](m,n);
+        double bb3_sim = sample_bb3[adaptive_level](m,n);
 
         // Calculate geodesic metric and connection
         CovariantGeodesicMetric(x1, x2, x3, gcov);
@@ -320,20 +260,20 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
 
         // Extract emissivity coefficients
         double j_s[4] = {};
-        j_s[0] = j_i_local(m,n);
-        j_s[1] = j_q_local(m,n);
-        j_s[3] = j_v_local(m,n);
+        j_s[0] = j_i[adaptive_level](m,n);
+        j_s[1] = j_q[adaptive_level](m,n);
+        j_s[3] = j_v[adaptive_level](m,n);
 
         // Extract absorptivity coefficients
         double alpha_s[4] = {};
-        alpha_s[0] = alpha_i_local(m,n);
-        alpha_s[1] = alpha_q_local(m,n);
-        alpha_s[3] = alpha_v_local(m,n);
+        alpha_s[0] = alpha_i[adaptive_level](m,n);
+        alpha_s[1] = alpha_q[adaptive_level](m,n);
+        alpha_s[3] = alpha_v[adaptive_level](m,n);
 
         // Extract rotativity coefficients
         double rho_s[4] = {};
-        rho_s[1] = rho_q_local(m,n);
-        rho_s[3] = rho_v_local(m,n);
+        rho_s[1] = rho_q[adaptive_level](m,n);
+        rho_s[3] = rho_v[adaptive_level](m,n);
 
         // Calculate optical depth
         double delta_tau = alpha_s[0] * delta_lambda_cgs;
@@ -341,7 +281,8 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
 
         // Accumulate alternative image quantities
         if (image_time)
-          image_local(image_offset_time,m) = std::min(image_local(image_offset_time,m), t_cgs);
+          image[adaptive_level](image_offset_time,m) =
+              std::min(image[adaptive_level](image_offset_time,m), t_cgs);
         if (image_length)
         {
           double dl_dlambda_sq = 0.0;
@@ -351,34 +292,37 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
                 for (int nu = 0; nu < 4; nu++)
                   dl_dlambda_sq += gcov(a,b) * (gcon(a,mu) - gcon(0,a) * gcon(0,mu) / gcon(0,0))
                       * (gcon(b,nu) - gcon(0,b) * gcon(0,nu) / gcon(0,0)) * kcov[mu] * kcov[nu];
-          image_local(image_offset_length,m) += std::sqrt(dl_dlambda_sq) * delta_lambda * x_unit;
+          image[adaptive_level](image_offset_length,m) +=
+              std::sqrt(dl_dlambda_sq) * delta_lambda * x_unit;
         }
         if (image_lambda or image_lambda_ave)
           integrated_lambda += delta_lambda_cgs;
         if (image_emission or image_emission_ave)
           integrated_emission += j_s[0] * delta_lambda_cgs;
         if (image_tau)
-          image_local(image_offset_tau,m) += delta_tau;
-        if (image_lambda_ave and not std::isnan(cell_values_local(0,m,n)))
+          image[adaptive_level](image_offset_tau,m) += delta_tau;
+        if (image_lambda_ave and not std::isnan(cell_values[adaptive_level](0,m,n)))
           for (int a = 0; a < CellValues::num_cell_values; a++)
-            image_local(image_offset_lambda_ave+a,m) += cell_values_local(a,m,n) * delta_lambda_cgs;
-        if (image_emission_ave and not std::isnan(cell_values_local(0,m,n)))
+            image[adaptive_level](image_offset_lambda_ave+a,m) +=
+                cell_values[adaptive_level](a,m,n) * delta_lambda_cgs;
+        if (image_emission_ave and not std::isnan(cell_values[adaptive_level](0,m,n)))
           for (int a = 0; a < CellValues::num_cell_values; a++)
-            image_local(image_offset_emission_ave+a,m) +=
-                cell_values_local(a,m,n) * j_s[0] * delta_lambda_cgs;
-        if (image_tau_int and not std::isnan(cell_values_local(0,m,n)))
+            image[adaptive_level](image_offset_emission_ave+a,m) +=
+                cell_values[adaptive_level](a,m,n) * j_s[0] * delta_lambda_cgs;
+        if (image_tau_int and not std::isnan(cell_values[adaptive_level](0,m,n)))
         {
           if (optically_thin)
           {
             double exp_neg = std::exp(-delta_tau);
             double expm1 = std::expm1(delta_tau);
             for (int a = 0; a < CellValues::num_cell_values; a++)
-              image_local(image_offset_tau_int+a,m) = exp_neg
-                  * (image_local(image_offset_tau_int+a,m) + cell_values_local(a,m,n) * expm1);
+              image[adaptive_level](image_offset_tau_int+a,m) = exp_neg
+                  * (image[adaptive_level](image_offset_tau_int+a,m)
+                  + cell_values[adaptive_level](a,m,n) * expm1);
           }
           else
             for (int a = 0; a < CellValues::num_cell_values; a++)
-              image_local(image_offset_tau_int+a,m) = cell_values_local(a,m,n);
+              image[adaptive_level](image_offset_tau_int+a,m) = cell_values[adaptive_level](a,m,n);
         }
 
         // Prepare to couple to matter
@@ -636,17 +580,17 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
 
       // Store integrated quantities
       if (image_lambda)
-        image_local(image_offset_lambda,m) = integrated_lambda;
+        image[adaptive_level](image_offset_lambda,m) = integrated_lambda;
       if (image_emission)
-        image_local(image_offset_emission,m) = integrated_emission;
+        image[adaptive_level](image_offset_emission,m) = integrated_emission;
 
       // Normalize integrated quantities
       if (image_lambda_ave)
         for (int a = 0; a < CellValues::num_cell_values; a++)
-          image_local(image_offset_lambda_ave+a,m) /= integrated_lambda;
+          image[adaptive_level](image_offset_lambda_ave+a,m) /= integrated_lambda;
       if (image_emission_ave)
         for (int a = 0; a < CellValues::num_cell_values; a++)
-          image_local(image_offset_emission_ave+a,m) /= integrated_emission;
+          image[adaptive_level](image_offset_emission_ave+a,m) /= integrated_emission;
     }
 
     // Go through pixels, transforming into camera frame
@@ -654,14 +598,14 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
     for (int m = 0; m < num_pix; m++)
     {
       // Extract geodesic position and covariant momentum
-      double x = camera_pos_local(m,1);
-      double y = camera_pos_local(m,2);
-      double z = camera_pos_local(m,3);
+      double x = camera_pos[adaptive_level](m,1);
+      double y = camera_pos[adaptive_level](m,2);
+      double z = camera_pos[adaptive_level](m,3);
       double kcov[4];
-      kcov[0] = camera_dir_local(m,0);
-      kcov[1] = camera_dir_local(m,1);
-      kcov[2] = camera_dir_local(m,2);
-      kcov[3] = camera_dir_local(m,3);
+      kcov[0] = camera_dir[adaptive_level](m,0);
+      kcov[1] = camera_dir[adaptive_level](m,1);
+      kcov[2] = camera_dir[adaptive_level](m,2);
+      kcov[3] = camera_dir[adaptive_level](m,3);
 
       // Calculate metric and connection
       CovariantGeodesicMetric(x, y, z, gcov);
@@ -697,10 +641,10 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
                       * nn_con(m,alpha,beta);
 
       // Calculate orthonormal-frame Stokes quantities at camera location (I 14)
-      image_local(0,m) = 0.5 * (nn_tet_cov(1,1) + nn_tet_cov(2,2)).real();
-      image_local(1,m) = 0.5 * (nn_tet_cov(1,1) - nn_tet_cov(2,2)).real();
-      image_local(2,m) = 0.5 * (nn_tet_cov(1,2) + nn_tet_cov(2,1)).real();
-      image_local(3,m) = 0.5 * (nn_tet_cov(2,1) - nn_tet_cov(1,2)).imag();
+      image[adaptive_level](0,m) = 0.5 * (nn_tet_cov(1,1) + nn_tet_cov(2,2)).real();
+      image[adaptive_level](1,m) = 0.5 * (nn_tet_cov(1,1) - nn_tet_cov(2,2)).real();
+      image[adaptive_level](2,m) = 0.5 * (nn_tet_cov(1,2) + nn_tet_cov(2,1)).real();
+      image[adaptive_level](3,m) = 0.5 * (nn_tet_cov(2,1) - nn_tet_cov(1,2)).imag();
     }
 
     // Transform invariant Stokes quantities (e.g. I_nu/nu^3) to standard ones (e.g. I_nu)
@@ -708,25 +652,28 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
     #pragma omp for schedule(static)
     for (int a = 0; a < 4; a++)
       for (int m = 0; m < num_pix; m++)
-        image_local(a,m) *= nu_cu;
+        image[adaptive_level](a,m) *= nu_cu;
   }
 
   // Free memory
-  sample_uu1_adaptive.Deallocate();
-  sample_uu2_adaptive.Deallocate();
-  sample_uu3_adaptive.Deallocate();
-  sample_bb1_adaptive.Deallocate();
-  sample_bb2_adaptive.Deallocate();
-  sample_bb3_adaptive.Deallocate();
-  j_i_adaptive.Deallocate();
-  j_q_adaptive.Deallocate();
-  j_v_adaptive.Deallocate();
-  alpha_i_adaptive.Deallocate();
-  alpha_q_adaptive.Deallocate();
-  alpha_v_adaptive.Deallocate();
-  rho_q_adaptive.Deallocate();
-  rho_v_adaptive.Deallocate();
-  if (render_num_images <= 0)
-    cell_values_adaptive.Deallocate();
+  if (adaptive_level > 0)
+  {
+    sample_uu1[adaptive_level].Deallocate();
+    sample_uu2[adaptive_level].Deallocate();
+    sample_uu3[adaptive_level].Deallocate();
+    sample_bb1[adaptive_level].Deallocate();
+    sample_bb2[adaptive_level].Deallocate();
+    sample_bb3[adaptive_level].Deallocate();
+    j_i[adaptive_level].Deallocate();
+    j_q[adaptive_level].Deallocate();
+    j_v[adaptive_level].Deallocate();
+    alpha_i[adaptive_level].Deallocate();
+    alpha_q[adaptive_level].Deallocate();
+    alpha_v[adaptive_level].Deallocate();
+    rho_q[adaptive_level].Deallocate();
+    rho_v[adaptive_level].Deallocate();
+    if (render_num_images <= 0)
+      cell_values[adaptive_level].Deallocate();
+  }
   return;
 }

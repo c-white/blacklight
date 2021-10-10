@@ -274,8 +274,8 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   ray_flat = p_input_reader->ray_flat.value();
 
   // Copy adaptive parameters
-  adaptive_on = p_input_reader->adaptive_on.value();
-  if (adaptive_on)
+  adaptive_max_level = p_input_reader->adaptive_max_level.value();
+  if (adaptive_max_level > 0)
   {
     if (not image_light)
       throw BlacklightException("Adaptive ray tracing requires image_light.");
@@ -284,9 +284,6 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       throw BlacklightException("Must have positive adaptive_block_size.");
     if (camera_resolution % adaptive_block_size != 0)
       throw BlacklightException("Must have adaptive_block_size divide camera_resolution.");
-    adaptive_max_level = p_input_reader->adaptive_max_level.value();
-    if (adaptive_max_level < 1)
-      throw BlacklightException("Must have at least one allowed refinement level.");
     adaptive_val_frac = p_input_reader->adaptive_val_frac.value();
     if (adaptive_val_frac >= 0.0)
       adaptive_val_cut = p_input_reader->adaptive_val_cut.value();
@@ -318,7 +315,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   camera_pos = p_geodesic_integrator->camera_pos;
   camera_dir = p_geodesic_integrator->camera_dir;
 
-  // Copy geodesic data
+  // Make shallow copy of geodesic data
   geodesic_num_steps = p_geodesic_integrator->geodesic_num_steps;
 
   // Make shallow copies of geodesic arrays
@@ -328,21 +325,31 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   sample_dir = p_geodesic_integrator->sample_dir;
   sample_len = p_geodesic_integrator->sample_len;
 
-  // Copy adaptive geodesic data
-  if (adaptive_on)
-  {
-    if (model_type == ModelType::simulation and image_polarization)
-    {
-      camera_pos_adaptive = p_geodesic_integrator->camera_pos_adaptive;
-      camera_dir_adaptive = p_geodesic_integrator->camera_dir_adaptive;
-    }
-    geodesic_num_steps_adaptive = p_geodesic_integrator->geodesic_num_steps_adaptive;
-    sample_flags_adaptive = p_geodesic_integrator->sample_flags_adaptive;
-    sample_num_adaptive = p_geodesic_integrator->sample_num_adaptive;
-    sample_pos_adaptive = p_geodesic_integrator->sample_pos_adaptive;
-    sample_dir_adaptive = p_geodesic_integrator->sample_dir_adaptive;
-    sample_len_adaptive = p_geodesic_integrator->sample_len_adaptive;
-  }
+  // Allocate space for sample data
+  sample_inds = new Array<int>[adaptive_max_level+1];
+  sample_fracs = new Array<double>[adaptive_max_level+1];
+  sample_nan = new Array<bool>[adaptive_max_level+1];
+  sample_fallback = new Array<bool>[adaptive_max_level+1];
+  sample_rho = new Array<float>[adaptive_max_level+1];
+  sample_pgas = new Array<float>[adaptive_max_level+1];
+  sample_kappa = new Array<float>[adaptive_max_level+1];
+  sample_uu1 = new Array<float>[adaptive_max_level+1];
+  sample_uu2 = new Array<float>[adaptive_max_level+1];
+  sample_uu3 = new Array<float>[adaptive_max_level+1];
+  sample_bb1 = new Array<float>[adaptive_max_level+1];
+  sample_bb2 = new Array<float>[adaptive_max_level+1];
+  sample_bb3 = new Array<float>[adaptive_max_level+1];
+
+  // Allocate space for coefficient data
+  j_i = new Array<double>[adaptive_max_level+1];
+  j_q = new Array<double>[adaptive_max_level+1];
+  j_v = new Array<double>[adaptive_max_level+1];
+  alpha_i = new Array<double>[adaptive_max_level+1];
+  alpha_q = new Array<double>[adaptive_max_level+1];
+  alpha_v = new Array<double>[adaptive_max_level+1];
+  rho_q = new Array<double>[adaptive_max_level+1];
+  rho_v = new Array<double>[adaptive_max_level+1];
+  cell_values = new Array<double>[adaptive_max_level+1];
 
   // Copy slow light extrapolation tolerance
   if (slow_light_on)
@@ -362,6 +369,9 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       break;
     }
   }
+
+  // Allocate space for image data
+  image = new Array<double>[adaptive_max_level+1];
 
   // Calculate number of simultaneous images and their offsets
   if (image_light)
@@ -435,8 +445,11 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   if (image_tau_int)
     image_num_quantities += CellValues::num_cell_values;
 
+  // Allocate space for rendering data
+  render = new Array<double>[adaptive_max_level+1];
+
   // Allocate space for calculating adaptive refinement
-  if (adaptive_on)
+  if (adaptive_max_level > 0)
   {
     linear_root_blocks = camera_resolution / adaptive_block_size;
     block_num_pix = adaptive_block_size * adaptive_block_size;
@@ -444,7 +457,6 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     block_counts[0] = linear_root_blocks * linear_root_blocks;
     refinement_flags = new Array<bool>[adaptive_max_level+1];
     refinement_flags[0].Allocate(block_counts[0]);
-    image_adaptive = new Array<double>[adaptive_max_level+1];
     image_blocks = new Array<double>[num_threads];
     for (int thread = 0; thread < num_threads; thread++)
       if (model_type == ModelType::simulation and image_polarization)
@@ -459,6 +471,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
 // Radiation integrator destructor
 RadiationIntegrator::~RadiationIntegrator()
 {
+  // Free memory - rendering input
   for (int n_i = 0; n_i < render_num_images; n_i++)
   {
     delete[] render_quantities[n_i];
@@ -483,25 +496,87 @@ RadiationIntegrator::~RadiationIntegrator()
   delete[] render_z_vals;
   delete[] render_opacities;
   delete[] render_tau_scales;
-  if (adaptive_on)
+
+  // Free memory - sample data
+  for (int level = 0; level <= adaptive_max_level; level++)
+  {
+    sample_inds[level].Deallocate();
+    sample_fracs[level].Deallocate();
+    sample_nan[level].Deallocate();
+    sample_fallback[level].Deallocate();
+    sample_rho[level].Deallocate();
+    sample_pgas[level].Deallocate();
+    sample_kappa[level].Deallocate();
+    sample_uu1[level].Deallocate();
+    sample_uu2[level].Deallocate();
+    sample_uu3[level].Deallocate();
+    sample_bb1[level].Deallocate();
+    sample_bb2[level].Deallocate();
+    sample_bb3[level].Deallocate();
+  }
+  delete[] sample_inds;
+  delete[] sample_fracs;
+  delete[] sample_nan;
+  delete[] sample_fallback;
+  delete[] sample_rho;
+  delete[] sample_pgas;
+  delete[] sample_kappa;
+  delete[] sample_uu1;
+  delete[] sample_uu2;
+  delete[] sample_uu3;
+  delete[] sample_bb1;
+  delete[] sample_bb2;
+  delete[] sample_bb3;
+
+  // Free memory - coefficient data
+  for (int level = 0; level <= adaptive_max_level; level++)
+  {
+    j_i[level].Deallocate();
+    j_q[level].Deallocate();
+    j_v[level].Deallocate();
+    alpha_i[level].Deallocate();
+    alpha_q[level].Deallocate();
+    alpha_v[level].Deallocate();
+    rho_q[level].Deallocate();
+    rho_v[level].Deallocate();
+    cell_values[level].Deallocate();
+  }
+  delete[] j_i;
+  delete[] j_q;
+  delete[] j_v;
+  delete[] alpha_i;
+  delete[] alpha_q;
+  delete[] alpha_v;
+  delete[] rho_q;
+  delete[] rho_v;
+  delete[] cell_values;
+
+  // Free memory - image data
+  for (int level = 0; level <= adaptive_max_level; level++)
+    image[level].Deallocate();
+  delete[] image;
+
+  // Free memory - rendering data
+  for (int level = 0; level <= adaptive_max_level; level++)
+    render[level].Deallocate();
+  delete[] render;
+
+  // Free memory - adaptive data
+  if (adaptive_max_level > 0)
   {
     for (int level = 0; level <= adaptive_max_level; level++)
-    {
       refinement_flags[level].Deallocate();
-      image_adaptive[level].Deallocate();
-    }
     for (int thread = 0; thread < num_threads; thread++)
       image_blocks[thread].Deallocate();
     delete[] block_counts;
     delete[] refinement_flags;
-    delete[] image_adaptive;
     delete[] image_blocks;
   }
 }
 
 //--------------------------------------------------------------------------------------------------
 
-// Top-level function for processing raw data into image
+// Top-level function for processing raw data into image and/or rendering
 // Inputs:
 //   snapshot: index (starting at 0) of which snapshot is about to be processed
 //   *p_time_sample: amount of time already taken for sampling
@@ -526,7 +601,7 @@ bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double 
     time_sample_start = omp_get_wtime();
     if (first_time)
       ObtainGridData();
-    if (adaptive_on and adaptive_current_level > 0)
+    if (adaptive_level > 0)
       CalculateSimulationSampling(snapshot);
     else if (first_time)
     {
@@ -567,15 +642,15 @@ bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double 
 
   // Check for adaptive refinement
   bool adaptive_complete = true;
-  if (adaptive_on)
+  if (adaptive_max_level > 0)
     adaptive_complete = CheckAdaptiveRefinement();
   if (adaptive_complete)
   {
-    adaptive_num_levels = adaptive_current_level;
-    adaptive_current_level = 0;
+    adaptive_num_levels = adaptive_level;
+    adaptive_level = 0;
   }
   else
-    adaptive_current_level++;
+    adaptive_level++;
   time_integrate_end = omp_get_wtime();
 
   // Update first time flag

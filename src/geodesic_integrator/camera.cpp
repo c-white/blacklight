@@ -17,7 +17,7 @@
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Allocates and initializes camera_pos and camera_dir except for time components of camera_dir.
+//   Allocates and initializes camera_pos[0] and camera_dir[0] except for time components of latter.
 //   Neglects spacetime curvature at camera location.
 //   Symbols:
 //     n: unit outward normal
@@ -291,8 +291,8 @@ void GeodesicIntegrator::InitializeCamera()
   vert_con_c[3] = temp_vert_con_zc * crot + temp_hor_con_zc * srot;
 
   // Allocate arrays
-  camera_pos.Allocate(camera_num_pix, 4);
-  camera_dir.Allocate(camera_num_pix, 4);
+  camera_pos[0].Allocate(camera_num_pix, 4);
+  camera_dir[0].Allocate(camera_num_pix, 4);
 
   // Initialize position and direction for plane-parallel camera
   if (camera_type == Camera::plane)
@@ -304,7 +304,7 @@ void GeodesicIntegrator::InitializeCamera()
       int l = ind % camera_resolution;
       double u_ind = (l - camera_resolution / 2.0 + 0.5) / camera_resolution;
       double v_ind = (m - camera_resolution / 2.0 + 0.5) / camera_resolution;
-      SetPixelPlane(u_ind, v_ind, ind, camera_pos, camera_dir);
+      SetPixelPlane(u_ind, v_ind, ind, camera_pos[0], camera_dir[0]);
     }
   }
 
@@ -318,7 +318,7 @@ void GeodesicIntegrator::InitializeCamera()
       int l = ind % camera_resolution;
       double u_ind = (l - camera_resolution / 2.0 + 0.5) / camera_resolution;
       double v_ind = (m - camera_resolution / 2.0 + 0.5) / camera_resolution;
-      SetPixelPinhole(u_ind, v_ind, ind, camera_pos, camera_dir);
+      SetPixelPinhole(u_ind, v_ind, ind, camera_pos[0], camera_dir[0]);
     }
   }
   return;
@@ -330,45 +330,44 @@ void GeodesicIntegrator::InitializeCamera()
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Allocates and initializes camera_loc_adaptive[adaptive_current_level],
-//       camera_pos_adaptive[adaptive_current_level], and
-//       camera_dir_adaptive[adaptive_current_level] except for time components of
-//       camera_dir_adaptive[adaptive_current_level].
+//   Assumes block_count[adaptive_level] and block_count[adaptive_level-1] have been set.
+//   Allocates and initializes camera_loc[adaptive_level], camera_pos[adaptive_level], and
+//       camera_dir[adaptive_level] except for time components of camera_dir[adaptive_level].
 void GeodesicIntegrator::AugmentCamera()
 {
   // Allocate storage for new blocks
-  int block_count = block_counts[adaptive_current_level];
-  camera_loc_adaptive[adaptive_current_level].Allocate(block_count, 2);
-  camera_pos_adaptive[adaptive_current_level].Allocate(block_count * block_num_pix, 4);
-  camera_dir_adaptive[adaptive_current_level].Allocate(block_count * block_num_pix, 4);
+  int block_count = block_counts[adaptive_level];
+  camera_loc[adaptive_level].Allocate(block_count, 2);
+  camera_pos[adaptive_level].Allocate(block_count * block_num_pix, 4);
+  camera_dir[adaptive_level].Allocate(block_count * block_num_pix, 4);
 
   // Prepare to go through blocks
-  int block_count_old = block_counts[adaptive_current_level-1];
+  int block_count_old = block_counts[adaptive_level-1];
   int effective_resolution = camera_resolution;
-  for (int n = 1; n <= adaptive_current_level; n++)
+  for (int n = 1; n <= adaptive_level; n++)
     effective_resolution *= 2;
-  Array<double> camera_pos_local;
-  Array<double> camera_dir_local;
+  Array<double> camera_pos_block;
+  Array<double> camera_dir_block;
 
   // Go through blocks at previous level
   for (int block_old = 0, block = 0; block_old < block_count_old; block_old++)
-    if (refinement_flags[adaptive_current_level-1](block_old))
+    if (refinement_flags[adaptive_level-1](block_old))
     {
       // Locate block
-      int block_v_old = camera_loc_adaptive[adaptive_current_level-1](block_old,0);
-      int block_u_old = camera_loc_adaptive[adaptive_current_level-1](block_old,1);
+      int block_v_old = camera_loc[adaptive_level-1](block_old,0);
+      int block_u_old = camera_loc[adaptive_level-1](block_old,1);
 
       // Go through new blocks at current level
       for (int block_v = 2 * block_v_old; block_v <= 2 * block_v_old + 1; block_v++)
         for (int block_u = 2 * block_u_old; block_u <= 2 * block_u_old + 1; block_u++, block++)
         {
           // Calculate location in image plane
-          camera_loc_adaptive[adaptive_current_level](block,0) = block_v;
-          camera_loc_adaptive[adaptive_current_level](block,1) = block_u;
-          camera_pos_local = camera_pos_adaptive[adaptive_current_level];
-          camera_dir_local = camera_dir_adaptive[adaptive_current_level];
-          camera_pos_local.Slice(2, block * block_num_pix);
-          camera_dir_local.Slice(2, block * block_num_pix);
+          camera_loc[adaptive_level](block,0) = block_v;
+          camera_loc[adaptive_level](block,1) = block_u;
+          camera_pos_block = camera_pos[adaptive_level];
+          camera_dir_block = camera_dir[adaptive_level];
+          camera_pos_block.Slice(2, block * block_num_pix);
+          camera_dir_block.Slice(2, block * block_num_pix);
           int m_offset = block_v * adaptive_block_size;
           int l_offset = block_u * adaptive_block_size;
 
@@ -384,7 +383,7 @@ void GeodesicIntegrator::AugmentCamera()
                   (l + l_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
               double v_ind =
                   (m + m_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
-              SetPixelPlane(u_ind, v_ind, ind, camera_pos_local, camera_dir_local);
+              SetPixelPlane(u_ind, v_ind, ind, camera_pos_block, camera_dir_block);
             }
           }
 
@@ -400,7 +399,7 @@ void GeodesicIntegrator::AugmentCamera()
                   (l + l_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
               double v_ind =
                   (m + m_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
-              SetPixelPinhole(u_ind, v_ind, ind, camera_pos_local, camera_dir_local);
+              SetPixelPinhole(u_ind, v_ind, ind, camera_pos_block, camera_dir_block);
             }
           }
         }

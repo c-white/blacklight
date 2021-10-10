@@ -19,12 +19,10 @@
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Works on arrays appropriate for root level or adaptively refined regions.
-//   Assumes camera_pos (or camera_pos_adaptive[adaptive_current_level]) and camera_dir (or
-//       camera_dir_adaptive[adaptive_current_level]) have been set except for the time components
-//       of the latter.
-//   Initializes time components of camera_dir (or camera_dir_adaptive[adaptive_current_level]).
-//   Lowers all components of camera_dir (or camera_dir_adaptive[adaptive_current_level]).
+//   Assumes camera_pos[adaptive_level] and camera_dir[adaptive_level] have been set except for the
+//       time components of the latter.
+//   Initializes time components of camera_dir[adaptive_level].
+//   Lowers all components of camera_dir[adaptive_level].
 //   Quadratic solved as follows:
 //     Outside ergosphere: unique positive root.
 //     On ergosphere, assuming g_{0i} p^i < 0: unique root, which will be positive
@@ -34,14 +32,8 @@ void GeodesicIntegrator::InitializeGeodesics()
 {
   // Prepare to go though pixels
   int num_pix = camera_num_pix;
-  Array<double> camera_pos_local = camera_pos;
-  Array<double> camera_dir_local = camera_dir;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    num_pix = block_counts[adaptive_current_level] * block_num_pix;
-    camera_pos_local = camera_pos_adaptive[adaptive_current_level];
-    camera_dir_local = camera_dir_adaptive[adaptive_current_level];
-  }
+  if (adaptive_level > 0)
+    num_pix = block_counts[adaptive_level] * block_num_pix;
 
   // Work in parallel
   #pragma omp parallel
@@ -55,16 +47,16 @@ void GeodesicIntegrator::InitializeGeodesics()
     {
       // Extract position
       double x[4];
-      x[0] = camera_pos_local(m,0);
-      x[1] = camera_pos_local(m,1);
-      x[2] = camera_pos_local(m,2);
-      x[3] = camera_pos_local(m,3);
+      x[0] = camera_pos[adaptive_level](m,0);
+      x[1] = camera_pos[adaptive_level](m,1);
+      x[2] = camera_pos[adaptive_level](m,2);
+      x[3] = camera_pos[adaptive_level](m,3);
 
       // Extract spatial components of momentum
       double p[4];
-      p[1] = camera_dir_local(m,1);
-      p[2] = camera_dir_local(m,2);
-      p[3] = camera_dir_local(m,3);
+      p[1] = camera_dir[adaptive_level](m,1);
+      p[2] = camera_dir[adaptive_level](m,2);
+      p[3] = camera_dir[adaptive_level](m,3);
 
       // Calculate time component of momentum
       CovariantGeodesicMetric(x[1], x[2], x[3], gcov);
@@ -83,9 +75,9 @@ void GeodesicIntegrator::InitializeGeodesics()
       // Lower momentum components
       for (int mu = 0; mu < 4; mu++)
       {
-        camera_dir_local(m,mu) = 0.0;
+        camera_dir[adaptive_level](m,mu) = 0.0;
         for (int nu = 0; nu < 4; nu++)
-          camera_dir_local(m,mu) += gcov(mu,nu) * p[nu];
+          camera_dir[adaptive_level](m,mu) += gcov(mu,nu) * p[nu];
       }
     }
   }
@@ -98,13 +90,10 @@ void GeodesicIntegrator::InitializeGeodesics()
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Works on arrays appropriate for root level or adaptively refined regions.
-//   Assumes camera_pos (or camera_pos_adaptive[adaptive_current_level]) and camera_dir (or
-//       camera_dir_adaptive[adaptive_current_level]) have been set.
-//   Initializes geodesic_num_steps (or geodesic_num_steps_adaptive[adaptive_current_level]).
-//   Allocates and initializes geodesic_pos, geodesic_dir, geodesic_len, sample_flags (or
-//       sample_flags_adaptive[adaptive_current_level]), and sample_num (or
-//       sample_num_adaptive[adaptive_current_level]).
+//   Assumes camera_pos[adaptive_level] and camera_dir[adaptive_level] have been set.
+//   Initializes geodesic_num_steps[adaptive_level].
+//   Allocates and initializes geodesic_pos, geodesic_dir, geodesic_len,
+//       sample_flags[adaptive_level], and sample_num[adaptive_level].
 //   Assumes x^0 is ignorable.
 //   Integrates via the Dormand-Prince method (5th-order Runge-Kutta).
 //     Method is RK5(4)7M of 1980 JCoAM 6 19.
@@ -156,42 +145,16 @@ void GeodesicIntegrator::IntegrateGeodesics()
 
   // Allocate arrays
   int num_pix = camera_num_pix;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    num_pix = block_counts[adaptive_current_level] * block_num_pix;
-    geodesic_pos.Allocate(num_pix, ray_max_steps, 4);
-    geodesic_dir.Allocate(num_pix, ray_max_steps, 4);
-    geodesic_len.Allocate(num_pix, ray_max_steps);
-    geodesic_len.Zero();
-    sample_flags_adaptive[adaptive_current_level].Allocate(num_pix);
-    sample_flags_adaptive[adaptive_current_level].Zero();
-    sample_num_adaptive[adaptive_current_level].Allocate(num_pix);
-    sample_num_adaptive[adaptive_current_level].Zero();
-  }
-  else
-  {
-    geodesic_pos.Allocate(num_pix, ray_max_steps, 4);
-    geodesic_dir.Allocate(num_pix, ray_max_steps, 4);
-    geodesic_len.Allocate(num_pix, ray_max_steps);
-    geodesic_len.Zero();
-    sample_flags.Allocate(num_pix);
-    sample_flags.Zero();
-    sample_num.Allocate(num_pix);
-    sample_num.Zero();
-  }
-
-  // Alias arrays
-  Array<double> camera_pos_local = camera_pos;
-  Array<double> camera_dir_local = camera_dir;
-  Array<bool> sample_flags_local = sample_flags;
-  Array<int> sample_num_local = sample_num;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    camera_pos_local = camera_pos_adaptive[adaptive_current_level];
-    camera_dir_local = camera_dir_adaptive[adaptive_current_level];
-    sample_flags_local = sample_flags_adaptive[adaptive_current_level];
-    sample_num_local = sample_num_adaptive[adaptive_current_level];
-  }
+  if (adaptive_level > 0)
+    num_pix = block_counts[adaptive_level] * block_num_pix;
+  geodesic_pos.Allocate(num_pix, ray_max_steps, 4);
+  geodesic_dir.Allocate(num_pix, ray_max_steps, 4);
+  geodesic_len.Allocate(num_pix, ray_max_steps);
+  geodesic_len.Zero();
+  sample_flags[adaptive_level].Allocate(num_pix);
+  sample_flags[adaptive_level].Zero();
+  sample_num[adaptive_level].Allocate(num_pix);
+  sample_num[adaptive_level].Zero();
 
   // Work in parallel
   int geodesic_num_steps_local = 0;
@@ -215,16 +178,16 @@ void GeodesicIntegrator::IntegrateGeodesics()
     for (int m = 0; m < num_pix; m++)
     {
       // Extract initial position
-      y_vals[0] = camera_pos_local(m,0);
-      y_vals[1] = camera_pos_local(m,1);
-      y_vals[2] = camera_pos_local(m,2);
-      y_vals[3] = camera_pos_local(m,3);
+      y_vals[0] = camera_pos[adaptive_level](m,0);
+      y_vals[1] = camera_pos[adaptive_level](m,1);
+      y_vals[2] = camera_pos[adaptive_level](m,2);
+      y_vals[3] = camera_pos[adaptive_level](m,3);
 
       // Extract initial momentum
-      y_vals[4] = camera_dir_local(m,0);
-      y_vals[5] = camera_dir_local(m,1);
-      y_vals[6] = camera_dir_local(m,2);
-      y_vals[7] = camera_dir_local(m,3);
+      y_vals[4] = camera_dir[adaptive_level](m,0);
+      y_vals[5] = camera_dir[adaptive_level](m,1);
+      y_vals[6] = camera_dir[adaptive_level](m,2);
+      y_vals[7] = camera_dir[adaptive_level](m,3);
 
       // Set initial proper distance
       y_vals[8] = 0.0;
@@ -243,7 +206,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
         // Check for too many retries
         if (num_retry > ray_max_retries)
         {
-          sample_flags_local(m) = true;
+          sample_flags[adaptive_level](m) = true;
           break;
         }
 
@@ -347,7 +310,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
         if (num_steps > num_steps_max)
         {
           num_steps = num_steps_max;
-          sample_flags_local(m) = true;
+          sample_flags[adaptive_level](m) = true;
         }
 
         // Calculate step midpoint if no subdivision necessary
@@ -415,14 +378,14 @@ void GeodesicIntegrator::IntegrateGeodesics()
           y_vals_5[4+a] *= factor;
 
         // Check termination
-        sample_num_local(m) += num_steps;
+        sample_num[adaptive_level](m) += num_steps;
         bool terminate_outer = r_new > camera_r and r_new > r;
         bool terminate_inner = r_new < r_terminate;
         if (terminate_outer or terminate_inner)
           break;
         bool last_step = n + num_steps >= ray_max_steps;
         if (last_step)
-          sample_flags_local(m) = true;
+          sample_flags[adaptive_level](m) = true;
 
         // Prepare for next step
         n += num_steps;
@@ -433,7 +396,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
     #pragma omp for schedule(static)
     for (int m = 0; m < num_pix; m++)
     {
-      int num_samples = sample_num_local(m);
+      int num_samples = sample_num[adaptive_level](m);
       if (num_samples > 1)
       {
         double r_new =
@@ -447,7 +410,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
           bool terminate_inner = r_new < r_terminate;
           if (terminate_outer or terminate_inner)
           {
-            sample_num_local(m) = n;
+            sample_num[adaptive_level](m) = n;
             break;
           }
         }
@@ -457,7 +420,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
     // Renormalize momenta
     #pragma omp for schedule(static)
     for (int m = 0; m < num_pix; m++)
-      for (int n = 0; n < sample_num_local(m); n++)
+      for (int n = 0; n < sample_num[adaptive_level](m); n++)
       {
         ContravariantGeodesicMetric(geodesic_pos(m,n,1), geodesic_pos(m,n,2), geodesic_pos(m,n,3),
             gcon);
@@ -479,20 +442,17 @@ void GeodesicIntegrator::IntegrateGeodesics()
     // Calculate maximum number of steps actually taken
     #pragma omp for schedule(static) reduction(max: geodesic_num_steps_local)
     for (int m = 0; m < num_pix; m++)
-      geodesic_num_steps_local = std::max(geodesic_num_steps_local, sample_num_local(m));
+      geodesic_num_steps_local = std::max(geodesic_num_steps_local, sample_num[adaptive_level](m));
 
     // Calculate number of geodesics that do not terminate properly
     #pragma omp for schedule(static) reduction(+: num_bad_geodesics)
     for (int m = 0; m < num_pix; m++)
-      if (sample_flags_local(m))
+      if (sample_flags[adaptive_level](m))
         num_bad_geodesics++;
   }
 
   // Record number of steps taken
-  if (adaptive_on and adaptive_current_level > 0)
-    geodesic_num_steps_adaptive[adaptive_current_level] = geodesic_num_steps_local;
-  else
-    geodesic_num_steps = geodesic_num_steps_local;
+  geodesic_num_steps[adaptive_level] = geodesic_num_steps_local;
 
   // Report improperly terminated geodesics
   if (num_bad_geodesics > 0)
@@ -510,53 +470,27 @@ void GeodesicIntegrator::IntegrateGeodesics()
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Works on arrays appropriate for root level or adaptively refined regions.
-//   Assumes geodesic_num_steps (or geodesic_num_steps_adaptive[adaptive_current_level]),
-//       geodesic_pos, geodesic_dir, geodesic_len, and sample_num (or
-//       sample_num_adaptive[adaptive_current_level]) have been set.
-//   Allocates and initializes sample_pos (or sample_pos_adaptive[adaptive_current_level]),
-//       sample_dir (or sample_dir_adaptive[adaptive_current_level]), and sample_len (or
-//       sample_len_adaptive[adaptive_current_level]), except reversed in the sampling dimension.
+//   Assumes geodesic_num_steps[adaptive_level], geodesic_pos, geodesic_dir, geodesic_len, and
+//       sample_num[adaptive_level] have been set.
+//   Allocates and initializes sample_pos[adaptive_level], sample_dir[adaptive_level], and
+//       sample_len[adaptive_level], except reversed in the sampling dimension.
 //   Deallocates geodesic_pos, geodesic_dir, and geodesic_len.
 void GeodesicIntegrator::ReverseGeodesics()
 {
   // Allocate arrays
   int num_pix = camera_num_pix;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    num_pix = block_counts[adaptive_current_level] * block_num_pix;
-    int geodesic_num_steps_local = geodesic_num_steps_adaptive[adaptive_current_level];
-    sample_pos_adaptive[adaptive_current_level].Allocate(num_pix, geodesic_num_steps_local, 4);
-    sample_dir_adaptive[adaptive_current_level].Allocate(num_pix, geodesic_num_steps_local, 4);
-    sample_len_adaptive[adaptive_current_level].Allocate(num_pix, geodesic_num_steps_local);
-    sample_len_adaptive[adaptive_current_level].Zero();
-  }
-  else
-  {
-    sample_pos.Allocate(num_pix, geodesic_num_steps, 4);
-    sample_dir.Allocate(num_pix, geodesic_num_steps, 4);
-    sample_len.Allocate(num_pix, geodesic_num_steps);
-    sample_len.Zero();
-  }
-
-  // Alias arrays
-  Array<int> sample_num_local = sample_num;
-  Array<double> sample_pos_local = sample_pos;
-  Array<double> sample_dir_local = sample_dir;
-  Array<double> sample_len_local = sample_len;
-  if (adaptive_on and adaptive_current_level > 0)
-  {
-    sample_num_local = sample_num_adaptive[adaptive_current_level];
-    sample_pos_local = sample_pos_adaptive[adaptive_current_level];
-    sample_dir_local = sample_dir_adaptive[adaptive_current_level];
-    sample_len_local = sample_len_adaptive[adaptive_current_level];
-  }
+  if (adaptive_level > 0)
+    num_pix = block_counts[adaptive_level] * block_num_pix;
+  sample_pos[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level], 4);
+  sample_dir[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level], 4);
+  sample_len[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
+  sample_len[adaptive_level].Zero();
 
   // Go through samples
   #pragma omp parallel for schedule(static)
   for (int m = 0; m < num_pix; m++)
   {
-    int num_steps = sample_num_local(m);
+    int num_steps = sample_num[adaptive_level](m);
     for (int n = 0; n < num_steps; n++)
     {
       // Skip terminated geodesics
@@ -565,15 +499,15 @@ void GeodesicIntegrator::ReverseGeodesics()
         break;
 
       // Set new arrays in reverse order
-      sample_pos_local(m,num_steps-1-n,0) = geodesic_pos(m,n,0);
-      sample_pos_local(m,num_steps-1-n,1) = geodesic_pos(m,n,1);
-      sample_pos_local(m,num_steps-1-n,2) = geodesic_pos(m,n,2);
-      sample_pos_local(m,num_steps-1-n,3) = geodesic_pos(m,n,3);
-      sample_dir_local(m,num_steps-1-n,0) = geodesic_dir(m,n,0);
-      sample_dir_local(m,num_steps-1-n,1) = geodesic_dir(m,n,1);
-      sample_dir_local(m,num_steps-1-n,2) = geodesic_dir(m,n,2);
-      sample_dir_local(m,num_steps-1-n,3) = geodesic_dir(m,n,3);
-      sample_len_local(m,num_steps-1-n) = -len;
+      sample_pos[adaptive_level](m,num_steps-1-n,0) = geodesic_pos(m,n,0);
+      sample_pos[adaptive_level](m,num_steps-1-n,1) = geodesic_pos(m,n,1);
+      sample_pos[adaptive_level](m,num_steps-1-n,2) = geodesic_pos(m,n,2);
+      sample_pos[adaptive_level](m,num_steps-1-n,3) = geodesic_pos(m,n,3);
+      sample_dir[adaptive_level](m,num_steps-1-n,0) = geodesic_dir(m,n,0);
+      sample_dir[adaptive_level](m,num_steps-1-n,1) = geodesic_dir(m,n,1);
+      sample_dir[adaptive_level](m,num_steps-1-n,2) = geodesic_dir(m,n,2);
+      sample_dir[adaptive_level](m,num_steps-1-n,3) = geodesic_dir(m,n,3);
+      sample_len[adaptive_level](m,num_steps-1-n) = -len;
     }
   }
 

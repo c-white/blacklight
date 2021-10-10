@@ -117,9 +117,8 @@ struct RadiationIntegrator
   bool ray_flat;
 
   // Input data - adaptive parameters
-  bool adaptive_on;
-  int adaptive_block_size;
   int adaptive_max_level;
+  int adaptive_block_size;
   double adaptive_val_cut;
   double adaptive_val_frac;
   double adaptive_abs_grad_cut;
@@ -155,44 +154,61 @@ struct RadiationIntegrator
   double camera_u_con[4], camera_u_cov[4];
   double camera_vert_con_c[4];
   int camera_num_pix;
-  Array<double> camera_pos, camera_dir;
+  Array<double> *camera_pos = nullptr;
+  Array<double> *camera_dir = nullptr;
 
   // Geodesic data
-  int geodesic_num_steps;
-  Array<bool> sample_flags;
-  Array<int> sample_num;
-  Array<double> sample_pos, sample_dir, sample_len;
+  int *geodesic_num_steps = nullptr;
+  Array<bool> *sample_flags = nullptr;
+  Array<int> *sample_num = nullptr;
+  Array<double> *sample_pos = nullptr;
+  Array<double> *sample_dir = nullptr;
+  Array<double> *sample_len = nullptr;
 
   // Grid data
   int n_3_root;
   int max_level;
   Array<int> n_3_level;
-  Array<int> levels, locations;
+  Array<int> levels;
+  Array<int> locations;
   Array<float> x1f, x2f, x3f;
   Array<float> x1v, x2v, x3v;
   float *time;
-  Array<float> *grid_prim, *grid_bb;
+  Array<float> *grid_prim;
+  Array<float> *grid_bb;
   int ind_rho, ind_pgas, ind_kappa;
   int ind_uu1, ind_uu2, ind_uu3;
   int ind_bb1, ind_bb2, ind_bb3;
 
   // Sample data
-  Array<int> sample_inds;
-  Array<double> sample_fracs;
-  Array<bool> sample_nan, sample_fallback;
-  Array<float> sample_rho, sample_pgas, sample_kappa;
-  Array<float> sample_uu1, sample_uu2, sample_uu3;
-  Array<float> sample_bb1, sample_bb2, sample_bb3;
+  Array<int> *sample_inds = nullptr;
+  Array<double> *sample_fracs = nullptr;
+  Array<bool> *sample_nan = nullptr;
+  Array<bool> *sample_fallback = nullptr;
+  Array<float> *sample_rho = nullptr;
+  Array<float> *sample_pgas = nullptr;
+  Array<float> *sample_kappa = nullptr;
+  Array<float> *sample_uu1 = nullptr;
+  Array<float> *sample_uu2 = nullptr;
+  Array<float> *sample_uu3 = nullptr;
+  Array<float> *sample_bb1 = nullptr;
+  Array<float> *sample_bb2 = nullptr;
+  Array<float> *sample_bb3 = nullptr;
   float extrapolation_tolerance;
 
   // Coefficient data
-  Array<double> j_i, j_q, j_v;
-  Array<double> alpha_i, alpha_q, alpha_v;
-  Array<double> rho_q, rho_v;
-  Array<double> cell_values;
+  Array<double> *j_i = nullptr;
+  Array<double> *j_q = nullptr;
+  Array<double> *j_v = nullptr;
+  Array<double> *alpha_i = nullptr;
+  Array<double> *alpha_q = nullptr;
+  Array<double> *alpha_v = nullptr;
+  Array<double> *rho_q = nullptr;
+  Array<double> *rho_v = nullptr;
+  Array<double> *cell_values = nullptr;
 
   // Image data
-  Array<double> image;
+  Array<double> *image = nullptr;
   int image_num_quantities = 0;
   int image_offset_time = 0;
   int image_offset_length = 0;
@@ -204,36 +220,16 @@ struct RadiationIntegrator
   int image_offset_tau_int = 0;
 
   // Rendering data
-  Array<double> render;
+  Array<double> *render = nullptr;
 
   // Adaptive data
-  int adaptive_current_level = 0;
+  int adaptive_level = 0;
   int adaptive_num_levels;
   int linear_root_blocks;
   int block_num_pix;
-  int *block_counts;
-  Array<bool> *refinement_flags;
-  Array<double> *camera_pos_adaptive;
-  Array<double> *camera_dir_adaptive;
-  int *geodesic_num_steps_adaptive;
-  Array<bool> *sample_flags_adaptive;
-  Array<int> *sample_num_adaptive;
-  Array<double> *sample_pos_adaptive;
-  Array<double> *sample_dir_adaptive;
-  Array<double> *sample_len_adaptive;
-  Array<int> sample_inds_adaptive;
-  Array<double> sample_fracs_adaptive;
-  Array<bool> sample_nan_adaptive, sample_fallback_adaptive;
-  Array<float> sample_rho_adaptive, sample_pgas_adaptive, sample_kappa_adaptive;
-  Array<float> sample_uu1_adaptive, sample_uu2_adaptive, sample_uu3_adaptive;
-  Array<float> sample_bb1_adaptive, sample_bb2_adaptive, sample_bb3_adaptive;
-  Array<double> j_i_adaptive, j_q_adaptive, j_v_adaptive;
-  Array<double> alpha_i_adaptive, alpha_q_adaptive, alpha_v_adaptive;
-  Array<double> rho_q_adaptive, rho_v_adaptive;
-  Array<double> cell_values_adaptive;
-  Array<double> *image_adaptive;
-  Array<double> *image_blocks;
-  Array<double> *render_adaptive;
+  int *block_counts = nullptr;
+  Array<bool> *refinement_flags = nullptr;
+  Array<double> *image_blocks = nullptr;
 
   // Precalculated values
   double power_jj, power_jj_q, power_jj_v;

@@ -17,7 +17,8 @@
 // Outputs: (none)
 // Notes:
 //   Overwrites file specified by checkpoint_sample_file.
-//   Saves certain sample data (sample_inds, sample_fracs (if needed), sample_nan, sample_fallback).
+//   Saves certain sample data (sample_inds[0], sample_fracs[0] (if needed), sample_nan[0], and
+//       sample_fallback[0]).
 void RadiationIntegrator::SaveSampling()
 {
   // Open checkpoint file for writing
@@ -27,11 +28,11 @@ void RadiationIntegrator::SaveSampling()
     throw BlacklightException("Could not open sample checkpoint file.");
 
   // Write sampling data
-  WriteBinary(&checkpoint_stream, sample_inds);
+  WriteBinary(&checkpoint_stream, sample_inds[0]);
   if (simulation_interp)
-    WriteBinary(&checkpoint_stream, sample_fracs);
-  WriteBinary(&checkpoint_stream, sample_nan);
-  WriteBinary(&checkpoint_stream, sample_fallback);
+    WriteBinary(&checkpoint_stream, sample_fracs[0]);
+  WriteBinary(&checkpoint_stream, sample_nan[0]);
+  WriteBinary(&checkpoint_stream, sample_fallback[0]);
   return;
 }
 
@@ -42,8 +43,8 @@ void RadiationIntegrator::SaveSampling()
 // Outputs: (none)
 // Notes:
 //   Reads file specified by checkpoint_sample_file.
-//   Saves certain sample data (sample_inds, sample_fracs (if needed), sample_nan, sample_fallback),
-//       allocating arrays.
+//   Saves certain sample data (sample_inds[0], sample_fracs[0] (if needed), sample_nan[0], and
+//       sample_fallback[0]), allocating arrays.
 void RadiationIntegrator::LoadSampling()
 {
   // Open checkpoint file for readiing
@@ -53,10 +54,10 @@ void RadiationIntegrator::LoadSampling()
     throw BlacklightException("Could not open sample checkpoint file.");
 
   // Read sampling data
-  ReadBinary(&checkpoint_stream, &sample_inds);
+  ReadBinary(&checkpoint_stream, &sample_inds[0]);
   if (simulation_interp)
-    ReadBinary(&checkpoint_stream, &sample_fracs);
-  ReadBinary(&checkpoint_stream, &sample_nan);
-  ReadBinary(&checkpoint_stream, &sample_fallback);
+    ReadBinary(&checkpoint_stream, &sample_fracs[0]);
+  ReadBinary(&checkpoint_stream, &sample_nan[0]);
+  ReadBinary(&checkpoint_stream, &sample_fallback[0]);
   return;
 }

@@ -67,9 +67,8 @@ struct GeodesicIntegrator
   double ray_max_factor;
 
   // Input data - adaptive parameters
-  bool adaptive_on;
-  int adaptive_block_size;
   int adaptive_max_level;
+  int adaptive_block_size;
 
   // Geometry data
   double bh_m;
@@ -84,30 +83,27 @@ struct GeodesicIntegrator
   double norm_con[4], norm_con_c[4];
   double hor_con_c[4];
   double vert_con_c[4];
-  Array<double> camera_pos, camera_dir;
+  Array<int> *camera_loc = nullptr;
+  Array<double> *camera_pos = nullptr;
+  Array<double> *camera_dir = nullptr;
 
   // Geodesic data
-  int geodesic_num_steps;
-  Array<double> geodesic_pos, geodesic_dir, geodesic_len;
-  Array<bool> sample_flags;
-  Array<int> sample_num;
-  Array<double> sample_pos, sample_dir, sample_len;
+  int *geodesic_num_steps = nullptr;
+  Array<double> geodesic_pos;
+  Array<double> geodesic_dir;
+  Array<double> geodesic_len;
+  Array<bool> *sample_flags = nullptr;
+  Array<int> *sample_num = nullptr;
+  Array<double> *sample_pos = nullptr;
+  Array<double> *sample_dir = nullptr;
+  Array<double> *sample_len = nullptr;
 
   // Adaptive data
-  int adaptive_current_level;
+  int adaptive_level;
   int linear_root_blocks;
   int block_num_pix;
   int *block_counts;
   Array<bool> *refinement_flags;
-  Array<int> *camera_loc_adaptive;
-  Array<double> *camera_pos_adaptive;
-  Array<double> *camera_dir_adaptive;
-  int *geodesic_num_steps_adaptive;
-  Array<bool> *sample_flags_adaptive;
-  Array<int> *sample_num_adaptive;
-  Array<double> *sample_pos_adaptive;
-  Array<double> *sample_dir_adaptive;
-  Array<double> *sample_len_adaptive;
 
   // External functions
   double Integrate();

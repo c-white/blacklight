@@ -15,6 +15,6 @@
 //   Output file endianness will match that of machine writing file.
 void OutputWriter::WriteRaw()
 {
-  WriteBinary(p_output_stream, image.data, image.n_tot);
+  WriteBinary(p_output_stream, image[0].data, image[0].n_tot);
   return;
 }

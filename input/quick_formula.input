@@ -4,7 +4,7 @@ num_threads = 4        # number of threads to use in parallel
 
 # Output parameters
 output_format = npz                       # format of output file (raw, npy, npz)
-output_file   = output/quick_formula.npz  # file to be (over)written with image data
+output_file   = output/quick_formula.npz  # file to be (over)written with output data
 output_camera = false                     # flag for saving camera details
 
 # Checkpoint parameters
@@ -51,7 +51,7 @@ image_length        = false   # flag indicating image of geodesic lengths should
 image_lambda        = false   # flag indicating image of affine path lengths should be produced
 image_emission      = false   # flag indicating image of emission coefficients should be produced
 image_tau           = false   # flag indicating image of optical depths should be produced
-image_lambda_ave    = false   # flag indicating path-averaged images should be produced
+image_lambda_ave    = false   # flag indicating lambda-averaged images should be produced
 image_emission_ave  = false   # flag indicating emission-averaged images should be produced
 image_tau_int       = false   # flag indicating tau-integrated images should be produced
 
@@ -72,4 +72,4 @@ ray_min_factor  = 0.2       # minimum ratio of new to old step size
 ray_max_factor  = 10.0      # maximum ratio of new to old step size
 
 # Adaptive parameters
-adaptive_on = false  # flag indicating adaptive ray tracing should be used
+adaptive_max_level = 0  # maximum number of adaptive levels beyond root
