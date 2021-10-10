@@ -220,11 +220,11 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     render_num_features = new int[render_num_images];
     render_quantities = new int *[render_num_images]();
     render_types = new RenderType *[render_num_images]();
-    render_thresh_vals = new double *[render_num_images]();
     render_min_vals = new double *[render_num_images]();
     render_max_vals = new double *[render_num_images]();
-    render_opacities = new double *[render_num_images]();
+    render_thresh_vals = new double *[render_num_images]();
     render_tau_scales = new double *[render_num_images]();
+    render_opacities = new double *[render_num_images]();
     render_x_vals = new double *[render_num_images]();
     render_y_vals = new double *[render_num_images]();
     render_z_vals = new double *[render_num_images]();
@@ -236,11 +236,11 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       render_num_features[n_i] = num_features;
       render_quantities[n_i] = new int[num_features];
       render_types[n_i] = new RenderType[num_features];
-      render_thresh_vals[n_i] = new double[num_features];
       render_min_vals[n_i] = new double[num_features];
       render_max_vals[n_i] = new double[num_features];
-      render_opacities[n_i] = new double[num_features];
+      render_thresh_vals[n_i] = new double[num_features];
       render_tau_scales[n_i] = new double[num_features];
+      render_opacities[n_i] = new double[num_features];
       render_x_vals[n_i] = new double[num_features];
       render_y_vals[n_i] = new double[num_features];
       render_z_vals[n_i] = new double[num_features];
@@ -248,17 +248,18 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       {
         render_quantities[n_i][n_f] = p_input_reader->render_quantities[n_i][n_f].value();
         render_types[n_i][n_f] = p_input_reader->render_types[n_i][n_f].value();
-        if (render_types[n_i][n_f] == RenderType::rise
-            or render_types[n_i][n_f] == RenderType::fall)
-        {
-          render_thresh_vals[n_i][n_f] = p_input_reader->render_thresh_vals[n_i][n_f].value();
-          render_opacities[n_i][n_f] = p_input_reader->render_opacities[n_i][n_f].value();
-        }
         if (render_types[n_i][n_f] == RenderType::fill)
         {
           render_min_vals[n_i][n_f] = p_input_reader->render_min_vals[n_i][n_f].value();
           render_max_vals[n_i][n_f] = p_input_reader->render_max_vals[n_i][n_f].value();
           render_tau_scales[n_i][n_f] = p_input_reader->render_tau_scales[n_i][n_f].value();
+        }
+        if (render_types[n_i][n_f] == RenderType::thresh
+            or render_types[n_i][n_f] == RenderType::rise
+            or render_types[n_i][n_f] == RenderType::fall)
+        {
+          render_thresh_vals[n_i][n_f] = p_input_reader->render_thresh_vals[n_i][n_f].value();
+          render_opacities[n_i][n_f] = p_input_reader->render_opacities[n_i][n_f].value();
         }
         render_x_vals[n_i][n_f] = p_input_reader->render_x_vals[n_i][n_f].value();
         render_y_vals[n_i][n_f] = p_input_reader->render_y_vals[n_i][n_f].value();
@@ -476,26 +477,26 @@ RadiationIntegrator::~RadiationIntegrator()
   {
     delete[] render_quantities[n_i];
     delete[] render_types[n_i];
-    delete[] render_thresh_vals[n_i];
     delete[] render_min_vals[n_i];
     delete[] render_max_vals[n_i];
+    delete[] render_thresh_vals[n_i];
+    delete[] render_tau_scales[n_i];
+    delete[] render_opacities[n_i];
     delete[] render_x_vals[n_i];
     delete[] render_y_vals[n_i];
     delete[] render_z_vals[n_i];
-    delete[] render_opacities[n_i];
-    delete[] render_tau_scales[n_i];
   }
   delete[] render_num_features;
   delete[] render_quantities;
   delete[] render_types;
-  delete[] render_thresh_vals;
   delete[] render_min_vals;
   delete[] render_max_vals;
+  delete[] render_thresh_vals;
+  delete[] render_tau_scales;
+  delete[] render_opacities;
   delete[] render_x_vals;
   delete[] render_y_vals;
   delete[] render_z_vals;
-  delete[] render_opacities;
-  delete[] render_tau_scales;
 
   // Free memory - sample data
   for (int level = 0; level <= adaptive_max_level; level++)

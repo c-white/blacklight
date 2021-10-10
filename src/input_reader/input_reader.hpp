@@ -132,11 +132,11 @@ struct InputReader
   std::optional<int> *render_num_features = nullptr;
   std::optional<int> **render_quantities = nullptr;
   std::optional<RenderType> **render_types = nullptr;
-  std::optional<double> **render_thresh_vals = nullptr;
   std::optional<double> **render_min_vals = nullptr;
   std::optional<double> **render_max_vals = nullptr;
-  std::optional<double> **render_opacities = nullptr;
+  std::optional<double> **render_thresh_vals = nullptr;
   std::optional<double> **render_tau_scales = nullptr;
+  std::optional<double> **render_opacities = nullptr;
   std::optional<double> **render_x_vals = nullptr;
   std::optional<double> **render_y_vals = nullptr;
   std::optional<double> **render_z_vals = nullptr;

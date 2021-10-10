@@ -71,29 +71,24 @@ image_tau_int       = false     # flag indicating tau-integrated images should b
 
 # Rendering parameters
 render_num_images     = 1             # number of false-color renderings
-render_1_num_features = 4             # image 1: number of features
+render_1_num_features = 3             # image 1: number of features
 render_1_1_quantity   = sigma         # image 1, feature 1: quantity to use
-render_1_1_type       = fill          # image 1, feature 1: type of feature (rise, fall, fill)
+render_1_1_type       = fill          # image 1, feature 1: type (fill, thresh, rise, fall)
 render_1_1_min        = 1.0           # image 1, feature 1: lower cutoff
 render_1_1_max        = inf           # image 1, feature 1: upper cutoff
 render_1_1_tau_scale  = 1.5e13        # image 1, feature 1: opacity in [0,1]
 render_1_1_rgb        = 222,12,98     # image 1, feature 1: RGB colors in [0,255]
 render_1_2_quantity   = beta_inverse  # image 1, feature 2: quantity to use
-render_1_2_type       = rise          # image 1, feature 2: type of feature (rise, fall, fill)
+render_1_2_type       = thresh        # image 1, feature 2: type (fill, thresh, rise, fall)
 render_1_2_thresh     = 1.0           # image 1, feature 2: threshold
 render_1_2_opacity    = 0.2           # image 1, feature 2: opacity in [0,1]
 render_1_2_rgb        = 133,197,38    # image 1, feature 2: RGB colors in [0,255]
-render_1_3_quantity   = beta_inverse  # image 1, feature 3: quantity to use
-render_1_3_type       = fall          # image 1, feature 3: type of feature (rise, fall, fill)
-render_1_3_thresh     = 1.0           # image 1, feature 3: threshold
-render_1_3_opacity    = 0.2           # image 1, feature 3: opacity in [0,1]
-render_1_3_rgb        = 133,197,38    # image 1, feature 3: RGB colors in [0,255]
-render_1_4_quantity   = rho           # image 1, feature 4: quantity to use
-render_1_4_type       = fill          # image 1, feature 4: type of feature (rise, fall, fill)
-render_1_4_min        = 1.0e-17       # image 1, feature 4: lower cutoff
-render_1_4_max        = inf           # image 1, feature 4: upper cutoff
-render_1_4_tau_scale  = 1.5e13        # image 1, feature 4: optical depth length scale
-render_1_4_rgb        = 106,121,247   # image 1, feature 4: RGB colors in [0,255]
+render_1_3_quantity   = rho           # image 1, feature 3: quantity to use
+render_1_3_type       = fill          # image 1, feature 3: type (fill, thresh, rise, fall)
+render_1_3_min        = 1.0e-17       # image 1, feature 3: lower cutoff
+render_1_3_max        = inf           # image 1, feature 3: upper cutoff
+render_1_3_tau_scale  = 1.5e13        # image 1, feature 3: optical depth length scale
+render_1_3_rgb        = 106,121,247   # image 1, feature 3: RGB colors in [0,255]
 
 # Ray-tracing parameters
 ray_flat        = true            # flag indicating ray tracing should assume flat spacetime

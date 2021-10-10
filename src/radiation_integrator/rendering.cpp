@@ -111,23 +111,6 @@ void RadiationIntegrator::Render()
             double previous_value = previous_values[n_v];
             double current_value = current_values[n_v];
 
-            // Calculate effect of crossing threshold
-            if ((render_types[n_i][n_f] == RenderType::rise
-                and previous_value < render_thresh_vals[n_i][n_f]
-                and current_value >= render_thresh_vals[n_i][n_f])
-                or (render_types[n_i][n_f] == RenderType::fall
-                and previous_value > render_thresh_vals[n_i][n_f]
-                and current_value <= render_thresh_vals[n_i][n_f]))
-            {
-              double opacity = render_opacities[n_i][n_f];
-              render[adaptive_level](n_i,0,m) = (1.0 - opacity) * render[adaptive_level](n_i,0,m)
-                  + opacity * render_x_vals[n_i][n_f];
-              render[adaptive_level](n_i,1,m) = (1.0 - opacity) * render[adaptive_level](n_i,1,m)
-                  + opacity * render_y_vals[n_i][n_f];
-              render[adaptive_level](n_i,2,m) = (1.0 - opacity) * render[adaptive_level](n_i,2,m)
-                  + opacity * render_z_vals[n_i][n_f];
-            }
-
             // Calculate effect of passing through filling region
             if (render_types[n_i][n_f] == RenderType::fill
                 and current_value >= render_min_vals[n_i][n_f]
@@ -152,6 +135,31 @@ void RadiationIntegrator::Render()
                 render[adaptive_level](n_i,1,m) = render_y_vals[n_i][n_f];
                 render[adaptive_level](n_i,2,m) = render_z_vals[n_i][n_f];
               }
+            }
+
+            // Determine if threshold has been crossed
+            bool threshold_crossed = false;
+            bool rise_search = render_types[n_i][n_f] == RenderType::thresh
+                or render_types[n_i][n_f] == RenderType::rise;
+            if (rise_search and previous_value < render_thresh_vals[n_i][n_f]
+                and current_value >= render_thresh_vals[n_i][n_f])
+              threshold_crossed = true;
+            bool fall_search = render_types[n_i][n_f] == RenderType::thresh
+                or render_types[n_i][n_f] == RenderType::fall;
+            if (fall_search and previous_value > render_thresh_vals[n_i][n_f]
+                and current_value <= render_thresh_vals[n_i][n_f])
+              threshold_crossed = true;
+
+            // Calculate effect of crossing threshold
+            if (threshold_crossed)
+            {
+              double opacity = render_opacities[n_i][n_f];
+              render[adaptive_level](n_i,0,m) = (1.0 - opacity) * render[adaptive_level](n_i,0,m)
+                  + opacity * render_x_vals[n_i][n_f];
+              render[adaptive_level](n_i,1,m) = (1.0 - opacity) * render[adaptive_level](n_i,1,m)
+                  + opacity * render_y_vals[n_i][n_f];
+              render[adaptive_level](n_i,2,m) = (1.0 - opacity) * render[adaptive_level](n_i,2,m)
+                  + opacity * render_z_vals[n_i][n_f];
             }
           }
         }

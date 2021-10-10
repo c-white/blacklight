@@ -104,11 +104,11 @@ struct RadiationIntegrator
   int *render_num_features = nullptr;
   int **render_quantities = nullptr;
   RenderType **render_types = nullptr;
-  double **render_thresh_vals = nullptr;
   double **render_min_vals = nullptr;
   double **render_max_vals = nullptr;
-  double **render_opacities = nullptr;
+  double **render_thresh_vals = nullptr;
   double **render_tau_scales = nullptr;
+  double **render_opacities = nullptr;
   double **render_x_vals = nullptr;
   double **render_y_vals = nullptr;
   double **render_z_vals = nullptr;

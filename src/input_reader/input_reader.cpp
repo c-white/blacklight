@@ -32,26 +32,26 @@ InputReader::~InputReader()
   {
     delete[] render_quantities[n_i];
     delete[] render_types[n_i];
-    delete[] render_thresh_vals[n_i];
     delete[] render_min_vals[n_i];
     delete[] render_max_vals[n_i];
+    delete[] render_thresh_vals[n_i];
+    delete[] render_tau_scales[n_i];
+    delete[] render_opacities[n_i];
     delete[] render_x_vals[n_i];
     delete[] render_y_vals[n_i];
     delete[] render_z_vals[n_i];
-    delete[] render_opacities[n_i];
-    delete[] render_tau_scales[n_i];
   }
   delete[] render_num_features;
   delete[] render_quantities;
   delete[] render_types;
-  delete[] render_thresh_vals;
   delete[] render_min_vals;
   delete[] render_max_vals;
+  delete[] render_thresh_vals;
+  delete[] render_tau_scales;
+  delete[] render_opacities;
   delete[] render_x_vals;
   delete[] render_y_vals;
   delete[] render_z_vals;
-  delete[] render_opacities;
-  delete[] render_tau_scales;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -416,11 +416,11 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     render_num_features = new std::optional<int>[render_num_images.value()];
     render_quantities = new std::optional<int> *[render_num_images.value()]();
     render_types = new std::optional<RenderType> *[render_num_images.value()]();
-    render_thresh_vals = new std::optional<double> *[render_num_images.value()]();
     render_min_vals = new std::optional<double> *[render_num_images.value()]();
     render_max_vals = new std::optional<double> *[render_num_images.value()]();
-    render_opacities = new std::optional<double> *[render_num_images.value()]();
+    render_thresh_vals = new std::optional<double> *[render_num_images.value()]();
     render_tau_scales = new std::optional<double> *[render_num_images.value()]();
+    render_opacities = new std::optional<double> *[render_num_images.value()]();
     render_x_vals = new std::optional<double> *[render_num_images.value()]();
     render_y_vals = new std::optional<double> *[render_num_images.value()]();
     render_z_vals = new std::optional<double> *[render_num_images.value()]();
@@ -440,11 +440,11 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     render_num_features[image_num] = num_features;
     render_quantities[image_num] = new std::optional<int>[num_features];
     render_types[image_num] = new std::optional<RenderType>[num_features];
-    render_thresh_vals[image_num] = new std::optional<double>[num_features];
     render_min_vals[image_num] = new std::optional<double>[num_features];
     render_max_vals[image_num] = new std::optional<double>[num_features];
-    render_opacities[image_num] = new std::optional<double>[num_features];
+    render_thresh_vals[image_num] = new std::optional<double>[num_features];
     render_tau_scales[image_num] = new std::optional<double>[num_features];
+    render_opacities[image_num] = new std::optional<double>[num_features];
     render_x_vals[image_num] = new std::optional<double>[num_features];
     render_y_vals[image_num] = new std::optional<double>[num_features];
     render_z_vals[image_num] = new std::optional<double>[num_features];
@@ -498,34 +498,20 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
       message << "No space allocated for input parameter (render_" << key << ").";
       throw BlacklightException(message.str().c_str());
     }
-    if (val == "rise")
+    if (val == "fill")
+      render_types[image_num][feature_num] = RenderType::fill;
+    else if (val == "thresh")
+      render_types[image_num][feature_num] = RenderType::thresh;
+    else if (val == "rise")
       render_types[image_num][feature_num] = RenderType::rise;
     else if (val == "fall")
       render_types[image_num][feature_num] = RenderType::fall;
-    else if (val == "fill")
-      render_types[image_num][feature_num] = RenderType::fill;
     else
     {
       std::ostringstream message;
       message << "Invalid render type (" << val << ") in input file.";
       throw BlacklightException(message.str().c_str());
     }
-  }
-
-  // Read threshold
-  else if (key.size() >= 10 and key.compare(key.size() - 7, key.npos,  "_thresh") == 0)
-  {
-    std::size_t pos;
-    int image_num = std::stoi(key, &pos) - 1;
-    int feature_num = std::stoi(key.substr(pos + 1)) - 1;
-    if (image_num >= render_num_images.value()
-        or feature_num >= render_num_features[image_num].value())
-    {
-      std::ostringstream message;
-      message << "No space allocated for input parameter (render_" << key << ").";
-      throw BlacklightException(message.str().c_str());
-    }
-    render_thresh_vals[image_num][feature_num] = std::stod(val);
   }
 
   // Read minimum
@@ -560,8 +546,8 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     render_max_vals[image_num][feature_num] = std::stod(val);
   }
 
-  // Read opacity
-  else if (key.size() >= 11 and key.compare(key.size() - 8, key.npos, "_opacity") == 0)
+  // Read threshold
+  else if (key.size() >= 10 and key.compare(key.size() - 7, key.npos,  "_thresh") == 0)
   {
     std::size_t pos;
     int image_num = std::stoi(key, &pos) - 1;
@@ -573,7 +559,7 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
       message << "No space allocated for input parameter (render_" << key << ").";
       throw BlacklightException(message.str().c_str());
     }
-    render_opacities[image_num][feature_num] = std::stod(val);
+    render_thresh_vals[image_num][feature_num] = std::stod(val);
   }
 
   // Read tau scale
@@ -590,6 +576,22 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
       throw BlacklightException(message.str().c_str());
     }
     render_tau_scales[image_num][feature_num] = std::stod(val);
+  }
+
+  // Read opacity
+  else if (key.size() >= 11 and key.compare(key.size() - 8, key.npos, "_opacity") == 0)
+  {
+    std::size_t pos;
+    int image_num = std::stoi(key, &pos) - 1;
+    int feature_num = std::stoi(key.substr(pos + 1)) - 1;
+    if (image_num >= render_num_images.value()
+        or feature_num >= render_num_features[image_num].value())
+    {
+      std::ostringstream message;
+      message << "No space allocated for input parameter (render_" << key << ").";
+      throw BlacklightException(message.str().c_str());
+    }
+    render_opacities[image_num][feature_num] = std::stod(val);
   }
 
   // Read RGB values

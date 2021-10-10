@@ -39,7 +39,7 @@ enum struct Coordinates {sph_ks, cart_ks};
 enum struct PlasmaModel {ti_te_beta, code_kappa};
 enum struct Camera {plane, pinhole};
 enum struct FrequencyNormalization {camera, infinity};
-enum struct RenderType {rise, fall, fill};
+enum struct RenderType {fill, thresh, rise, fall};
 enum struct RayTerminate {photon, multiplicative, additive};
 
 #endif
