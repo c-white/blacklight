@@ -86,15 +86,4 @@ ray_min_factor  = 0.2             # minimum ratio of new to old step size
 ray_max_factor  = 10.0            # maximum ratio of new to old step size
 
 # Adaptive parameters
-adaptive_max_level = 1  # maximum number of adaptive levels beyond root
-adaptive_block_size    = 8       # linear size of adaptively refined blocks of pixels
-adaptive_val_cut       = 4.0e-4  # absolute value minimum for signaling refinement
-adaptive_val_frac      = 0.0     # minimum fraction of cells exceeding cut for triggering refinement
-adaptive_abs_grad_cut  = 0.0     # absolute gradient minimum for signaling refinement
-adaptive_abs_grad_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
-adaptive_rel_grad_cut  = 0.0     # relative gradient minimum for signaling refinement
-adaptive_rel_grad_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
-adaptive_abs_lapl_cut  = 0.0     # absolute Laplacian minimum for signaling refinement
-adaptive_abs_lapl_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
-adaptive_rel_lapl_cut  = 0.0     # relative Laplacian minimum for signaling refinement
-adaptive_rel_lapl_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
+adaptive_max_level = 0  # maximum number of adaptive levels beyond root
