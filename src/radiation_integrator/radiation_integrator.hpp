@@ -251,7 +251,7 @@ struct RadiationIntegrator
   double kappa_rho_v_high_a, kappa_rho_v_high_b;
 
   // External function
-  bool Integrate(int snapshot, double *p_time_sample, double *p_time_integrate);
+  bool Integrate(int snapshot, double *p_time_sample, double *p_time_image, double *p_time_render);
 
   // Internal functions - sample_checkpoint.cpp
   void SaveSampling();

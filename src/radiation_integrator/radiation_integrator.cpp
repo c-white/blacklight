@@ -580,20 +580,28 @@ RadiationIntegrator::~RadiationIntegrator()
 // Inputs:
 //   snapshot: index (starting at 0) of which snapshot is about to be processed
 //   *p_time_sample: amount of time already taken for sampling
-//   *p_time_integrate: amount of time already taken for integrating
+//   *p_time_image: amount of time already taken for integrating image and evaluating refinement
+//   *p_time_render: amount of time already taken for rendering
 // Outputs:
 //   *p_time_sample: incremented by additional time taken for sampling
-//   *p_time_integrate: incremented by additional time taken for integrating
+//   *p_time_image: incremented by additional time taken for integrating image and evaluating
+//       refinement
+//   *p_time_render: incremented by additional time taken for rendering
 //   returned value: flag indicating no additional geodesics need to be run for this snapshot
 // Notes:
 //   Assumes all data arrays have been set.
-bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double *p_time_integrate)
+bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double *p_time_image,
+    double *p_time_render)
 {
   // Prepare timers
   double time_sample_start = 0.0;
   double time_sample_end = 0.0;
-  double time_integrate_start = 0.0;
-  double time_integrate_end = 0.0;
+  double time_image_start = 0.0;
+  double time_image_end = 0.0;
+  double time_render_start = 0.0;
+  double time_render_end = 0.0;
+  double time_refine_start = 0.0;
+  double time_refine_end = 0.0;
 
   // Sample simulation data
   if (model_type == ModelType::simulation)
@@ -621,26 +629,33 @@ bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double 
   // Integrate according to simulation data
   if (model_type == ModelType::simulation)
   {
-    time_integrate_start = time_sample_end;
+    time_image_start = time_sample_end;
     CalculateSimulationCoefficients();
     if (image_light and image_polarization)
       IntegratePolarizedRadiation();
     else if (image_light or image_time or image_length or image_lambda or image_emission
         or image_tau or image_lambda_ave or image_emission_ave or image_tau_int)
       IntegrateUnpolarizedRadiation();
+    time_image_end = omp_get_wtime();
     if (render_num_images > 0)
+    {
+      time_render_start = time_image_end;
       Render();
+      time_render_end = omp_get_wtime();
+    }
   }
 
   // Integrate according to formula
   if (model_type == ModelType::formula)
   {
-    time_integrate_start = omp_get_wtime();
+    time_image_start = omp_get_wtime();
     CalculateFormulaCoefficients();
     IntegrateUnpolarizedRadiation();
+    time_image_end = omp_get_wtime();
   }
 
   // Check for adaptive refinement
+  time_refine_start = omp_get_wtime();
   bool adaptive_complete = true;
   if (adaptive_max_level > 0)
     adaptive_complete = CheckAdaptiveRefinement();
@@ -651,13 +666,14 @@ bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double 
   }
   else
     adaptive_level++;
-  time_integrate_end = omp_get_wtime();
+  time_refine_end = omp_get_wtime();
 
   // Update first time flag
   first_time = false;
 
   // Calculate elapsed time
   *p_time_sample += time_sample_end - time_sample_start;
-  *p_time_integrate += time_integrate_end - time_integrate_start;
+  *p_time_image += time_image_end - time_image_start + time_refine_end - time_refine_start;
+  *p_time_render += time_render_end - time_render_start;
   return adaptive_complete;
 }

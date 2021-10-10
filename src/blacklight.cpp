@@ -35,7 +35,8 @@ int main(int argc, char *argv[])
   double time_geodesic = 0.0;
   double time_read = 0.0;
   double time_sample = 0.0;
-  double time_radiation = 0.0;
+  double time_image = 0.0;
+  double time_render = 0.0;
 
   // Parse command-line inputs
   if (argc != 2)
@@ -199,7 +200,8 @@ int main(int argc, char *argv[])
       // Integrate radiation
       try
       {
-        adaptive_complete = p_radiation_integrator->Integrate(n, &time_sample, &time_radiation);
+        adaptive_complete =
+            p_radiation_integrator->Integrate(n, &time_sample, &time_image, &time_render);
       }
       catch (const BlacklightException &exception)
       {
@@ -262,7 +264,8 @@ int main(int argc, char *argv[])
   std::cout << "\n  Integrating geodesics: " << time_geodesic << " s";
   std::cout << "\n  Reading simulation:    " << time_read << " s";
   std::cout << "\n  Sampling simulation:   " << time_sample << " s";
-  std::cout << "\n  Integrating radiation: " << time_radiation << " s";
+  std::cout << "\n  Integrating image:     " << time_image << " s";
+  std::cout << "\n  Rendering:             " << time_render << " s";
   std::cout << "\n\n";
 
   // End program
