@@ -34,6 +34,13 @@ struct RadiationIntegrator
   bool checkpoint_sample_load;
   std::string checkpoint_sample_file;
 
+  // Input data - simulation parameters
+  Coordinates simulation_coord;
+  double simulation_m_msun;
+  double simulation_rho_cgs;
+  bool simulation_interp;
+  bool simulation_block_interp;
+
   // Input data - formula parameters
   double formula_mass;
   double formula_r0;
@@ -46,45 +53,12 @@ struct RadiationIntegrator
   double formula_a;
   double formula_beta;
 
-  // Input data - simulation parameters
-  Coordinates simulation_coord;
-  double simulation_m_msun;
-  double simulation_rho_cgs;
-  bool simulation_interp;
-  bool simulation_block_interp;
-
-  // Input data - plasma parameters
-  double plasma_mu;
-  double plasma_ne_ni;
-  double plasma_thermal_frac;
-  PlasmaModel plasma_model;
-  double plasma_rat_low;
-  double plasma_rat_high;
-  double plasma_power_frac;
-  double plasma_p;
-  double plasma_gamma_min;
-  double plasma_gamma_max;
-  double plasma_kappa_frac;
-  double plasma_kappa;
-  double plasma_w;
-  double plasma_sigma_max;
-
-  // Input data - slow light parameters
-  bool slow_light_on;
-  bool slow_interp;
-  int slow_chunk_size;
-  double slow_t_start;
-  double slow_dt;
-
-  // Input data - fallback parameters
-  bool fallback_nan;
-  float fallback_rho;
-  float fallback_pgas;
-  float fallback_kappa;
-
   // Input data - camera parameters
   double camera_r;
   int camera_resolution;
+
+  // Input data - ray-tracing parameters
+  bool ray_flat;
 
   // Input data - image parameters
   bool image_light;
@@ -113,8 +87,12 @@ struct RadiationIntegrator
   double **render_y_vals = nullptr;
   double **render_z_vals = nullptr;
 
-  // Input data - ray-tracing parameters
-  bool ray_flat;
+  // Input data - slow-light parameters
+  bool slow_light_on;
+  bool slow_interp;
+  int slow_chunk_size;
+  double slow_t_start;
+  double slow_dt;
 
   // Input data - adaptive parameters
   int adaptive_max_level;
@@ -129,6 +107,28 @@ struct RadiationIntegrator
   double adaptive_abs_lapl_frac;
   double adaptive_rel_lapl_cut;
   double adaptive_rel_lapl_frac;
+
+  // Input data - plasma parameters
+  double plasma_mu;
+  double plasma_ne_ni;
+  double plasma_thermal_frac;
+  PlasmaModel plasma_model;
+  double plasma_rat_low;
+  double plasma_rat_high;
+  double plasma_power_frac;
+  double plasma_p;
+  double plasma_gamma_min;
+  double plasma_gamma_max;
+  double plasma_kappa_frac;
+  double plasma_kappa;
+  double plasma_w;
+  double plasma_sigma_max;
+
+  // Input data - fallback parameters
+  bool fallback_nan;
+  float fallback_rho;
+  float fallback_pgas;
+  float fallback_kappa;
 
   // Flag for tracking function calls
   bool first_time = true;

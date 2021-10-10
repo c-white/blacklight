@@ -1,5 +1,5 @@
 # General parameters
-model_type  = formula  # type of model (formula, simulation)
+model_type  = formula  # type of model (simulation, formula)
 num_threads = 4        # number of threads to use in parallel
 
 # Output parameters
@@ -15,19 +15,6 @@ checkpoint_sample_save   = false                 # flag indicating sampling shou
 checkpoint_sample_load   = false                 # flag indicating sampling should be loaded
 checkpoint_sample_file   = output/sample.dat     # name of sampling checkpoint file
 
-# Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
-formula_mass  = 6.0e11   # black hole mass in cm
-formula_spin  = 0.9      # dimensionless black hole spin
-formula_r0    = 10.0     # radial scale parameter in gravitational units
-formula_h     = 0.0      # scale height parameter in gravitational units
-formula_l0    = 0.0      # angular momentum parameter l_0
-formula_q     = 0.5      # angular momentum index
-formula_nup   = 2.3e11   # pivotal frequency nu_p in Hz
-formula_cn0   = 3.0e-18  # emissivity amplitude parameter C * n_0 in erg/cm^3.s.sr.Hz
-formula_alpha = -3.0     # emissivity index
-formula_a     = 0.0      # source amplitude parameter A in cm^2.s.sr.Hz/erg
-formula_beta  = 2.5      # source index
-
 # Simulation parameters (only used if model_type == simulation)
 simulation_file         = data/example.athdf  # file containing Athena++ data dump if needed
 simulation_multiple     = false               # flag for processing multiple files
@@ -41,35 +28,18 @@ simulation_kappa_name   = r0                  # name of variable containing elec
 simulation_interp       = false               # flag indicating interpolation should be used
 simulation_block_interp = false               # flag indicating interpolation should cross blocks
 
-# Plasma parameters (only used if model_type == simulation)
-plasma_mu         = 0.5         # molecular weight of fluid in proton masses
-plasma_ne_ni      = 1.0         # electrons per ion
-plasma_model      = ti_te_beta  # thermal electron temperature model (ti_te_beta, code_kappa)
-plasma_rat_low    = 1.0         # ion-electron temperature ratio at zero plasma beta
-plasma_rat_high   = 10.0        # ion-electron temperature ratio at infinite plasma beta
-plasma_power_frac = 0.0         # fraction of electrons with power-law distribution
-plasma_p          = 3.0         # power-law index
-plasma_gamma_min  = 1.0         # minimum Lorentz factor in power law
-plasma_gamma_max  = 10.0        # maximum Lorentz factor in power law
-plasma_kappa_frac = 0.0         # fraction of electrons with kappa distribution
-plasma_kappa      = 3.5         # kappa parameter for kappa distribution
-plasma_w          = 1.0         # w parameter for kappa distribution
-plasma_sigma_max  = 1.0         # if nonnegative, cutoff in sigma above which plasma is ignored
-
-# Slow light parameters (only used if model_type == simulation)
-slow_light_on   = false  # flag indicating slow light should be used
-slow_interp     = true   # flag indicating slow light should interpolate between input files
-slow_chunk_size = 10     # number of simultaneous files to use for slow light
-slow_t_start    = 0.0    # time at camera of first slow light snapshot to make
-slow_dt         = 1.0    # timestep between slow light snapshots to make
-slow_num_images = 1      # number of slow light snapshots to make
-slow_offset     = 0      # offset to use for numbering slow light output files
-
-# Fallback parameters
-fallback_nan   = true    # flag indicating any fallback should result in NaN for that ray
-fallback_rho   = 1.0e-6  # out-of-bounds density (model_type == simulation and not fallback_nan)
-fallback_pgas  = 1.0e-8  # out-of-bounds pressure (model_type == simulation and not fallback_nan)
-fallback_kappa = 1.0e-8  # out-of-bounds kappa (model_type == simulation and not fallback_nan)
+# Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
+formula_mass  = 6.0e11   # black hole mass in cm
+formula_spin  = 0.9      # dimensionless black hole spin
+formula_r0    = 10.0     # radial scale parameter in gravitational units
+formula_h     = 0.0      # scale height parameter in gravitational units
+formula_l0    = 0.0      # angular momentum parameter l_0
+formula_q     = 0.5      # angular momentum index
+formula_nup   = 2.3e11   # pivotal frequency nu_p in Hz
+formula_cn0   = 3.0e-18  # emissivity amplitude parameter C * n_0 in erg/cm^3.s.sr.Hz
+formula_alpha = -3.0     # emissivity index
+formula_a     = 0.0      # source amplitude parameter A in cm^2.s.sr.Hz/erg
+formula_beta  = 2.5      # source index
 
 # Camera parameters
 camera_type       = plane  # type of camera (plane, pinhole)
@@ -86,10 +56,23 @@ camera_rotation   = 0.0    # rotation of camera in degrees (0/90 for north up/le
 camera_width      = 24.0   # full width of image in gravitational units
 camera_resolution = 64     # number of pixels per side
 
+# Ray-tracing parameters
+ray_flat        = false           # flag indicating ray tracing should assume flat spacetime
+ray_terminate   = multiplicative  # termination condition (photon, multiplicative, additive)
+ray_factor      = 1.005           # constant for terminate (only used for ray_terminate != photon)
+ray_step        = 0.01            # ratio of maximum proper length of step to radial coordinate
+ray_max_steps   = 2500            # maximum number of steps allowed for each geodesic
+ray_max_retries = 25              # maximum number of times a step can fail
+ray_tol_abs     = 1.0e-8          # absolute tolerance for taking full steps
+ray_tol_rel     = 1.0e-8          # relative tolerance for taking full steps
+ray_err_factor  = 0.9             # coefficient used to scale step size based on error
+ray_min_factor  = 0.2             # minimum ratio of new to old step size
+ray_max_factor  = 10.0            # maximum ratio of new to old step size
+
 # Image parameters
 image_light         = true      # flag indicating real image of radiation should be produced
 image_frequency     = 2.3e11    # frequency of observation in Hz
-image_normalization = infinity  # image_frequency location (infinity [rest], camera [w/ velocity])
+image_normalization = infinity  # image_frequency location (camera [w/ velocity], infinity [rest])
 image_polarization  = false     # flag indicating transport should be polarized
 image_time          = false     # flag indicating image of geodesic times should be produced
 image_length        = false     # flag indicating image of geodesic lengths should be produced
@@ -121,18 +104,14 @@ render_1_3_max        = inf               # image 1, feature 3: upper cutoff
 render_1_3_tau_scale  = 1.5e13            # image 1, feature 3: optical depth length scale
 render_1_3_xyz        = 0.296,0.235,0.91  # image 1, feature 3: XYZ colors in [0,1]
 
-# Ray-tracing parameters
-ray_flat        = false           # flag indicating ray tracing should assume flat spacetime
-ray_terminate   = multiplicative  # termination condition (photon, multiplicative, additive)
-ray_factor      = 1.005           # constant for terminate (only used for ray_terminate != photon)
-ray_step        = 0.01            # ratio of maximum proper length of step to radial coordinate
-ray_max_steps   = 2500            # maximum number of steps allowed for each geodesic
-ray_max_retries = 25              # maximum number of times a step can fail
-ray_tol_abs     = 1.0e-8          # absolute tolerance for taking full steps
-ray_tol_rel     = 1.0e-8          # relative tolerance for taking full steps
-ray_err_factor  = 0.9             # coefficient used to scale step size based on error
-ray_min_factor  = 0.2             # minimum ratio of new to old step size
-ray_max_factor  = 10.0            # maximum ratio of new to old step size
+# Slow-light parameters (only used if model_type == simulation)
+slow_light_on   = false  # flag indicating slow light should be used
+slow_interp     = true   # flag indicating slow light should interpolate between input files
+slow_chunk_size = 10     # number of simultaneous files to use for slow light
+slow_t_start    = 0.0    # time at camera of first slow-light snapshot to make
+slow_dt         = 1.0    # timestep between slow-light snapshots to make
+slow_num_images = 1      # number of slow-light snapshots to make
+slow_offset     = 0      # offset to use for numbering slow-light output files
 
 # Adaptive parameters
 adaptive_max_level     = 0       # maximum number of adaptive levels beyond root
@@ -147,3 +126,24 @@ adaptive_abs_lapl_cut  = 0.0     # absolute Laplacian minimum for signaling refi
 adaptive_abs_lapl_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
 adaptive_rel_lapl_cut  = 0.0     # relative Laplacian minimum for signaling refinement
 adaptive_rel_lapl_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
+
+# Plasma parameters (only used if model_type == simulation)
+plasma_mu         = 0.5         # molecular weight of fluid in proton masses
+plasma_ne_ni      = 1.0         # electrons per ion
+plasma_model      = ti_te_beta  # thermal electron temperature model (ti_te_beta, code_kappa)
+plasma_rat_low    = 1.0         # ion-electron temperature ratio at zero plasma beta
+plasma_rat_high   = 10.0        # ion-electron temperature ratio at infinite plasma beta
+plasma_power_frac = 0.0         # fraction of electrons with power-law distribution
+plasma_p          = 3.0         # power-law index
+plasma_gamma_min  = 1.0         # minimum Lorentz factor in power law
+plasma_gamma_max  = 10.0        # maximum Lorentz factor in power law
+plasma_kappa_frac = 0.0         # fraction of electrons with kappa distribution
+plasma_kappa      = 3.5         # kappa parameter for kappa distribution
+plasma_w          = 1.0         # w parameter for kappa distribution
+plasma_sigma_max  = 1.0         # if nonnegative, cutoff in sigma above which plasma is ignored
+
+# Fallback parameters
+fallback_nan   = true    # flag indicating any fallback should result in NaN for that ray
+fallback_rho   = 1.0e-6  # out-of-bounds density (model_type == simulation and not fallback_nan)
+fallback_pgas  = 1.0e-8  # out-of-bounds pressure (model_type == simulation and not fallback_nan)
+fallback_kappa = 1.0e-8  # out-of-bounds kappa (model_type == simulation and not fallback_nan)

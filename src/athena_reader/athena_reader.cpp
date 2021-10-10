@@ -49,15 +49,7 @@ AthenaReader::AthenaReader(const InputReader *p_input_reader_)
     }
   }
 
-  // Copy plasma parameters
-  if (model_type == ModelType::simulation)
-  {
-    plasma_model = p_input_reader->plasma_model.value();
-    if (plasma_model == PlasmaModel::code_kappa)
-      simulation_kappa_name = p_input_reader->simulation_kappa_name.value();
-  }
-
-  // Copy slow light parameters
+  // Copy slow-light parameters
   if (model_type == ModelType::simulation)
   {
     slow_light_on = p_input_reader->slow_light_on.value();
@@ -79,6 +71,14 @@ AthenaReader::AthenaReader(const InputReader *p_input_reader_)
   if (model_type != ModelType::simulation and p_input_reader->slow_light_on.has_value()
       and p_input_reader->slow_light_on.value())
     throw BlacklightException("Can only use slow light with simulation data.");
+
+  // Copy plasma parameters
+  if (model_type == ModelType::simulation)
+  {
+    plasma_model = p_input_reader->plasma_model.value();
+    if (plasma_model == PlasmaModel::code_kappa)
+      simulation_kappa_name = p_input_reader->simulation_kappa_name.value();
+  }
 
   // Determine how many files will be held in memory simultaneously
   num_arrays = 0;

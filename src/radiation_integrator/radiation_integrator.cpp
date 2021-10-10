@@ -31,23 +31,6 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   model_type = p_input_reader->model_type.value();
   num_threads = p_input_reader->num_threads.value();
 
-  // Set parameters
-  switch (model_type)
-  {
-    case ModelType::simulation:
-    {
-      bh_m = 1.0;
-      bh_a = p_input_reader->simulation_a.value();
-      break;
-    }
-    case ModelType::formula:
-    {
-      bh_m = 1.0;
-      bh_a = p_input_reader->formula_spin.value();
-      break;
-    }
-  }
-
   // Copy checkpoint parameters
   if (model_type == ModelType::simulation)
   {
@@ -68,6 +51,17 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       BlacklightWarning("Ignoring checkpoint_sample_load selection.");
   }
 
+  // Copy simulation parameters
+  if (model_type == ModelType::simulation)
+  {
+    simulation_coord = p_input_reader->simulation_coord.value();
+    simulation_m_msun = p_input_reader->simulation_m_msun.value();
+    simulation_rho_cgs = p_input_reader->simulation_rho_cgs.value();
+    simulation_interp = p_input_reader->simulation_interp.value();
+    if (simulation_interp)
+      simulation_block_interp = p_input_reader->simulation_block_interp.value();
+  }
+
   // Copy formula parameters
   if (model_type == ModelType::formula)
   {
@@ -83,79 +77,12 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     formula_beta = p_input_reader->formula_beta.value();
   }
 
-  // Copy simulation parameters
-  if (model_type == ModelType::simulation)
-  {
-    simulation_coord = p_input_reader->simulation_coord.value();
-    simulation_m_msun = p_input_reader->simulation_m_msun.value();
-    simulation_rho_cgs = p_input_reader->simulation_rho_cgs.value();
-    simulation_interp = p_input_reader->simulation_interp.value();
-    if (simulation_interp)
-      simulation_block_interp = p_input_reader->simulation_block_interp.value();
-  }
-
-  // Copy plasma parameters
-  if (model_type == ModelType::simulation)
-  {
-    plasma_mu = p_input_reader->plasma_mu.value();
-    plasma_ne_ni = p_input_reader->plasma_ne_ni.value();
-    plasma_model = p_input_reader->plasma_model.value();
-    if (plasma_model == PlasmaModel::ti_te_beta)
-    {
-      plasma_rat_low = p_input_reader->plasma_rat_low.value();
-      plasma_rat_high = p_input_reader->plasma_rat_high.value();
-    }
-    plasma_power_frac = p_input_reader->plasma_power_frac.value();
-    if (plasma_power_frac < 0.0 or plasma_power_frac > 1.0)
-      BlacklightWarning("Fraction of power-law electrons outside [0, 1].");
-    if (plasma_power_frac != 0.0)
-    {
-      plasma_p = p_input_reader->plasma_p.value();
-      plasma_gamma_min = p_input_reader->plasma_gamma_min.value();
-      plasma_gamma_max = p_input_reader->plasma_gamma_max.value();
-    }
-    plasma_kappa_frac = p_input_reader->plasma_kappa_frac.value();
-    if (plasma_kappa_frac < 0.0 or plasma_kappa_frac > 1.0)
-      BlacklightWarning("Fraction of kappa-distribution electrons outside [0, 1].");
-    if (plasma_kappa_frac != 0.0)
-    {
-      plasma_kappa = p_input_reader->plasma_kappa.value();
-      plasma_w = p_input_reader->plasma_w.value();
-    }
-    plasma_thermal_frac = 1.0 - (plasma_power_frac + plasma_kappa_frac);
-    if (plasma_thermal_frac < 0.0 or plasma_thermal_frac > 1.0)
-      BlacklightWarning("Fraction of thermal electrons outside [0, 1].");
-    plasma_sigma_max = p_input_reader->plasma_sigma_max.value();
-  }
-
-  // Copy slow light parameters
-  if (model_type == ModelType::simulation)
-  {
-    slow_light_on = p_input_reader->slow_light_on.value();
-    if (slow_light_on)
-    {
-      if (checkpoint_sample_save or checkpoint_sample_load)
-        throw BlacklightException("Cannot use sample checkpoints with slow light.");
-      slow_interp = p_input_reader->slow_interp.value();
-      slow_chunk_size = p_input_reader->slow_chunk_size.value();
-      slow_t_start = p_input_reader->slow_t_start.value();
-      slow_dt = p_input_reader->slow_dt.value();
-    }
-  }
-
-  // Copy fallback parameters
-  fallback_nan = p_input_reader->fallback_nan.value();
-  if (model_type == ModelType::simulation and not fallback_nan)
-  {
-    fallback_rho = p_input_reader->fallback_rho.value();
-    fallback_pgas = p_input_reader->fallback_pgas.value();
-    if (plasma_model == PlasmaModel::code_kappa)
-      fallback_kappa = p_input_reader->fallback_kappa.value();
-  }
-
   // Copy camera parameters
   camera_r = p_input_reader->camera_r.value();
   camera_resolution = p_input_reader->camera_resolution.value();
+
+  // Copy ray-tracing parameters
+  ray_flat = p_input_reader->ray_flat.value();
 
   // Copy image parameters
   image_light = p_input_reader->image_light.value();
@@ -167,14 +94,6 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     else if (p_input_reader->image_polarization.has_value()
         and p_input_reader->image_polarization.value())
       BlacklightWarning("Ignoring image_polarization selection.");
-    if (model_type == ModelType::simulation and image_polarization and plasma_kappa_frac != 0.0)
-    {
-      if (plasma_kappa < 3.5 or plasma_kappa > 5.0)
-        throw BlacklightException("Polarized transport only supports kappa in [3.5, 5].");
-      else if (plasma_kappa != 3.5 and plasma_kappa != 4.0 and plasma_kappa != 4.5
-          and plasma_kappa != 5.0)
-        BlacklightWarning("Polarized transport will interpolate formulas based on kappa.");
-    }
   }
   else if (p_input_reader->image_polarization.has_value()
       and p_input_reader->image_polarization.value())
@@ -270,8 +189,20 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       or image_lambda_ave or image_emission_ave or image_tau_int or render_num_images > 0))
     throw BlacklightException("No image or rendering selected.");
 
-  // Copy ray-tracing parameters
-  ray_flat = p_input_reader->ray_flat.value();
+  // Copy slow-light parameters
+  if (model_type == ModelType::simulation)
+  {
+    slow_light_on = p_input_reader->slow_light_on.value();
+    if (slow_light_on)
+    {
+      if (checkpoint_sample_save or checkpoint_sample_load)
+        throw BlacklightException("Cannot use sample checkpoints with slow light.");
+      slow_interp = p_input_reader->slow_interp.value();
+      slow_chunk_size = p_input_reader->slow_chunk_size.value();
+      slow_t_start = p_input_reader->slow_t_start.value();
+      slow_dt = p_input_reader->slow_dt.value();
+    }
+  }
 
   // Copy adaptive parameters
   adaptive_max_level = p_input_reader->adaptive_max_level.value();
@@ -299,6 +230,58 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     adaptive_rel_lapl_frac = p_input_reader->adaptive_rel_lapl_frac.value();
     if (adaptive_rel_lapl_frac >= 0.0)
       adaptive_rel_lapl_cut = p_input_reader->adaptive_rel_lapl_cut.value();
+  }
+
+  // Copy plasma parameters
+  if (model_type == ModelType::simulation)
+  {
+    plasma_mu = p_input_reader->plasma_mu.value();
+    plasma_ne_ni = p_input_reader->plasma_ne_ni.value();
+    plasma_model = p_input_reader->plasma_model.value();
+    if (plasma_model == PlasmaModel::ti_te_beta)
+    {
+      plasma_rat_low = p_input_reader->plasma_rat_low.value();
+      plasma_rat_high = p_input_reader->plasma_rat_high.value();
+    }
+    plasma_power_frac = p_input_reader->plasma_power_frac.value();
+    if (plasma_power_frac < 0.0 or plasma_power_frac > 1.0)
+      BlacklightWarning("Fraction of power-law electrons outside [0, 1].");
+    if (plasma_power_frac != 0.0)
+    {
+      plasma_p = p_input_reader->plasma_p.value();
+      plasma_gamma_min = p_input_reader->plasma_gamma_min.value();
+      plasma_gamma_max = p_input_reader->plasma_gamma_max.value();
+    }
+    plasma_kappa_frac = p_input_reader->plasma_kappa_frac.value();
+    if (plasma_kappa_frac < 0.0 or plasma_kappa_frac > 1.0)
+      BlacklightWarning("Fraction of kappa-distribution electrons outside [0, 1].");
+    if (plasma_kappa_frac != 0.0)
+    {
+      plasma_kappa = p_input_reader->plasma_kappa.value();
+      if (model_type == ModelType::simulation and image_light and image_polarization)
+      {
+        if (plasma_kappa < 3.5 or plasma_kappa > 5.0)
+          throw BlacklightException("Polarized transport only supports kappa in [3.5, 5].");
+        else if (plasma_kappa != 3.5 and plasma_kappa != 4.0 and plasma_kappa != 4.5
+            and plasma_kappa != 5.0)
+          BlacklightWarning("Polarized transport will interpolate formulas based on kappa.");
+      }
+      plasma_w = p_input_reader->plasma_w.value();
+    }
+    plasma_thermal_frac = 1.0 - (plasma_power_frac + plasma_kappa_frac);
+    if (plasma_thermal_frac < 0.0 or plasma_thermal_frac > 1.0)
+      BlacklightWarning("Fraction of thermal electrons outside [0, 1].");
+    plasma_sigma_max = p_input_reader->plasma_sigma_max.value();
+  }
+
+  // Copy fallback parameters
+  fallback_nan = p_input_reader->fallback_nan.value();
+  if (model_type == ModelType::simulation and not fallback_nan)
+  {
+    fallback_rho = p_input_reader->fallback_rho.value();
+    fallback_pgas = p_input_reader->fallback_pgas.value();
+    if (plasma_model == PlasmaModel::code_kappa)
+      fallback_kappa = p_input_reader->fallback_kappa.value();
   }
 
   // Copy camera data
@@ -351,20 +334,24 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   rho_v = new Array<double>[adaptive_max_level+1];
   cell_values = new Array<double>[adaptive_max_level+1];
 
-  // Copy slow light extrapolation tolerance
+  // Copy slow-light extrapolation tolerance
   if (slow_light_on)
     extrapolation_tolerance = p_athena_reader->extrapolation_tolerance;
 
-  // Calculate black hole mass
+  // Set and calculate geometry data
   switch (model_type)
   {
     case ModelType::simulation:
     {
+      bh_m = 1.0;
+      bh_a = p_input_reader->simulation_a.value();
       mass_msun = simulation_m_msun;
       break;
     }
     case ModelType::formula:
     {
+      bh_m = 1.0;
+      bh_a = p_input_reader->formula_spin.value();
       mass_msun = formula_mass * Physics::c * Physics::c / Physics::gg_msun;
       break;
     }

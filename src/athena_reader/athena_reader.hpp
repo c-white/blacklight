@@ -36,14 +36,14 @@ struct AthenaReader
   int simulation_end;
   std::string simulation_kappa_name;
 
-  // Input data - plasma parameters
-  PlasmaModel plasma_model;
-
-  // Input data - slow light parameters
+  // Input data - slow-light parameters
   bool slow_light_on;
   int slow_chunk_size;
   double slow_t_start;
   double slow_dt;
+
+  // Input data - plasma parameters
+  PlasmaModel plasma_model;
 
   // Flags for tracking function calls
   bool first_time = true;

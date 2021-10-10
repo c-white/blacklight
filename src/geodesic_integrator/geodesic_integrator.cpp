@@ -25,23 +25,6 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   // Copy general input data
   model_type = p_input_reader->model_type.value();
 
-  // Set parameters
-  switch (model_type)
-  {
-    case ModelType::simulation:
-    {
-      bh_m = 1.0;
-      bh_a = p_input_reader->simulation_a.value();
-      break;
-    }
-    case ModelType::formula:
-    {
-      bh_m = 1.0;
-      bh_a = p_input_reader->formula_spin.value();
-      break;
-    }
-  }
-
   // Copy checkpoint parameters
   checkpoint_geodesic_save = p_input_reader->checkpoint_geodesic_save.value();
   checkpoint_geodesic_load = p_input_reader->checkpoint_geodesic_load.value();
@@ -66,10 +49,6 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   camera_resolution = p_input_reader->camera_resolution.value();
   camera_pole = p_input_reader->camera_pole.value();
 
-  // Copy image parameters
-  image_frequency = p_input_reader->image_frequency.value();
-  image_normalization = p_input_reader->image_normalization.value();
-
   // Copy ray-tracing parameters
   ray_flat = p_input_reader->ray_flat.value();
   ray_terminate = p_input_reader->ray_terminate.value();
@@ -84,6 +63,10 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   ray_min_factor = p_input_reader->ray_min_factor.value();
   ray_max_factor = p_input_reader->ray_max_factor.value();
 
+  // Copy image parameters
+  image_frequency = p_input_reader->image_frequency.value();
+  image_normalization = p_input_reader->image_normalization.value();
+
   // Copy adaptive parameters
   adaptive_max_level = p_input_reader->adaptive_max_level.value();
   if (adaptive_max_level > 0)
@@ -95,7 +78,22 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
       throw BlacklightException("Must have adaptive_block_size divide camera_resolution.");
   }
 
-  // Calculate termination radii
+  // Set and calculate geometry data
+  switch (model_type)
+  {
+    case ModelType::simulation:
+    {
+      bh_m = 1.0;
+      bh_a = p_input_reader->simulation_a.value();
+      break;
+    }
+    case ModelType::formula:
+    {
+      bh_m = 1.0;
+      bh_a = p_input_reader->formula_spin.value();
+      break;
+    }
+  }
   double r_horizon = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
   switch (ray_terminate)
   {

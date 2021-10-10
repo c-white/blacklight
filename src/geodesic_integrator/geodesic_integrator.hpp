@@ -49,10 +49,6 @@ struct GeodesicIntegrator
   int camera_resolution;
   bool camera_pole;
 
-  // Input data - image parameters
-  double image_frequency;
-  FrequencyNormalization image_normalization;
-
   // Input data - ray-tracing parameters
   bool ray_flat;
   RayTerminate ray_terminate;
@@ -65,6 +61,10 @@ struct GeodesicIntegrator
   double ray_err_factor;
   double ray_min_factor;
   double ray_max_factor;
+
+  // Input data - image parameters
+  double image_frequency;
+  FrequencyNormalization image_normalization;
 
   // Input data - adaptive parameters
   int adaptive_max_level;

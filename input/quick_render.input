@@ -1,5 +1,5 @@
 # General parameters
-model_type  = simulation  # type of model (formula, simulation)
+model_type  = simulation  # type of model (simulation, formula)
 num_threads = 4           # number of threads to use in parallel
 
 # Output parameters
@@ -24,22 +24,6 @@ simulation_kappa_name   = kappa                  # name of variable containing e
 simulation_interp       = false                  # flag indicating interpolation should be used
 simulation_block_interp = false                  # flag indicating interpolation should cross blocks
 
-# Plasma parameters (only used if model_type == simulation)
-plasma_mu         = 0.5         # molecular weight of fluid in proton masses
-plasma_ne_ni      = 1.0         # electrons per ion
-plasma_model      = ti_te_beta  # electron temperature model (ti_te_beta, code_kappa)
-plasma_rat_low    = 1.0         # ion-electron temperature ratio at zero plasma beta
-plasma_rat_high   = 10.0        # ion-electron temperature ratio at infinite plasma beta
-plasma_power_frac = 0.0         # fraction of electrons with power-law distribution
-plasma_kappa_frac = 0.0         # fraction of electrons with kappa distribution
-plasma_sigma_max  = -1.0        # if nonnegative, cutoff in sigma above which plasma is ignored
-
-# Slow light parameters (only used if model_type == simulation)
-slow_light_on = false  # flag indicating slow light should be used
-
-# Fallback parameters
-fallback_nan = true  # flag indicating any fallback should result in NaN for that ray
-
 # Camera parameters
 camera_type       = plane  # type of camera (plane, pinhole)
 camera_r          = 50.0   # KS radial coordinate r of camera in gravitational units
@@ -55,10 +39,23 @@ camera_rotation   = 0.0    # rotation of camera in degrees (0/90 for north up/le
 camera_width      = 100.0  # full width of image in gravitational units
 camera_resolution = 256    # number of pixels per side
 
+# Ray-tracing parameters
+ray_flat        = true            # flag indicating ray tracing should assume flat spacetime
+ray_terminate   = multiplicative  # termination condition (photon, multiplicative, additive)
+ray_factor      = 1.005           # constant for terminate (only used for ray_terminate != photon)
+ray_step        = 0.01            # ratio of maximum proper length of step to radial coordinate
+ray_max_steps   = 3300            # maximum number of steps allowed for each geodesic
+ray_max_retries = 25              # maximum number of times a step can fail
+ray_tol_abs     = 1.0e-8          # absolute tolerance for taking full steps
+ray_tol_rel     = 1.0e-8          # relative tolerance for taking full steps
+ray_err_factor  = 0.9             # coefficient used to scale step size based on error
+ray_min_factor  = 0.2             # minimum ratio of new to old step size
+ray_max_factor  = 10.0            # maximum ratio of new to old step size
+
 # Image parameters
 image_light         = false     # flag indicating real image of radiation should be produced
 image_frequency     = 2.3e11    # frequency of observation in Hz
-image_normalization = infinity  # image_frequency location (infinity [rest], camera [w/ velocity])
+image_normalization = infinity  # image_frequency location (camera [w/ velocity], infinity [rest])
 image_polarization  = false     # flag indicating transport should be polarized
 image_time          = false     # flag indicating image of geodesic times should be produced
 image_length        = false     # flag indicating image of geodesic lengths should be produced
@@ -90,18 +87,21 @@ render_1_3_max        = inf           # image 1, feature 3: upper cutoff
 render_1_3_tau_scale  = 1.5e13        # image 1, feature 3: optical depth length scale
 render_1_3_rgb        = 106,121,247   # image 1, feature 3: RGB colors in [0,255]
 
-# Ray-tracing parameters
-ray_flat        = true            # flag indicating ray tracing should assume flat spacetime
-ray_terminate   = multiplicative  # termination condition (photon, multiplicative, additive)
-ray_factor      = 1.005           # constant for terminate (only used for ray_terminate != photon)
-ray_step        = 0.01            # ratio of maximum proper length of step to radial coordinate
-ray_max_steps   = 3300            # maximum number of steps allowed for each geodesic
-ray_max_retries = 25              # maximum number of times a step can fail
-ray_tol_abs     = 1.0e-8          # absolute tolerance for taking full steps
-ray_tol_rel     = 1.0e-8          # relative tolerance for taking full steps
-ray_err_factor  = 0.9             # coefficient used to scale step size based on error
-ray_min_factor  = 0.2             # minimum ratio of new to old step size
-ray_max_factor  = 10.0            # maximum ratio of new to old step size
+# Slow-light parameters (only used if model_type == simulation)
+slow_light_on = false  # flag indicating slow light should be used
 
 # Adaptive parameters
 adaptive_max_level = 0  # maximum number of adaptive levels beyond root
+
+# Plasma parameters (only used if model_type == simulation)
+plasma_mu         = 0.5         # molecular weight of fluid in proton masses
+plasma_ne_ni      = 1.0         # electrons per ion
+plasma_model      = ti_te_beta  # electron temperature model (ti_te_beta, code_kappa)
+plasma_rat_low    = 1.0         # ion-electron temperature ratio at zero plasma beta
+plasma_rat_high   = 10.0        # ion-electron temperature ratio at infinite plasma beta
+plasma_power_frac = 0.0         # fraction of electrons with power-law distribution
+plasma_kappa_frac = 0.0         # fraction of electrons with kappa distribution
+plasma_sigma_max  = -1.0        # if nonnegative, cutoff in sigma above which plasma is ignored
+
+# Fallback parameters
+fallback_nan = true  # flag indicating any fallback should result in NaN for that ray

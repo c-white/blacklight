@@ -1,5 +1,5 @@
 # General parameters
-model_type  = simulation  # type of model (formula, simulation)
+model_type  = simulation  # type of model (simulation, formula)
 num_threads = 4           # number of threads to use in parallel
 
 # Output parameters
@@ -24,22 +24,6 @@ simulation_kappa_name   = kappa                  # name of variable containing e
 simulation_interp       = false                  # flag indicating interpolation should be used
 simulation_block_interp = false                  # flag indicating interpolation should cross blocks
 
-# Plasma parameters (only used if model_type == simulation)
-plasma_mu         = 0.5         # molecular weight of fluid in proton masses
-plasma_ne_ni      = 1.0         # electrons per ion
-plasma_model      = ti_te_beta  # electron temperature model (ti_te_beta, code_kappa)
-plasma_rat_low    = 1.0         # ion-electron temperature ratio at zero plasma beta
-plasma_rat_high   = 10.0        # ion-electron temperature ratio at infinite plasma beta
-plasma_power_frac = 0.0         # fraction of electrons with power-law distribution
-plasma_kappa_frac = 0.0         # fraction of electrons with kappa distribution
-plasma_sigma_max  = 1.0         # if nonnegative, cutoff in sigma above which plasma is ignored
-
-# Slow light parameters (only used if model_type == simulation)
-slow_light_on = false  # flag indicating slow light should be used
-
-# Fallback parameters
-fallback_nan = true  # flag indicating any fallback should result in NaN for that ray
-
 # Camera parameters
 camera_type       = plane  # type of camera (plane, pinhole)
 camera_r          = 50.0   # KS radial coordinate r of camera in gravitational units
@@ -55,23 +39,6 @@ camera_rotation   = 0.0    # rotation of camera in degrees (0/90 for north up/le
 camera_width      = 24.0   # full width of image in gravitational units
 camera_resolution = 64     # number of pixels per side
 
-# Image parameters
-image_light         = true      # flag indicating real image of radiation should be produced
-image_frequency     = 2.3e11    # frequency of observation in Hz
-image_normalization = infinity  # image_frequency location (infinity [rest], camera [w/ velocity])
-image_polarization  = true      # flag indicating transport should be polarized
-image_time          = false     # flag indicating image of geodesic times should be produced
-image_length        = false     # flag indicating image of geodesic lengths should be produced
-image_lambda        = false     # flag indicating image of affine path lengths should be produced
-image_emission      = false     # flag indicating image of emission coefficients should be produced
-image_tau           = false     # flag indicating image of optical depths should be produced
-image_lambda_ave    = false     # flag indicating lambda-averaged images should be produced
-image_emission_ave  = false     # flag indicating emission-averaged images should be produced
-image_tau_int       = false     # flag indicating tau-integrated images should be produced
-
-# Rendering parameters
-render_num_images = 0  # number of false-color renderings
-
 # Ray-tracing parameters
 ray_flat        = false           # flag indicating ray tracing should assume flat spacetime
 ray_terminate   = multiplicative  # termination condition (photon, multiplicative, additive)
@@ -85,5 +52,38 @@ ray_err_factor  = 0.9             # coefficient used to scale step size based on
 ray_min_factor  = 0.2             # minimum ratio of new to old step size
 ray_max_factor  = 10.0            # maximum ratio of new to old step size
 
+# Image parameters
+image_light         = true      # flag indicating real image of radiation should be produced
+image_frequency     = 2.3e11    # frequency of observation in Hz
+image_normalization = infinity  # image_frequency location (camera [w/ velocity], infinity [rest])
+image_polarization  = true      # flag indicating transport should be polarized
+image_time          = false     # flag indicating image of geodesic times should be produced
+image_length        = false     # flag indicating image of geodesic lengths should be produced
+image_lambda        = false     # flag indicating image of affine path lengths should be produced
+image_emission      = false     # flag indicating image of emission coefficients should be produced
+image_tau           = false     # flag indicating image of optical depths should be produced
+image_lambda_ave    = false     # flag indicating lambda-averaged images should be produced
+image_emission_ave  = false     # flag indicating emission-averaged images should be produced
+image_tau_int       = false     # flag indicating tau-integrated images should be produced
+
+# Rendering parameters
+render_num_images = 0  # number of false-color renderings
+
+# Slow-light parameters (only used if model_type == simulation)
+slow_light_on = false  # flag indicating slow light should be used
+
 # Adaptive parameters
 adaptive_max_level = 0  # maximum number of adaptive levels beyond root
+
+# Plasma parameters (only used if model_type == simulation)
+plasma_mu         = 0.5         # molecular weight of fluid in proton masses
+plasma_ne_ni      = 1.0         # electrons per ion
+plasma_model      = ti_te_beta  # electron temperature model (ti_te_beta, code_kappa)
+plasma_rat_low    = 1.0         # ion-electron temperature ratio at zero plasma beta
+plasma_rat_high   = 10.0        # ion-electron temperature ratio at infinite plasma beta
+plasma_power_frac = 0.0         # fraction of electrons with power-law distribution
+plasma_kappa_frac = 0.0         # fraction of electrons with kappa distribution
+plasma_sigma_max  = 1.0         # if nonnegative, cutoff in sigma above which plasma is ignored
+
+# Fallback parameters
+fallback_nan = true  # flag indicating any fallback should result in NaN for that ray

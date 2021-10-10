@@ -117,30 +117,6 @@ int InputReader::Read()
     else if (key == "checkpoint_sample_file")
       checkpoint_sample_file = val;
 
-    // Store formula parameters
-    else if (key == "formula_mass")
-      formula_mass = std::stod(val);
-    else if (key == "formula_spin")
-      formula_spin = std::stod(val);
-    else if (key == "formula_r0")
-      formula_r0 = std::stod(val);
-    else if (key == "formula_h")
-      formula_h = std::stod(val);
-    else if (key == "formula_l0")
-      formula_l0 = std::stod(val);
-    else if (key == "formula_q")
-      formula_q = std::stod(val);
-    else if (key == "formula_nup")
-      formula_nup = std::stod(val);
-    else if (key == "formula_cn0")
-      formula_cn0 = std::stod(val);
-    else if (key == "formula_alpha")
-      formula_alpha = std::stod(val);
-    else if (key == "formula_a")
-      formula_a = std::stod(val);
-    else if (key == "formula_beta")
-      formula_beta = std::stod(val);
-
     // Store simulation parameters
     else if (key == "simulation_file")
       simulation_file = val;
@@ -165,59 +141,29 @@ int InputReader::Read()
     else if (key == "simulation_block_interp")
       simulation_block_interp = ReadBool(val);
 
-    // Store plasma parameters
-    else if (key == "plasma_mu")
-      plasma_mu = std::stod(val);
-    else if (key == "plasma_ne_ni")
-      plasma_ne_ni = std::stod(val);
-    else if (key == "plasma_model")
-      plasma_model = ReadPlasmaModel(val);
-    else if (key == "plasma_rat_low")
-      plasma_rat_low = std::stod(val);
-    else if (key == "plasma_rat_high")
-      plasma_rat_high = std::stod(val);
-    else if (key == "plasma_power_frac")
-      plasma_power_frac = std::stod(val);
-    else if (key == "plasma_p")
-      plasma_p = std::stod(val);
-    else if (key == "plasma_gamma_min")
-      plasma_gamma_min = std::stod(val);
-    else if (key == "plasma_gamma_max")
-      plasma_gamma_max = std::stod(val);
-    else if (key == "plasma_kappa_frac")
-      plasma_kappa_frac = std::stod(val);
-    else if (key == "plasma_kappa")
-      plasma_kappa = std::stod(val);
-    else if (key == "plasma_w")
-      plasma_w = std::stod(val);
-    else if (key == "plasma_sigma_max")
-      plasma_sigma_max = std::stod(val);
-
-    // Store slow light parameters
-    else if (key == "slow_light_on")
-      slow_light_on = ReadBool(val);
-    else if (key == "slow_interp")
-      slow_interp = ReadBool(val);
-    else if (key == "slow_chunk_size")
-      slow_chunk_size = std::stoi(val);
-    else if (key == "slow_t_start")
-      slow_t_start = std::stod(val);
-    else if (key == "slow_dt")
-      slow_dt = std::stod(val);
-    else if (key == "slow_num_images")
-      slow_num_images = std::stoi(val);
-    else if (key == "slow_offset")
-      slow_offset = std::stoi(val);
-
-    // Store fallback parameters
-    else if (key == "fallback_nan")
-      fallback_nan = ReadBool(val);
-    else if (key == "fallback_rho")
-      fallback_rho = std::stof(val);
-    else if (key == "fallback_pgas")
-      fallback_pgas = std::stof(val);
-    else if (key == "fallback_kappa")
-      fallback_kappa = std::stof(val);
+    // Store formula parameters
+    else if (key == "formula_mass")
+      formula_mass = std::stod(val);
+    else if (key == "formula_spin")
+      formula_spin = std::stod(val);
+    else if (key == "formula_r0")
+      formula_r0 = std::stod(val);
+    else if (key == "formula_h")
+      formula_h = std::stod(val);
+    else if (key == "formula_l0")
+      formula_l0 = std::stod(val);
+    else if (key == "formula_q")
+      formula_q = std::stod(val);
+    else if (key == "formula_nup")
+      formula_nup = std::stod(val);
+    else if (key == "formula_cn0")
+      formula_cn0 = std::stod(val);
+    else if (key == "formula_alpha")
+      formula_alpha = std::stod(val);
+    else if (key == "formula_a")
+      formula_a = std::stod(val);
+    else if (key == "formula_beta")
+      formula_beta = std::stod(val);
 
     // Store camera parameters
     else if (key == "camera_type")
@@ -246,6 +192,30 @@ int InputReader::Read()
       camera_width = std::stod(val);
     else if (key == "camera_resolution")
       camera_resolution = std::stoi(val);
+
+    // Store ray-tracing parameters
+    else if (key == "ray_flat")
+      ray_flat = ReadBool(val);
+    else if (key == "ray_terminate")
+      ray_terminate = ReadRayTerminate(val);
+    else if (key == "ray_factor")
+      ray_factor = std::stod(val);
+    else if (key == "ray_step")
+      ray_step = std::stod(val);
+    else if (key == "ray_max_steps")
+      ray_max_steps = std::stoi(val);
+    else if (key == "ray_max_retries")
+      ray_max_retries = std::stoi(val);
+    else if (key == "ray_tol_abs")
+      ray_tol_abs = std::stod(val);
+    else if (key == "ray_tol_rel")
+      ray_tol_rel = std::stod(val);
+    else if (key == "ray_err_factor")
+      ray_err_factor = std::stod(val);
+    else if (key == "ray_min_factor")
+      ray_min_factor = std::stod(val);
+    else if (key == "ray_max_factor")
+      ray_max_factor = std::stod(val);
 
     // Store image parameters
     else if (key == "image_light")
@@ -277,29 +247,21 @@ int InputReader::Read()
     else if (key.compare(0, 7, "render_") == 0)
       ReadRender(key.substr(7), val);
 
-    // Store ray-tracing parameters
-    else if (key == "ray_flat")
-      ray_flat = ReadBool(val);
-    else if (key == "ray_terminate")
-      ray_terminate = ReadRayTerminate(val);
-    else if (key == "ray_factor")
-      ray_factor = std::stod(val);
-    else if (key == "ray_step")
-      ray_step = std::stod(val);
-    else if (key == "ray_max_steps")
-      ray_max_steps = std::stoi(val);
-    else if (key == "ray_max_retries")
-      ray_max_retries = std::stoi(val);
-    else if (key == "ray_tol_abs")
-      ray_tol_abs = std::stod(val);
-    else if (key == "ray_tol_rel")
-      ray_tol_rel = std::stod(val);
-    else if (key == "ray_err_factor")
-      ray_err_factor = std::stod(val);
-    else if (key == "ray_min_factor")
-      ray_min_factor = std::stod(val);
-    else if (key == "ray_max_factor")
-      ray_max_factor = std::stod(val);
+    // Store slow-light parameters
+    else if (key == "slow_light_on")
+      slow_light_on = ReadBool(val);
+    else if (key == "slow_interp")
+      slow_interp = ReadBool(val);
+    else if (key == "slow_chunk_size")
+      slow_chunk_size = std::stoi(val);
+    else if (key == "slow_t_start")
+      slow_t_start = std::stod(val);
+    else if (key == "slow_dt")
+      slow_dt = std::stod(val);
+    else if (key == "slow_num_images")
+      slow_num_images = std::stoi(val);
+    else if (key == "slow_offset")
+      slow_offset = std::stoi(val);
 
     // Store adaptive parameters
     else if (key == "adaptive_max_level")
@@ -326,6 +288,44 @@ int InputReader::Read()
       adaptive_rel_lapl_cut = std::stod(val);
     else if (key == "adaptive_rel_lapl_frac")
       adaptive_rel_lapl_frac = std::stod(val);
+
+    // Store plasma parameters
+    else if (key == "plasma_mu")
+      plasma_mu = std::stod(val);
+    else if (key == "plasma_ne_ni")
+      plasma_ne_ni = std::stod(val);
+    else if (key == "plasma_model")
+      plasma_model = ReadPlasmaModel(val);
+    else if (key == "plasma_rat_low")
+      plasma_rat_low = std::stod(val);
+    else if (key == "plasma_rat_high")
+      plasma_rat_high = std::stod(val);
+    else if (key == "plasma_power_frac")
+      plasma_power_frac = std::stod(val);
+    else if (key == "plasma_p")
+      plasma_p = std::stod(val);
+    else if (key == "plasma_gamma_min")
+      plasma_gamma_min = std::stod(val);
+    else if (key == "plasma_gamma_max")
+      plasma_gamma_max = std::stod(val);
+    else if (key == "plasma_kappa_frac")
+      plasma_kappa_frac = std::stod(val);
+    else if (key == "plasma_kappa")
+      plasma_kappa = std::stod(val);
+    else if (key == "plasma_w")
+      plasma_w = std::stod(val);
+    else if (key == "plasma_sigma_max")
+      plasma_sigma_max = std::stod(val);
+
+    // Store fallback parameters
+    else if (key == "fallback_nan")
+      fallback_nan = ReadBool(val);
+    else if (key == "fallback_rho")
+      fallback_rho = std::stof(val);
+    else if (key == "fallback_pgas")
+      fallback_pgas = std::stof(val);
+    else if (key == "fallback_kappa")
+      fallback_kappa = std::stof(val);
 
     // Handle unknown entry
     else

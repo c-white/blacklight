@@ -41,19 +41,6 @@ struct InputReader
   std::optional<bool> checkpoint_sample_load;
   std::optional<std::string> checkpoint_sample_file;
 
-  // Data - formula parameters
-  std::optional<double> formula_mass;
-  std::optional<double> formula_spin;
-  std::optional<double> formula_r0;
-  std::optional<double> formula_h;
-  std::optional<double> formula_l0;
-  std::optional<double> formula_q;
-  std::optional<double> formula_nup;
-  std::optional<double> formula_cn0;
-  std::optional<double> formula_alpha;
-  std::optional<double> formula_a;
-  std::optional<double> formula_beta;
-
   // Data - simulation parameters
   std::optional<std::string> simulation_file;
   std::optional<bool> simulation_multiple;
@@ -67,35 +54,18 @@ struct InputReader
   std::optional<bool> simulation_interp;
   std::optional<bool> simulation_block_interp;
 
-  // Data - plasma parameters
-  std::optional<double> plasma_mu;
-  std::optional<double> plasma_ne_ni;
-  std::optional<PlasmaModel> plasma_model;
-  std::optional<double> plasma_rat_low;
-  std::optional<double> plasma_rat_high;
-  std::optional<double> plasma_power_frac;
-  std::optional<double> plasma_p;
-  std::optional<double> plasma_gamma_min;
-  std::optional<double> plasma_gamma_max;
-  std::optional<double> plasma_kappa_frac;
-  std::optional<double> plasma_kappa;
-  std::optional<double> plasma_w;
-  std::optional<double> plasma_sigma_max;
-
-  // Data - slow light parameters
-  std::optional<bool> slow_light_on;
-  std::optional<bool> slow_interp;
-  std::optional<int> slow_chunk_size;
-  std::optional<double> slow_t_start;
-  std::optional<double> slow_dt;
-  std::optional<int> slow_num_images;
-  std::optional<int> slow_offset;
-
-  // Data - fallback parameters
-  std::optional<bool> fallback_nan;
-  std::optional<float> fallback_rho;
-  std::optional<float> fallback_pgas;
-  std::optional<float> fallback_kappa;
+  // Data - formula parameters
+  std::optional<double> formula_mass;
+  std::optional<double> formula_spin;
+  std::optional<double> formula_r0;
+  std::optional<double> formula_h;
+  std::optional<double> formula_l0;
+  std::optional<double> formula_q;
+  std::optional<double> formula_nup;
+  std::optional<double> formula_cn0;
+  std::optional<double> formula_alpha;
+  std::optional<double> formula_a;
+  std::optional<double> formula_beta;
 
   // Data - camera parameters
   std::optional<Camera> camera_type;
@@ -112,6 +82,19 @@ struct InputReader
   std::optional<double> camera_width;
   std::optional<int> camera_resolution;
   std::optional<bool> camera_pole;
+
+  // Data - ray-tracing parameters
+  std::optional<bool> ray_flat;
+  std::optional<RayTerminate> ray_terminate;
+  std::optional<double> ray_factor;
+  std::optional<double> ray_step;
+  std::optional<int> ray_max_steps;
+  std::optional<int> ray_max_retries;
+  std::optional<double> ray_tol_abs;
+  std::optional<double> ray_tol_rel;
+  std::optional<double> ray_err_factor;
+  std::optional<double> ray_min_factor;
+  std::optional<double> ray_max_factor;
 
   // Data - image parameters
   std::optional<bool> image_light;
@@ -141,18 +124,14 @@ struct InputReader
   std::optional<double> **render_y_vals = nullptr;
   std::optional<double> **render_z_vals = nullptr;
 
-  // Data - ray-tracing parameters
-  std::optional<bool> ray_flat;
-  std::optional<RayTerminate> ray_terminate;
-  std::optional<double> ray_factor;
-  std::optional<double> ray_step;
-  std::optional<int> ray_max_steps;
-  std::optional<int> ray_max_retries;
-  std::optional<double> ray_tol_abs;
-  std::optional<double> ray_tol_rel;
-  std::optional<double> ray_err_factor;
-  std::optional<double> ray_min_factor;
-  std::optional<double> ray_max_factor;
+  // Data - slow-light parameters
+  std::optional<bool> slow_light_on;
+  std::optional<bool> slow_interp;
+  std::optional<int> slow_chunk_size;
+  std::optional<double> slow_t_start;
+  std::optional<double> slow_dt;
+  std::optional<int> slow_num_images;
+  std::optional<int> slow_offset;
 
   // Data - adaptive parameters
   std::optional<int> adaptive_max_level;
@@ -167,6 +146,27 @@ struct InputReader
   std::optional<double> adaptive_abs_lapl_frac;
   std::optional<double> adaptive_rel_lapl_cut;
   std::optional<double> adaptive_rel_lapl_frac;
+
+  // Data - plasma parameters
+  std::optional<double> plasma_mu;
+  std::optional<double> plasma_ne_ni;
+  std::optional<PlasmaModel> plasma_model;
+  std::optional<double> plasma_rat_low;
+  std::optional<double> plasma_rat_high;
+  std::optional<double> plasma_power_frac;
+  std::optional<double> plasma_p;
+  std::optional<double> plasma_gamma_min;
+  std::optional<double> plasma_gamma_max;
+  std::optional<double> plasma_kappa_frac;
+  std::optional<double> plasma_kappa;
+  std::optional<double> plasma_w;
+  std::optional<double> plasma_sigma_max;
+
+  // Data - fallback parameters
+  std::optional<bool> fallback_nan;
+  std::optional<float> fallback_rho;
+  std::optional<float> fallback_pgas;
+  std::optional<float> fallback_kappa;
 
   // External functions
   int Read();

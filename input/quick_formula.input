@@ -1,5 +1,5 @@
 # General parameters
-model_type  = formula  # type of model (formula, simulation)
+model_type  = formula  # type of model (simulation, formula)
 num_threads = 4        # number of threads to use in parallel
 
 # Output parameters
@@ -24,9 +24,6 @@ formula_alpha = -3.0     # emissivity index
 formula_a     = 0.0      # source amplitude parameter A in cm^2.s.sr.Hz/erg
 formula_beta  = 2.5      # source index
 
-# Fallback parameters
-fallback_nan = true  # flag indicating any fallback should result in NaN for that ray
-
 # Camera parameters
 camera_type       = plane                 # type of camera (plane, pinhole)
 camera_r          = 1000.0                # KS radial coordinate r in gravitational units
@@ -42,22 +39,6 @@ camera_rotation   = 0.0                   # rotation of camera in degrees (0/90 
 camera_width      = 30.0                  # full width of image in gravitational units
 camera_resolution = 128                   # number of pixels per side
 
-# Image parameters
-image_light         = true    # flag indicating real image of radiation should be produced
-image_frequency     = 2.3e11  # frequency of observation in Hz
-image_normalization = camera  # image_frequency location (infinity, camera)
-image_time          = false   # flag indicating image of geodesic times should be produced
-image_length        = false   # flag indicating image of geodesic lengths should be produced
-image_lambda        = false   # flag indicating image of affine path lengths should be produced
-image_emission      = false   # flag indicating image of emission coefficients should be produced
-image_tau           = false   # flag indicating image of optical depths should be produced
-image_lambda_ave    = false   # flag indicating lambda-averaged images should be produced
-image_emission_ave  = false   # flag indicating emission-averaged images should be produced
-image_tau_int       = false   # flag indicating tau-integrated images should be produced
-
-# Rendering parameters
-render_num_images = 0  # number of false-color renderings
-
 # Ray-tracing parameters
 ray_flat        = false     # flag indicating ray tracing should assume flat spacetime
 ray_terminate   = additive  # termination condition (photon, multiplicative, additive)
@@ -71,5 +52,24 @@ ray_err_factor  = 0.75      # coefficient used to scale step size based on error
 ray_min_factor  = 0.2       # minimum ratio of new to old step size
 ray_max_factor  = 10.0      # maximum ratio of new to old step size
 
+# Image parameters
+image_light         = true    # flag indicating real image of radiation should be produced
+image_frequency     = 2.3e11  # frequency of observation in Hz
+image_normalization = camera  # image_frequency location (camera [w/ velocity], infinity [rest])
+image_time          = false   # flag indicating image of geodesic times should be produced
+image_length        = false   # flag indicating image of geodesic lengths should be produced
+image_lambda        = false   # flag indicating image of affine path lengths should be produced
+image_emission      = false   # flag indicating image of emission coefficients should be produced
+image_tau           = false   # flag indicating image of optical depths should be produced
+image_lambda_ave    = false   # flag indicating lambda-averaged images should be produced
+image_emission_ave  = false   # flag indicating emission-averaged images should be produced
+image_tau_int       = false   # flag indicating tau-integrated images should be produced
+
+# Rendering parameters
+render_num_images = 0  # number of false-color renderings
+
 # Adaptive parameters
 adaptive_max_level = 0  # maximum number of adaptive levels beyond root
+
+# Fallback parameters
+fallback_nan = true  # flag indicating any fallback should result in NaN for that ray
