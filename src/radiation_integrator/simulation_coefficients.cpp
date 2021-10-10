@@ -21,9 +21,10 @@
 // Notes:
 //   Assumes geodesic_num_steps[adaptive_level], sample_num[adaptive_level],
 //       sample_pos[adaptive_level], sample_dir[adaptive_level], sample_rho[adaptive_level],
-//       sample_pgas[adaptive_level] or sample_kappa[adaptive_level], sample_uu1[adaptive_level],
-//       sample_uu2[adaptive_level], sample_uu3[adaptive_level], sample_bb1[adaptive_level],
-//       sample_bb2[adaptive_level], and sample_bb3[adaptive_level] have been set.
+//       sample_pgas[adaptive_level], sample_kappa[adaptive_level] (if needed),
+//       sample_uu1[adaptive_level], sample_uu2[adaptive_level], sample_uu3[adaptive_level],
+//       sample_bb1[adaptive_level], sample_bb2[adaptive_level], and sample_bb3[adaptive_level] have
+//       been set.
 //   Allocates and initializes j_i[adaptive_level] if image_light == true or image_emission == true
 //       or image_emission_ave == true.
 //   Allocates and initializes alpha_i[adaptive_level] if image_light == true or image_tau == true
@@ -40,7 +41,7 @@
 //       definitions in (M) but agreeing with their usages in 2018 MNRAS 475 43.
 //   Tetrad is chosen such that j_U, alpha_U, rho_U = 0.
 //   Deallocates sample_rho[adaptive_level], sample_pgas[adaptive_level], and
-//       sample_kappa[adaptive_level] and adaptive_level > 0.
+//       sample_kappa[adaptive_level] if adaptive_level > 0.
 //   Dealllocates sample_uu1[adaptive_level], sample_uu2[adaptive_level],
 //       sample_uu3[adaptive_level], sample_bb1[adaptive_level], sample_bb2[adaptive_level], and
 //       sample_bb3[adaptive_level] if image_polarization == false and adaptive_level > 0.
@@ -266,9 +267,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
 
         // Extract model variables
         double rho = sample_rho[adaptive_level](m,n);
-        double pgas = 0.0;
-        if (plasma_model == PlasmaModel::ti_te_beta)
-          pgas = sample_pgas[adaptive_level](m,n);
+        double pgas = sample_pgas[adaptive_level](m,n);
         double kappa = 0.0;
         if (plasma_model == PlasmaModel::code_kappa)
           kappa = sample_kappa[adaptive_level](m,n);

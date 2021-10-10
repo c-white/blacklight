@@ -148,8 +148,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   if (model_type == ModelType::simulation and not fallback_nan)
   {
     fallback_rho = p_input_reader->fallback_rho.value();
-    if (plasma_model == PlasmaModel::ti_te_beta)
-      fallback_pgas = p_input_reader->fallback_pgas.value();
+    fallback_pgas = p_input_reader->fallback_pgas.value();
     if (plasma_model == PlasmaModel::code_kappa)
       fallback_kappa = p_input_reader->fallback_kappa.value();
   }

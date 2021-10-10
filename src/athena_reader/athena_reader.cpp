@@ -355,14 +355,11 @@ void AthenaReader::VerifyVariables()
       break;
   if (ind_rho == num_variables(ind_prim))
     throw BlacklightException("Unable to locate \"rho\" slice of \"prim\" in data file.");
-  if (plasma_model == PlasmaModel::ti_te_beta)
-  {
-    for (ind_pgas = 0; ind_pgas < num_variables(ind_prim); ind_pgas++)
-      if (variable_names[prim_offset+ind_pgas] == "press")
-        break;
-    if (ind_pgas == num_variables(ind_prim))
-      throw BlacklightException("Unable to locate \"press\" slice of \"prim\" in data file.");
-  }
+  for (ind_pgas = 0; ind_pgas < num_variables(ind_prim); ind_pgas++)
+    if (variable_names[prim_offset+ind_pgas] == "press")
+      break;
+  if (ind_pgas == num_variables(ind_prim))
+    throw BlacklightException("Unable to locate \"press\" slice of \"prim\" in data file.");
   if (plasma_model == PlasmaModel::code_kappa)
   {
     for (ind_kappa = 0; ind_kappa < num_variables(ind_prim); ind_kappa++)

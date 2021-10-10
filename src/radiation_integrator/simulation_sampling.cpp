@@ -484,10 +484,10 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
 //       sample_inds[adaptive_level], sample_nan[adaptive_level], and
 //       sample_fallback[adaptive_level] have been set.
 //   Assumes sample_fracs[adaptive_level] has been set if simulation_interp == true.
-//   Allocates and initializes sample_rho[adaptive_level], sample_pgas[adaptive_level] or
-//       sample_kappa[adaptive_level], sample_uu1[adaptive_level], sample_uu2[adaptive_level],
-//       sample_uu3[adaptive_level], sample_bb1[adaptive_level], sample_bb2[adaptive_level], and
-//       sample_bb3[adaptive_level].
+//   Allocates and initializes sample_rho[adaptive_level], sample_pgas[adaptive_level],
+//       sample_kappa[adaptive_level] (if needed), sample_uu1[adaptive_level],
+//       sample_uu2[adaptive_level], sample_uu3[adaptive_level], sample_bb1[adaptive_level],
+//       sample_bb2[adaptive_level], and sample_bb3[adaptive_level].
 //   Deallocates sample_inds[adaptive_level], sample_fracs[adaptive_level],
 //       sample_nan[adaptive_level], and sample_fallback[adaptive_level] if adaptive_level > 0.
 void RadiationIntegrator::SampleSimulation()
@@ -499,8 +499,7 @@ void RadiationIntegrator::SampleSimulation()
   if (first_time or adaptive_level > 0)
   {
     sample_rho[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
-    if (plasma_model == PlasmaModel::ti_te_beta)
-      sample_pgas[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
+    sample_pgas[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
     if (plasma_model == PlasmaModel::code_kappa)
       sample_kappa[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
     sample_uu1[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
@@ -525,8 +524,7 @@ void RadiationIntegrator::SampleSimulation()
       if (sample_nan[adaptive_level](m,n))
       {
         sample_rho[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
-        if (plasma_model == PlasmaModel::ti_te_beta)
-          sample_pgas[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
+        sample_pgas[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
         if (plasma_model == PlasmaModel::code_kappa)
           sample_kappa[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
         sample_uu1[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
@@ -541,8 +539,7 @@ void RadiationIntegrator::SampleSimulation()
       else if (sample_fallback[adaptive_level](m,n))
       {
         sample_rho[adaptive_level](m,n) = fallback_rho;
-        if (plasma_model == PlasmaModel::ti_te_beta)
-          sample_pgas[adaptive_level](m,n) = fallback_pgas;
+        sample_pgas[adaptive_level](m,n) = fallback_pgas;
         if (plasma_model == PlasmaModel::code_kappa)
           sample_kappa[adaptive_level](m,n) = fallback_kappa;
         sample_uu1[adaptive_level](m,n) = fallback_uu1;
@@ -569,8 +566,7 @@ void RadiationIntegrator::SampleSimulation()
         if (not (slow_light_on and slow_interp))
         {
           sample_rho[adaptive_level](m,n) = grid_prim[t](ind_rho,b,k,j,i);
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas[adaptive_level](m,n) = grid_prim[t](ind_pgas,b,k,j,i);
+          sample_pgas[adaptive_level](m,n) = grid_prim[t](ind_pgas,b,k,j,i);
           if (plasma_model == PlasmaModel::code_kappa)
             sample_kappa[adaptive_level](m,n) = grid_prim[t](ind_kappa,b,k,j,i);
           sample_uu1[adaptive_level](m,n) = grid_prim[t](ind_uu1,b,k,j,i);
@@ -586,9 +582,7 @@ void RadiationIntegrator::SampleSimulation()
         {
           // Perform spatial interpolation on first slice
           double rho_1 = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
-          double pgas_1 = 0.0;
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            pgas_1 = static_cast<double>(grid_prim[t](ind_pgas,b,k,j,i));
+          double pgas_1 = static_cast<double>(grid_prim[t](ind_pgas,b,k,j,i));
           double kappa_1 = 0.0;
           if (plasma_model == PlasmaModel::code_kappa)
             kappa_1 = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
@@ -601,9 +595,7 @@ void RadiationIntegrator::SampleSimulation()
 
           // Perform spatial interpolation on second slice
           double rho_2 = static_cast<double>(grid_prim[t+1](ind_rho,b,k,j,i));
-          double pgas_2 = 0.0;
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            pgas_2 = static_cast<double>(grid_prim[t+1](ind_pgas,b,k,j,i));
+          double pgas_2 = static_cast<double>(grid_prim[t+1](ind_pgas,b,k,j,i));
           double kappa_2 = 0.0;
           if (plasma_model == PlasmaModel::code_kappa)
             kappa_2 = static_cast<double>(grid_prim[t+1](ind_kappa,b,k,j,i));
@@ -618,9 +610,8 @@ void RadiationIntegrator::SampleSimulation()
           double t_frac = sample_fracs[adaptive_level](m,n,0);
           sample_rho[adaptive_level](m,n) =
               static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas[adaptive_level](m,n) =
-                static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
+          sample_pgas[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
           if (plasma_model == PlasmaModel::code_kappa)
             sample_kappa[adaptive_level](m,n) =
                 static_cast<float>((1.0 - t_frac) * kappa_1 + t_frac * kappa_2);
@@ -659,9 +650,7 @@ void RadiationIntegrator::SampleSimulation()
         {
           // Perform spatial interpolation
           double rho = InterpolateSimple(grid_prim[t], ind_rho, b, k, j, i, f_k, f_j, f_i);
-          double pgas = 0.0;
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            pgas = InterpolateSimple(grid_prim[t], ind_pgas, b, k, j, i, f_k, f_j, f_i);
+          double pgas = InterpolateSimple(grid_prim[t], ind_pgas, b, k, j, i, f_k, f_j, f_i);
           double kappa = 0.0;
           if (plasma_model == PlasmaModel::code_kappa)
             kappa = InterpolateSimple(grid_prim[t], ind_kappa, b, k, j, i, f_k, f_j, f_i);
@@ -675,15 +664,14 @@ void RadiationIntegrator::SampleSimulation()
           // Account for possible invalid values
           if (rho <= 0.0)
             rho = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
-          if (plasma_model == PlasmaModel::ti_te_beta and pgas <= 0.0)
+          if (pgas <= 0.0)
             pgas = static_cast<double>(grid_prim[t](ind_pgas,b,k,j,i));
           if (plasma_model == PlasmaModel::code_kappa and kappa <= 0.0)
             kappa = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
 
           // Assign values
           sample_rho[adaptive_level](m,n) = static_cast<float>(rho);
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas[adaptive_level](m,n) = static_cast<float>(pgas);
+          sample_pgas[adaptive_level](m,n) = static_cast<float>(pgas);
           if (plasma_model == PlasmaModel::code_kappa)
             sample_kappa[adaptive_level](m,n) = static_cast<float>(kappa);
           sample_uu1[adaptive_level](m,n) = static_cast<float>(uu1);
@@ -699,9 +687,7 @@ void RadiationIntegrator::SampleSimulation()
         {
           // Perform spatial interpolation on first slice
           double rho_1 = InterpolateSimple(grid_prim[t], ind_rho, b, k, j, i, f_k, f_j, f_i);
-          double pgas_1 = 0.0;
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            pgas_1 = InterpolateSimple(grid_prim[t], ind_pgas, b, k, j, i, f_k, f_j, f_i);
+          double pgas_1 = InterpolateSimple(grid_prim[t], ind_pgas, b, k, j, i, f_k, f_j, f_i);
           double kappa_1 = 0.0;
           if (plasma_model == PlasmaModel::code_kappa)
             kappa_1 = InterpolateSimple(grid_prim[t], ind_kappa, b, k, j, i, f_k, f_j, f_i);
@@ -715,16 +701,14 @@ void RadiationIntegrator::SampleSimulation()
           // Account for possible invalid values
           if (rho_1 <= 0.0)
             rho_1 = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
-          if (plasma_model == PlasmaModel::ti_te_beta and pgas_1 <= 0.0)
+          if (pgas_1 <= 0.0)
             pgas_1 = static_cast<double>(grid_prim[t](ind_pgas,b,k,j,i));
           if (plasma_model == PlasmaModel::code_kappa and kappa_1 <= 0.0)
             kappa_1 = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
 
           // Perform spatial interpolation on second slice
           double rho_2 = InterpolateSimple(grid_prim[t+1], ind_rho, b, k, j, i, f_k, f_j, f_i);
-          double pgas_2 = 0.0;
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            pgas_2 = InterpolateSimple(grid_prim[t+1], ind_pgas, b, k, j, i, f_k, f_j, f_i);
+          double pgas_2 = InterpolateSimple(grid_prim[t+1], ind_pgas, b, k, j, i, f_k, f_j, f_i);
           double kappa_2 = 0.0;
           if (plasma_model == PlasmaModel::code_kappa)
             kappa_2 = InterpolateSimple(grid_prim[t+1], ind_kappa, b, k, j, i, f_k, f_j, f_i);
@@ -738,7 +722,7 @@ void RadiationIntegrator::SampleSimulation()
           // Account for possible invalid values
           if (rho_2 <= 0.0)
             rho_2 = static_cast<double>(grid_prim[t+1](ind_rho,b,k,j,i));
-          if (plasma_model == PlasmaModel::ti_te_beta and pgas_2 <= 0.0)
+          if (pgas_2 <= 0.0)
             pgas_2 = static_cast<double>(grid_prim[t+1](ind_pgas,b,k,j,i));
           if (plasma_model == PlasmaModel::code_kappa and kappa_2 <= 0.0)
             kappa_2 = static_cast<double>(grid_prim[t+1](ind_kappa,b,k,j,i));
@@ -747,9 +731,8 @@ void RadiationIntegrator::SampleSimulation()
           double t_frac = sample_fracs[adaptive_level](m,n,3);
           sample_rho[adaptive_level](m,n) =
               static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas[adaptive_level](m,n) =
-                static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
+          sample_pgas[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
           if (plasma_model == PlasmaModel::code_kappa)
             sample_kappa[adaptive_level](m,n) =
                 static_cast<float>((1.0 - t_frac) * kappa_1 + t_frac * kappa_2);
@@ -781,9 +764,7 @@ void RadiationIntegrator::SampleSimulation()
         {
           // Perform spatial interpolation
           double rho = InterpolateAdvanced(grid_prim[t], ind_rho, m, n);
-          double pgas = 0.0;
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            pgas = InterpolateAdvanced(grid_prim[t], ind_pgas, m, n);
+          double pgas = InterpolateAdvanced(grid_prim[t], ind_pgas, m, n);
           double kappa = 0.0;
           if (plasma_model == PlasmaModel::code_kappa)
             kappa = InterpolateAdvanced(grid_prim[t], ind_kappa, m, n);
@@ -801,15 +782,14 @@ void RadiationIntegrator::SampleSimulation()
           int i = sample_inds[adaptive_level](m,n,0,3);
           if (rho <= 0.0)
             rho = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
-          if (plasma_model == PlasmaModel::ti_te_beta and pgas <= 0.0)
+          if (pgas <= 0.0)
             pgas = static_cast<double>(grid_prim[t](ind_pgas,b,k,j,i));
           if (plasma_model == PlasmaModel::code_kappa and kappa <= 0.0)
             kappa = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
 
           // Assign values
           sample_rho[adaptive_level](m,n) = static_cast<float>(rho);
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas[adaptive_level](m,n) = static_cast<float>(pgas);
+          sample_pgas[adaptive_level](m,n) = static_cast<float>(pgas);
           if (plasma_model == PlasmaModel::code_kappa)
             sample_kappa[adaptive_level](m,n) = static_cast<float>(kappa);
           sample_uu1[adaptive_level](m,n) = static_cast<float>(uu1);
@@ -825,9 +805,7 @@ void RadiationIntegrator::SampleSimulation()
         {
           // Perform spatial interpolation on first slice
           double rho_1 = InterpolateAdvanced(grid_prim[t], ind_rho, m, n);
-          double pgas_1 = 0.0;
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            pgas_1 = InterpolateAdvanced(grid_prim[t], ind_pgas, m, n);
+          double pgas_1 = InterpolateAdvanced(grid_prim[t], ind_pgas, m, n);
           double kappa_1 = 0.0;
           if (plasma_model == PlasmaModel::code_kappa)
             kappa_1 = InterpolateAdvanced(grid_prim[t], ind_kappa, m, n);
@@ -845,16 +823,14 @@ void RadiationIntegrator::SampleSimulation()
           int i = sample_inds[adaptive_level](m,n,0,3);
           if (rho_1 <= 0.0)
             rho_1 = static_cast<double>(grid_prim[t](ind_rho,b,k,j,i));
-          if (plasma_model == PlasmaModel::ti_te_beta and pgas_1 <= 0.0)
+          if (pgas_1 <= 0.0)
             pgas_1 = static_cast<double>(grid_prim[t](ind_pgas,b,k,j,i));
           if (plasma_model == PlasmaModel::code_kappa and kappa_1 <= 0.0)
             kappa_1 = static_cast<double>(grid_prim[t](ind_kappa,b,k,j,i));
 
           // Perform spatial interpolation on second slice
           double rho_2 = InterpolateAdvanced(grid_prim[t+1], ind_rho, m, n);
-          double pgas_2 = 0.0;
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            pgas_2 = InterpolateAdvanced(grid_prim[t+1], ind_pgas, m, n);
+          double pgas_2 = InterpolateAdvanced(grid_prim[t+1], ind_pgas, m, n);
           double kappa_2 = 0.0;
           if (plasma_model == PlasmaModel::code_kappa)
             kappa_2 = InterpolateAdvanced(grid_prim[t+1], ind_kappa, m, n);
@@ -868,7 +844,7 @@ void RadiationIntegrator::SampleSimulation()
           // Account for possible invalid values
           if (rho_2 <= 0.0)
             rho_2 = static_cast<double>(grid_prim[t+1](ind_rho,b,k,j,i));
-          if (plasma_model == PlasmaModel::ti_te_beta and pgas_2 <= 0.0)
+          if (pgas_2 <= 0.0)
             pgas_2 = static_cast<double>(grid_prim[t+1](ind_pgas,b,k,j,i));
           if (plasma_model == PlasmaModel::code_kappa and kappa_2 <= 0.0)
             kappa_2 = static_cast<double>(grid_prim[t+1](ind_kappa,b,k,j,i));
@@ -877,9 +853,8 @@ void RadiationIntegrator::SampleSimulation()
           double t_frac = sample_fracs[adaptive_level](m,n,3);
           sample_rho[adaptive_level](m,n) =
               static_cast<float>((1.0 - t_frac) * rho_1 + t_frac * rho_2);
-          if (plasma_model == PlasmaModel::ti_te_beta)
-            sample_pgas[adaptive_level](m,n) =
-                static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
+          sample_pgas[adaptive_level](m,n) =
+              static_cast<float>((1.0 - t_frac) * pgas_1 + t_frac * pgas_2);
           if (plasma_model == PlasmaModel::code_kappa)
             sample_kappa[adaptive_level](m,n) =
                 static_cast<float>((1.0 - t_frac) * kappa_1 + t_frac * kappa_2);
