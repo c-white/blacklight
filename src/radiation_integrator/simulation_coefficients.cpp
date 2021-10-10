@@ -208,7 +208,8 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
       rho_v[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
     }
     if (image_lambda_ave or image_emission_ave or image_tau_int or render_num_images > 0)
-      cell_values[adaptive_level].Allocate(CellValues::num_cell_values, num_pix, geodesic_num_steps[adaptive_level]);
+      cell_values[adaptive_level].Allocate(CellValues::num_cell_values, num_pix,
+          geodesic_num_steps[adaptive_level]);
   }
   j_i[adaptive_level].Zero();
   j_q[adaptive_level].Zero();
@@ -359,6 +360,10 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
           cell_values[adaptive_level](static_cast<int>(CellValues::sigma),m,n) = sigma;
           cell_values[adaptive_level](static_cast<int>(CellValues::beta_inv),m,n) = beta_inv;
         }
+
+        // Skip remaining calculations if possible
+        if (not (image_light or image_emission or image_tau or image_emission_ave or image_tau_int))
+          continue;
 
         // Skip coupling if magnetic field vanishes
         if (bb1_sim == 0.0 and bb2_sim == 0.0 and bb3_sim == 0.0)
