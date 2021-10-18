@@ -271,7 +271,39 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     plasma_thermal_frac = 1.0 - (plasma_power_frac + plasma_kappa_frac);
     if (plasma_thermal_frac < 0.0 or plasma_thermal_frac > 1.0)
       BlacklightWarning("Fraction of thermal electrons outside [0, 1].");
-    plasma_sigma_max = p_input_reader->plasma_sigma_max.value();
+  }
+
+  // Copy cut parameters
+  if (model_type == ModelType::simulation)
+  {
+    cut_rho_min = p_input_reader->cut_rho_min.value();
+    cut_rho_max = p_input_reader->cut_rho_max.value();
+    cut_n_e_min = p_input_reader->cut_n_e_min.value();
+    cut_n_e_max = p_input_reader->cut_n_e_max.value();
+    cut_p_gas_min = p_input_reader->cut_p_gas_min.value();
+    cut_p_gas_max = p_input_reader->cut_p_gas_max.value();
+    cut_theta_e_min = p_input_reader->cut_theta_e_min.value();
+    cut_theta_e_max = p_input_reader->cut_theta_e_max.value();
+    cut_b_min = p_input_reader->cut_b_min.value();
+    cut_b_max = p_input_reader->cut_b_max.value();
+    cut_sigma_min = p_input_reader->cut_sigma_min.value();
+    cut_sigma_max = p_input_reader->cut_sigma_max.value();
+    cut_beta_inverse_min = p_input_reader->cut_beta_inverse_min.value();
+    cut_beta_inverse_max = p_input_reader->cut_beta_inverse_max.value();
+  }
+  cut_omit_near = p_input_reader->cut_omit_near.value();
+  cut_omit_far = p_input_reader->cut_omit_far.value();
+  cut_omit_in = p_input_reader->cut_omit_in.value();
+  cut_omit_out = p_input_reader->cut_omit_out.value();
+  cut_plane = p_input_reader->cut_plane.value();
+  if (cut_plane)
+  {
+    cut_plane_origin_x = p_input_reader->cut_plane_origin_x.value();
+    cut_plane_origin_y = p_input_reader->cut_plane_origin_y.value();
+    cut_plane_origin_z = p_input_reader->cut_plane_origin_z.value();
+    cut_plane_normal_x = p_input_reader->cut_plane_normal_x.value();
+    cut_plane_normal_y = p_input_reader->cut_plane_normal_y.value();
+    cut_plane_normal_z = p_input_reader->cut_plane_normal_z.value();
   }
 
   // Copy fallback parameters
@@ -288,6 +320,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   momentum_factor = p_geodesic_integrator->momentum_factor;
   for (int mu = 0; mu < 4; mu++)
   {
+    camera_x[mu] = p_geodesic_integrator->cam_x[mu];
     camera_u_con[mu] = p_geodesic_integrator->u_con[mu];
     camera_u_cov[mu] = p_geodesic_integrator->u_cov[mu];
     camera_vert_con_c[mu] = p_geodesic_integrator->vert_con_c[mu];
@@ -312,6 +345,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   sample_inds = new Array<int>[adaptive_max_level+1];
   sample_fracs = new Array<double>[adaptive_max_level+1];
   sample_nan = new Array<bool>[adaptive_max_level+1];
+  sample_cut = new Array<bool>[adaptive_max_level+1];
   sample_fallback = new Array<bool>[adaptive_max_level+1];
   sample_rho = new Array<float>[adaptive_max_level+1];
   sample_pgas = new Array<float>[adaptive_max_level+1];
@@ -490,6 +524,7 @@ RadiationIntegrator::~RadiationIntegrator()
     sample_inds[level].Deallocate();
     sample_fracs[level].Deallocate();
     sample_nan[level].Deallocate();
+    sample_cut[level].Deallocate();
     sample_fallback[level].Deallocate();
     sample_rho[level].Deallocate();
     sample_pgas[level].Deallocate();
@@ -504,6 +539,7 @@ RadiationIntegrator::~RadiationIntegrator()
   delete[] sample_inds;
   delete[] sample_fracs;
   delete[] sample_nan;
+  delete[] sample_cut;
   delete[] sample_fallback;
   delete[] sample_rho;
   delete[] sample_pgas;

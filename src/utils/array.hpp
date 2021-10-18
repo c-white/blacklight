@@ -9,8 +9,7 @@
 //--------------------------------------------------------------------------------------------------
 
 // Multidimensional array
-template<typename type>
-struct Array
+template<typename type> struct Array
 {
   // Constructors and destructor
   Array();

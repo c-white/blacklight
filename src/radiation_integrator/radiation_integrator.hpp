@@ -122,7 +122,29 @@ struct RadiationIntegrator
   double plasma_kappa_frac;
   double plasma_kappa;
   double plasma_w;
-  double plasma_sigma_max;
+
+  // Input data - cut parameters
+  double cut_rho_min;
+  double cut_rho_max;
+  double cut_n_e_min;
+  double cut_n_e_max;
+  double cut_p_gas_min;
+  double cut_p_gas_max;
+  double cut_theta_e_min;
+  double cut_theta_e_max;
+  double cut_b_min;
+  double cut_b_max;
+  double cut_sigma_min;
+  double cut_sigma_max;
+  double cut_beta_inverse_min;
+  double cut_beta_inverse_max;
+  bool cut_omit_near;
+  bool cut_omit_far;
+  double cut_omit_in;
+  double cut_omit_out;
+  bool cut_plane;
+  double cut_plane_origin_x, cut_plane_origin_y, cut_plane_origin_z;
+  double cut_plane_normal_x, cut_plane_normal_y, cut_plane_normal_z;
 
   // Input data - fallback parameters
   bool fallback_nan;
@@ -151,6 +173,7 @@ struct RadiationIntegrator
 
   // Camera data
   double momentum_factor;
+  double camera_x[4];
   double camera_u_con[4], camera_u_cov[4];
   double camera_vert_con_c[4];
   int camera_num_pix;
@@ -184,6 +207,7 @@ struct RadiationIntegrator
   Array<int> *sample_inds = nullptr;
   Array<double> *sample_fracs = nullptr;
   Array<bool> *sample_nan = nullptr;
+  Array<bool> *sample_cut = nullptr;
   Array<bool> *sample_fallback = nullptr;
   Array<float> *sample_rho = nullptr;
   Array<float> *sample_pgas = nullptr;

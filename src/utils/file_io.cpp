@@ -71,8 +71,7 @@ void WriteBinary(std::ofstream *p_stream, double vals[], int num)
 //   *p_stream: open ofstream for file being written
 //   array: Array of doubles to write
 // Outputs: (none)
-template<typename type>
-void WriteBinary(std::ofstream *p_stream, const Array<type> &array)
+template<typename type> void WriteBinary(std::ofstream *p_stream, const Array<type> &array)
 {
   WriteBinary(p_stream, array.n1);
   WriteBinary(p_stream, array.n2);
@@ -139,8 +138,7 @@ void ReadBinary(std::ifstream *p_stream, double vals[], int num)
 //   *p_stream: open ifstream for file being read
 // Outputs:
 //   *p_array: Array of doubles read from file
-template<typename type>
-void ReadBinary(std::ifstream *p_stream, Array<type> *p_array)
+template<typename type> void ReadBinary(std::ifstream *p_stream, Array<type> *p_array)
 {
   int n1, n2, n3, n4, n5;
   ReadBinary(p_stream, &n1);

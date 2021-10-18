@@ -86,8 +86,8 @@ void RadiationIntegrator::ObtainGridData()
 // Notes:
 //   Assumes geodesic_num_steps[adaptive_level], sample_flags[adaptive_level],
 //       sample_num[adaptive_level], and sample_pos[adaptive_level] have been set.
-//   Allocates and initializes sample_inds[adaptive_level], sample_nan[adaptive_level], and
-//       sample_fallback[adaptive_level].
+//   Allocates and initializes sample_inds[adaptive_level], sample_nan[adaptive_level],
+//       sample_cut[adaptive_level], and sample_fallback[adaptive_level].
 //   Allocates and initializes sample_fracs[adaptive_level] if simulation_interp == true or if
 //       slow_light_on == true and slow_interp == true.
 //   If simulation_interp == false, locates cell containing geodesic sample point.
@@ -131,9 +131,11 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
       sample_fracs[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level],
           num_interp_fracs);
     sample_nan[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
+    sample_cut[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
     sample_fallback[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
   }
   sample_nan[adaptive_level].Zero();
+  sample_cut[adaptive_level].Zero();
   sample_fallback[adaptive_level].Zero();
 
   // Prepare bookkeeping for warnings and errors
@@ -201,6 +203,45 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
         double x1 = sample_pos[adaptive_level](m,n,1);
         double x2 = sample_pos[adaptive_level](m,n,2);
         double x3 = sample_pos[adaptive_level](m,n,3);
+
+        // Cut outside camera radius
+        double r = RadialGeodesicCoordinate(x1, x2, x3);
+        if (r > camera_r)
+        {
+          sample_cut[adaptive_level](m,n) = true;
+          continue;
+        }
+
+        // Cut camera plane
+        if (cut_omit_near or cut_omit_far)
+        {
+          double dot_product = x1 * camera_x[1] + x2 * camera_x[2] + x3 * camera_x[3];
+          if ((cut_omit_near and dot_product > 0.0) or (cut_omit_far and dot_product < 0.0))
+          {
+            sample_cut[adaptive_level](m,n) = true;
+            continue;
+          }
+        }
+
+        // Cut spheres
+        if ((cut_omit_in >= 0.0 and r < cut_omit_in) or (cut_omit_out >= 0.0 and r > cut_omit_out))
+        {
+          sample_cut[adaptive_level](m,n) = true;
+          continue;
+        }
+
+        // Cut arbitrary plane
+        if (cut_plane)
+        {
+          double dot_product = (x1 - cut_plane_origin_x) * cut_plane_normal_x
+              + (x2 - cut_plane_origin_y) * cut_plane_normal_y
+              + (x3 - cut_plane_origin_z) * cut_plane_normal_z;
+          if (dot_product < 0.0)
+          {
+            sample_cut[adaptive_level](m,n) = true;
+            continue;
+          }
+        }
 
         // Convert coordinates
         if (simulation_coord == Coordinates::sph_ks)
@@ -481,8 +522,8 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
 // Outputs: (none)
 // Notes:
 //   Assumes geodesic_num_steps[adaptive_level], sample_num[adaptive_level],
-//       sample_inds[adaptive_level], sample_nan[adaptive_level], and
-//       sample_fallback[adaptive_level] have been set.
+//       sample_inds[adaptive_level], sample_nan[adaptive_level], sample_cut[adaptive_level],
+//       and sample_fallback[adaptive_level] have been set.
 //   Assumes sample_fracs[adaptive_level] has been set if simulation_interp == true.
 //   Allocates and initializes sample_rho[adaptive_level], sample_pgas[adaptive_level],
 //       sample_kappa[adaptive_level] (if needed), sample_uu1[adaptive_level],
@@ -534,6 +575,10 @@ void RadiationIntegrator::SampleSimulation()
         sample_bb2[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
         sample_bb3[adaptive_level](m,n) = std::numeric_limits<float>::quiet_NaN();
       }
+
+      // Skip cut regions
+      else if (sample_cut[adaptive_level](m,n))
+        continue;
 
       // Set fallback values
       else if (sample_fallback[adaptive_level](m,n))

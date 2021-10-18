@@ -24,16 +24,14 @@ template struct Array<std::complex<double>>;
 
 // Multidimensional array constructor (empty)
 // Inputs: (none)
-template<typename type>
-Array<type>::Array() {}
+template<typename type> Array<type>::Array() {}
 
 //--------------------------------------------------------------------------------------------------
 
 // Multidimensional array constructor (1D)
 // Inputs:
 //   n1_: size of only dimension
-template<typename type>
-Array<type>::Array(int n1_)
+template<typename type> Array<type>::Array(int n1_)
   : n1(n1_),
     n2(1),
     n3(1),
@@ -49,8 +47,7 @@ Array<type>::Array(int n1_)
 // Inputs:
 //   n2_: size of outermost dimension
 //   n1_: size of innermost dimension
-template<typename type>
-Array<type>::Array(int n2_, int n1_)
+template<typename type> Array<type>::Array(int n2_, int n1_)
   : n1(n1_),
     n2(n2_),
     n3(1),
@@ -67,8 +64,7 @@ Array<type>::Array(int n2_, int n1_)
 //   n3_: size of outermost dimension
 //   n2_: size of intermediate dimension
 //   n1_: size of innermost dimension
-template<typename type>
-Array<type>::Array(int n3_, int n2_, int n1_)
+template<typename type> Array<type>::Array(int n3_, int n2_, int n1_)
   : n1(n1_),
     n2(n2_),
     n3(n3_),
@@ -85,8 +81,7 @@ Array<type>::Array(int n3_, int n2_, int n1_)
 //   n4_: size of outermost dimension
 //   n3_, n2_: sizes of intermediate dimensions
 //   n1_: size of innermost dimension
-template<typename type>
-Array<type>::Array(int n4_, int n3_, int n2_, int n1_)
+template<typename type> Array<type>::Array(int n4_, int n3_, int n2_, int n1_)
   : n1(n1_),
     n2(n2_),
     n3(n3_),
@@ -103,8 +98,7 @@ Array<type>::Array(int n4_, int n3_, int n2_, int n1_)
 //   n5_: size of outermost dimension
 //   n4_, n3_, n2_: sizes of intermediate dimensions
 //   n1_: size of innermost dimension
-template<typename type>
-Array<type>::Array(int n5_, int n4_, int n3_, int n2_, int n1_)
+template<typename type> Array<type>::Array(int n5_, int n4_, int n3_, int n2_, int n1_)
   : n1(n1_),
     n2(n2_),
     n3(n3_),
@@ -117,8 +111,7 @@ Array<type>::Array(int n5_, int n4_, int n3_, int n2_, int n1_)
 //--------------------------------------------------------------------------------------------------
 
 // Multidimensional array copy constructor
-template<typename type>
-Array<type>::Array(const Array<type> &source)
+template<typename type> Array<type>::Array(const Array<type> &source)
 {
   data = source.data;
   n1 = source.n1;
@@ -134,8 +127,7 @@ Array<type>::Array(const Array<type> &source)
 //--------------------------------------------------------------------------------------------------
 
 // Multidimensional array copy assignment constructor
-template<typename type>
-Array<type> &Array<type>::operator=(const Array<type> &source)
+template<typename type> Array<type> &Array<type>::operator=(const Array<type> &source)
 {
   data = source.data;
   n1 = source.n1;
@@ -152,8 +144,7 @@ Array<type> &Array<type>::operator=(const Array<type> &source)
 //--------------------------------------------------------------------------------------------------
 
 // Multidimensional array destructor
-template<typename type>
-Array<type>::~Array()
+template<typename type> Array<type>::~Array()
 {
   Deallocate();
 }
@@ -163,8 +154,7 @@ Array<type>::~Array()
 // Multidimensional array allocator (general)
 // Inputs: (none)
 // Outputs: (none)
-template<typename type>
-void Array<type>::Allocate()
+template<typename type> void Array<type>::Allocate()
 {
   if (allocated)
     throw BlacklightException("Attempting to reallocate array.");
@@ -181,8 +171,7 @@ void Array<type>::Allocate()
 // Inputs:
 //   n1_: size of only dimension
 // Outputs: (none)
-template<typename type>
-void Array<type>::Allocate(int n1_)
+template<typename type> void Array<type>::Allocate(int n1_)
 {
   n1 = n1_;
   n2 = 1;
@@ -199,8 +188,7 @@ void Array<type>::Allocate(int n1_)
 //   n2_: size of outermost dimension
 //   n1_: size of innermost dimension
 // Outputs: (none)
-template<typename type>
-void Array<type>::Allocate(int n2_, int n1_)
+template<typename type> void Array<type>::Allocate(int n2_, int n1_)
 {
   n1 = n1_;
   n2 = n2_;
@@ -218,8 +206,7 @@ void Array<type>::Allocate(int n2_, int n1_)
 //   n2_: size of intermediate dimension
 //   n1_: size of innermost dimension
 // Outputs: (none)
-template<typename type>
-void Array<type>::Allocate(int n3_, int n2_, int n1_)
+template<typename type> void Array<type>::Allocate(int n3_, int n2_, int n1_)
 {
   n1 = n1_;
   n2 = n2_;
@@ -237,8 +224,7 @@ void Array<type>::Allocate(int n3_, int n2_, int n1_)
 //   n3_, n2_: sizes of intermediate dimensions
 //   n1_: size of innermost dimension
 // Outputs: (none)
-template<typename type>
-void Array<type>::Allocate(int n4_, int n3_, int n2_, int n1_)
+template<typename type> void Array<type>::Allocate(int n4_, int n3_, int n2_, int n1_)
 {
   n1 = n1_;
   n2 = n2_;
@@ -256,8 +242,7 @@ void Array<type>::Allocate(int n4_, int n3_, int n2_, int n1_)
 //   n4_, n3_, n2_: sizes of intermediate dimensions
 //   n1_: size of innermost dimension
 // Outputs: (none)
-template<typename type>
-void Array<type>::Allocate(int n5_, int n4_, int n3_, int n2_, int n1_)
+template<typename type> void Array<type>::Allocate(int n5_, int n4_, int n3_, int n2_, int n1_)
 {
   n1 = n1_;
   n2 = n2_;
@@ -272,8 +257,7 @@ void Array<type>::Allocate(int n5_, int n4_, int n3_, int n2_, int n1_)
 // Multidimensional array deallocator
 // Inputs: (none)
 // Outputs: (none)
-template<typename type>
-void Array<type>::Deallocate()
+template<typename type> void Array<type>::Deallocate()
 {
   if (allocated and not is_copy)
     delete[] data;
@@ -288,13 +272,11 @@ void Array<type>::Deallocate()
 //   i1: only index
 // Outputs:
 //   returned value: element
-template<typename type>
-type Array<type>::operator()(int i1) const
+template<typename type> type Array<type>::operator()(int i1) const
 {
   return data[i1];
 }
-template<typename type>
-type Array<type>::operator()(unsigned int i1) const
+template<typename type> type Array<type>::operator()(unsigned int i1) const
 {
   return data[i1];
 }
@@ -307,13 +289,11 @@ type Array<type>::operator()(unsigned int i1) const
 //   i1: innermost index
 // Outputs:
 //   returned value: element
-template<typename type>
-type Array<type>::operator()(int i2, int i1) const
+template<typename type> type Array<type>::operator()(int i2, int i1) const
 {
   return data[i1 + n1 * i2];
 }
-template<typename type>
-type Array<type>::operator()(unsigned int i2, unsigned int i1) const
+template<typename type> type Array<type>::operator()(unsigned int i2, unsigned int i1) const
 {
   return data[i1 + static_cast<unsigned int>(n1) * i2];
 }
@@ -327,13 +307,12 @@ type Array<type>::operator()(unsigned int i2, unsigned int i1) const
 //   i1: innermost index
 // Outputs:
 //   returned value: element
-template<typename type>
-type Array<type>::operator()(int i3, int i2, int i1) const
+template<typename type> type Array<type>::operator()(int i3, int i2, int i1) const
 {
   return data[i1 + n1 * (i2 + n2 * i3)];
 }
-template<typename type>
-type Array<type>::operator()(unsigned int i3, unsigned int i2, unsigned int i1) const
+template<typename type> type Array<type>::operator()(unsigned int i3, unsigned int i2,
+    unsigned int i1) const
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2) * i3)];
 }
@@ -347,14 +326,12 @@ type Array<type>::operator()(unsigned int i3, unsigned int i2, unsigned int i1) 
 //   i1: innermost index
 // Outputs:
 //   returned value: element
-template<typename type>
-type Array<type>::operator()(int i4, int i3, int i2, int i1) const
+template<typename type> type Array<type>::operator()(int i4, int i3, int i2, int i1) const
 {
   return data[i1 + n1 * (i2 + n2 * (i3 + n3 * i4))];
 }
-template<typename type>
-type Array<type>::operator()(unsigned int i4, unsigned int i3, unsigned int i2, unsigned int i1)
-    const
+template<typename type> type Array<type>::operator()(unsigned int i4, unsigned int i3,
+    unsigned int i2, unsigned int i1) const
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
       * (i3 + static_cast<unsigned int>(n3) * i4))];
@@ -369,14 +346,12 @@ type Array<type>::operator()(unsigned int i4, unsigned int i3, unsigned int i2, 
 //   i1: innermost index
 // Outputs:
 //   returned value: element
-template<typename type>
-type Array<type>::operator()(int i5, int i4, int i3, int i2, int i1) const
+template<typename type> type Array<type>::operator()(int i5, int i4, int i3, int i2, int i1) const
 {
   return data[i1 + n1 * (i2 + n2 * (i3 + n3 * (i4 + n4 * i5)))];
 }
-template<typename type>
-type Array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3, unsigned int i2,
-    unsigned int i1) const
+template<typename type> type Array<type>::operator()(unsigned int i5, unsigned int i4,
+    unsigned int i3, unsigned int i2, unsigned int i1) const
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
       * (i3 + static_cast<unsigned int>(n3) * (i4 + static_cast<unsigned int>(n4) * i5)))];
@@ -389,13 +364,11 @@ type Array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3, 
 //   i1: only index
 // Outputs:
 //   returned value: element
-template<typename type>
-type &Array<type>::operator()(int i1)
+template<typename type> type &Array<type>::operator()(int i1)
 {
   return data[i1];
 }
-template<typename type>
-type &Array<type>::operator()(unsigned int i1)
+template<typename type> type &Array<type>::operator()(unsigned int i1)
 {
   return data[i1];
 }
@@ -408,13 +381,11 @@ type &Array<type>::operator()(unsigned int i1)
 //   i1: innermost index
 // Outputs:
 //   returned value: element
-template<typename type>
-type &Array<type>::operator()(int i2, int i1)
+template<typename type> type &Array<type>::operator()(int i2, int i1)
 {
   return data[i1 + n1 * i2];
 }
-template<typename type>
-type &Array<type>::operator()(unsigned int i2, unsigned int i1)
+template<typename type> type &Array<type>::operator()(unsigned int i2, unsigned int i1)
 {
   return data[i1 + static_cast<unsigned int>(n1) * i2];
 }
@@ -428,13 +399,12 @@ type &Array<type>::operator()(unsigned int i2, unsigned int i1)
 //   i1: innermost index
 // Outputs:
 //   returned value: element
-template<typename type>
-type &Array<type>::operator()(int i3, int i2, int i1)
+template<typename type> type &Array<type>::operator()(int i3, int i2, int i1)
 {
   return data[i1 + n1 * (i2 + n2 * i3)];
 }
-template<typename type>
-type &Array<type>::operator()(unsigned int i3, unsigned int i2, unsigned int i1)
+template<typename type> type &Array<type>::operator()(unsigned int i3, unsigned int i2,
+    unsigned int i1)
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2) * i3)];
 }
@@ -448,13 +418,12 @@ type &Array<type>::operator()(unsigned int i3, unsigned int i2, unsigned int i1)
 //   i1: innermost index
 // Outputs:
 //   returned value: element
-template<typename type>
-type &Array<type>::operator()(int i4, int i3, int i2, int i1)
+template<typename type> type &Array<type>::operator()(int i4, int i3, int i2, int i1)
 {
   return data[i1 + n1 * (i2 + n2 * (i3 + n3 * i4))];
 }
-template<typename type>
-type &Array<type>::operator()(unsigned int i4, unsigned int i3, unsigned int i2, unsigned int i1)
+template<typename type> type &Array<type>::operator()(unsigned int i4, unsigned int i3,
+    unsigned int i2, unsigned int i1)
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
       * (i3 + static_cast<unsigned int>(n3) * i4))];
@@ -469,14 +438,12 @@ type &Array<type>::operator()(unsigned int i4, unsigned int i3, unsigned int i2,
 //   i1: innermost index
 // Outputs:
 //   returned value: element
-template<typename type>
-type &Array<type>::operator()(int i5, int i4, int i3, int i2, int i1)
+template<typename type> type &Array<type>::operator()(int i5, int i4, int i3, int i2, int i1)
 {
   return data[i1 + n1 * (i2 + n2 * (i3 + n3 * (i4 + n4 * i5)))];
 }
-template<typename type>
-type &Array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3, unsigned int i2,
-    unsigned int i1)
+template<typename type> type &Array<type>::operator()(unsigned int i5, unsigned int i4,
+    unsigned int i3, unsigned int i2, unsigned int i1)
 {
   return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
       * (i3 + static_cast<unsigned int>(n3) * (i4 + static_cast<unsigned int>(n4) * i5)))];
@@ -488,8 +455,7 @@ type &Array<type>::operator()(unsigned int i5, unsigned int i4, unsigned int i3,
 // Inputs:
 //   other: array with which this should be swapped
 // Outputs: (none)
-template<typename type>
-void Array<type>::Swap(Array<type> &other)
+template<typename type> void Array<type>::Swap(Array<type> &other)
 {
   // Only allow swapping of allocated arrays
   if (not allocated or not other.allocated)
@@ -532,8 +498,7 @@ void Array<type>::Swap(Array<type> &other)
 //   Moves data pointer and redefines data shape.
 //   Checks to make sure only a shallow copy is being sliced so that destructor will not try to
 //       deallocate memory.
-template<typename type>
-void Array<type>::Slice(int dimension, int index)
+template<typename type> void Array<type>::Slice(int dimension, int index)
 {
   // Check that this is a shallow copy
   if (not is_copy)
@@ -622,8 +587,7 @@ void Array<type>::Slice(int dimension, int index)
 // Outputs: (none)
 // Notes:
 //   Sets any allocated array to be zero.
-template<typename type>
-void Array<type>::Zero()
+template<typename type> void Array<type>::Zero()
 {
   if (allocated)
     #pragma omp parallel for schedule(static)
@@ -639,8 +603,7 @@ void Array<type>::Zero()
 // Outputs: (none)
 // Notes:
 //   Sets any allocated array to be NaN.
-template<>
-void Array<float>::SetNaN()
+template<> void Array<float>::SetNaN()
 {
   if (allocated)
     #pragma omp parallel for schedule(static)
@@ -656,8 +619,7 @@ void Array<float>::SetNaN()
 // Outputs: (none)
 // Notes:
 //   Sets any allocated array to be NaN.
-template<>
-void Array<double>::SetNaN()
+template<> void Array<double>::SetNaN()
 {
   if (allocated)
     #pragma omp parallel for schedule(static)
@@ -672,8 +634,7 @@ void Array<double>::SetNaN()
 // Inputs: (none)
 // Outputs:
 //   returned value: number of bytes in allocated array
-template<typename type>
-std::size_t Array<type>::GetNumBytes() const
+template<typename type> std::size_t Array<type>::GetNumBytes() const
 {
   return static_cast<std::size_t>(n_tot) * sizeof(type);
 }

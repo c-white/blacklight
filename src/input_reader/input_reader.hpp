@@ -160,7 +160,33 @@ struct InputReader
   std::optional<double> plasma_kappa_frac;
   std::optional<double> plasma_kappa;
   std::optional<double> plasma_w;
-  std::optional<double> plasma_sigma_max;
+
+  // Data - cut parameters
+  std::optional<double> cut_rho_min;
+  std::optional<double> cut_rho_max;
+  std::optional<double> cut_n_e_min;
+  std::optional<double> cut_n_e_max;
+  std::optional<double> cut_p_gas_min;
+  std::optional<double> cut_p_gas_max;
+  std::optional<double> cut_theta_e_min;
+  std::optional<double> cut_theta_e_max;
+  std::optional<double> cut_b_min;
+  std::optional<double> cut_b_max;
+  std::optional<double> cut_sigma_min;
+  std::optional<double> cut_sigma_max;
+  std::optional<double> cut_beta_inverse_min;
+  std::optional<double> cut_beta_inverse_max;
+  std::optional<bool> cut_omit_near;
+  std::optional<bool> cut_omit_far;
+  std::optional<double> cut_omit_in;
+  std::optional<double> cut_omit_out;
+  std::optional<bool> cut_plane;
+  std::optional<double> cut_plane_origin_x;
+  std::optional<double> cut_plane_origin_y;
+  std::optional<double> cut_plane_origin_z;
+  std::optional<double> cut_plane_normal_x;
+  std::optional<double> cut_plane_normal_y;
+  std::optional<double> cut_plane_normal_z;
 
   // Data - fallback parameters
   std::optional<bool> fallback_nan;
@@ -173,8 +199,10 @@ struct InputReader
 
   // Internal functions - input_reader.cpp
   static bool RemoveableSpace(unsigned char c);
-  double ReadPole(const std::string &string, std::optional<bool> *p_pole_flag);
   bool ReadBool(const std::string &string);
+  template<typename type> void ReadTriple(const std::string &string, type *p_x, type *p_y,
+      type *p_z);
+  double ReadPole(const std::string &string, std::optional<bool> *p_pole_flag);
   void ReadRender(const std::string &key, const std::string &val);
 
   // Internal functions - enum_readers.cpp

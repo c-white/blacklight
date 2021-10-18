@@ -15,6 +15,11 @@
 #include "../utils/colors.hpp"      // RGBToXYZ
 #include "../utils/exceptions.hpp"  // BlacklightException
 
+// Instantiations
+template void InputReader::ReadTriple<double>(const std::string &, double *, double *, double *);
+template void InputReader::ReadTriple<std::optional<double>>(const std::string &,
+    std::optional<double> *, std::optional<double> *, std::optional<double> *);
+
 //--------------------------------------------------------------------------------------------------
 
 // Input reader constructor
@@ -314,8 +319,50 @@ int InputReader::Read()
       plasma_kappa = std::stod(val);
     else if (key == "plasma_w")
       plasma_w = std::stod(val);
-    else if (key == "plasma_sigma_max")
-      plasma_sigma_max = std::stod(val);
+
+    // Store cut parameters
+    else if (key == "cut_rho_min")
+      cut_rho_min = std::stod(val);
+    else if (key == "cut_rho_max")
+      cut_rho_max = std::stod(val);
+    else if (key == "cut_n_e_min")
+      cut_n_e_min = std::stod(val);
+    else if (key == "cut_n_e_max")
+      cut_n_e_max = std::stod(val);
+    else if (key == "cut_p_gas_min")
+      cut_p_gas_min = std::stod(val);
+    else if (key == "cut_p_gas_max")
+      cut_p_gas_max = std::stod(val);
+    else if (key == "cut_theta_e_min")
+      cut_theta_e_min = std::stod(val);
+    else if (key == "cut_theta_e_max")
+      cut_theta_e_max = std::stod(val);
+    else if (key == "cut_b_min")
+      cut_b_min = std::stod(val);
+    else if (key == "cut_b_max")
+      cut_b_max = std::stod(val);
+    else if (key == "cut_sigma_min")
+      cut_sigma_min = std::stod(val);
+    else if (key == "cut_sigma_max")
+      cut_sigma_max = std::stod(val);
+    else if (key == "cut_beta_inverse_min")
+      cut_beta_inverse_min = std::stod(val);
+    else if (key == "cut_beta_inverse_max")
+      cut_beta_inverse_max = std::stod(val);
+    else if (key == "cut_omit_near")
+      cut_omit_near = ReadBool(val);
+    else if (key == "cut_omit_far")
+      cut_omit_far = ReadBool(val);
+    else if (key == "cut_omit_in")
+      cut_omit_in = std::stod(val);
+    else if (key == "cut_omit_out")
+      cut_omit_out = std::stod(val);
+    else if (key == "cut_plane")
+      cut_plane = ReadBool(val);
+    else if (key == "cut_plane_origin")
+      ReadTriple(val, &cut_plane_origin_x, &cut_plane_origin_y, &cut_plane_origin_z);
+    else if (key == "cut_plane_normal")
+      ReadTriple(val, &cut_plane_normal_x, &cut_plane_normal_y, &cut_plane_normal_z);
 
     // Store fallback parameters
     else if (key == "fallback_nan")
@@ -362,24 +409,6 @@ bool InputReader::RemoveableSpace(unsigned char c)
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for converting a string and determining if it exactly matches angles representing poles
-// Inputs:
-//   string: string to be converted
-// Outputs:
-//   returned value: double conversion of string
-//   p_pole_flag: value set to true only if input string converts to 0.0 or 180.0
-double InputReader::ReadPole(const std::string &string, std::optional<bool> *p_pole_flag)
-{
-  double val = std::stod(string);
-  if (val == 0.0 or val == 180.0)
-    *p_pole_flag = true;
-  else
-    *p_pole_flag = false;
-  return val;
-}
-
-//--------------------------------------------------------------------------------------------------
-
 // Function for interpreting strings as booleans
 // Inputs:
 //   string: string to be interpreted
@@ -395,6 +424,47 @@ bool InputReader::ReadBool(const std::string &string)
     return false;
   else
     throw BlacklightException("Unknown string used for boolean value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for parsing comma-separated string as triple of floating point numbers
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   *p_x, *p_y, *p_z: values set
+template<typename type> void InputReader::ReadTriple(const std::string &string, type *p_x,
+    type *p_y, type *p_z)
+{
+  std::size_t pos_1, pos_2;
+  *p_x = std::stod(string, &pos_1);
+  *p_y = std::stod(string.substr(pos_1 + 1), &pos_2);
+  *p_z = std::stod(string.substr(pos_1 + pos_2 + 2));
+  if (string[pos_1] != ',' or string[pos_1+pos_2+1] != ',')
+  {
+    std::ostringstream message;
+    message << "Invalid triple (" << string << ") in input file.";
+    throw BlacklightException(message.str().c_str());
+  }
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for converting a string and determining if it exactly matches angles representing poles
+// Inputs:
+//   string: string to be converted
+// Outputs:
+//   returned value: double conversion of string
+//   p_pole_flag: value set to true only if input string converts to 0.0 or 180.0
+double InputReader::ReadPole(const std::string &string, std::optional<bool> *p_pole_flag)
+{
+  double val = std::stod(string);
+  if (val == 0.0 or val == 180.0)
+    *p_pole_flag = true;
+  else
+    *p_pole_flag = false;
+  return val;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -607,16 +677,8 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
       message << "No space allocated for input parameter (render_" << key << ").";
       throw BlacklightException(message.str().c_str());
     }
-    std::size_t pos_1, pos_2;
-    double r = std::stod(val, &pos_1);
-    double g = std::stod(val.substr(pos_1 + 1), &pos_2);
-    double b = std::stod(val.substr(pos_1 + pos_2 + 2));
-    if (val[pos_1] != ',' or val[pos_1+pos_2+1] != ',')
-    {
-      std::ostringstream message;
-      message << "Invalid RGB value (" << val << ") in input file.";
-      throw BlacklightException(message.str().c_str());
-    }
+    double r, g, b;
+    ReadTriple(val, &r, &g, &b);
     double x, y, z;
     RGBToXYZ(r, g, b, &x, &y, &z);
     render_x_vals[image_num][feature_num] = x;
@@ -637,19 +699,8 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
       message << "No space allocated for input parameter (render_" << key << ").";
       throw BlacklightException(message.str().c_str());
     }
-    std::size_t pos_1, pos_2;
-    double x = std::stod(val, &pos_1);
-    double y = std::stod(val.substr(pos_1 + 1), &pos_2);
-    double z = std::stod(val.substr(pos_1 + pos_2 + 2));
-    if (val[pos_1] != ',' or val[pos_1+pos_2+1] != ',')
-    {
-      std::ostringstream message;
-      message << "Invalid RGB value (" << val << ") in input file.";
-      throw BlacklightException(message.str().c_str());
-    }
-    render_x_vals[image_num][feature_num] = x;
-    render_y_vals[image_num][feature_num] = y;
-    render_z_vals[image_num][feature_num] = z;
+    ReadTriple(val, &render_x_vals[image_num][feature_num], &render_y_vals[image_num][feature_num],
+        &render_z_vals[image_num][feature_num]);
   }
 
   // Handle unknown entry

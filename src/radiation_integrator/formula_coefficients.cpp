@@ -67,10 +67,34 @@ void RadiationIntegrator::CalculateFormulaCoefficients()
       double k_2 = sample_dir[adaptive_level](m,n,2);
       double k_3 = sample_dir[adaptive_level](m,n,3);
 
-      // Calculate coordinates and skip coupling if outside camera radius
+      // Cut outside camera radius
       double r = RadialGeodesicCoordinate(x, y, z);
       if (r > camera_r)
         continue;
+
+      // Cut camera plane
+      if (cut_omit_near or cut_omit_far)
+      {
+        double dot_product = x * camera_x[1] + y * camera_x[2] + z * camera_x[3];
+        if ((cut_omit_near and dot_product > 0.0) or (cut_omit_far and dot_product < 0.0))
+          continue;
+      }
+
+      // Cut spheres
+      if ((cut_omit_in >= 0.0 and r < cut_omit_in) or (cut_omit_out >= 0.0 and r > cut_omit_out))
+        continue;
+
+      // Cut arbitrary plane
+      if (cut_plane)
+      {
+        double dot_product = (x - cut_plane_origin_x) * cut_plane_normal_x
+            + (y - cut_plane_origin_y) * cut_plane_normal_y
+            + (z - cut_plane_origin_z) * cut_plane_normal_z;
+        if (dot_product < 0.0)
+          continue;
+      }
+
+      // Calculate curvilinear coordinates
       double rr = std::sqrt(r * r - z * z);
       double cth = z / r;
       double sth = std::sqrt(1.0 - cth * cth);

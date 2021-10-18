@@ -140,7 +140,29 @@ plasma_gamma_max  = 10.0        # maximum Lorentz factor in power law
 plasma_kappa_frac = 0.0         # fraction of electrons with kappa distribution
 plasma_kappa      = 3.5         # kappa parameter for kappa distribution
 plasma_w          = 1.0         # w parameter for kappa distribution
-plasma_sigma_max  = 1.0         # if nonnegative, cutoff in sigma above which plasma is ignored
+
+# Cut parameters
+cut_rho_min          = -1.0         # if nonneg., cutoff in rho below which plasma is ignored
+cut_rho_max          = -1.0         # if nonneg., cutoff in rho above which plasma is ignored
+cut_n_e_min          = -1.0         # if nonneg., cutoff in n_e below which plasma is ignored
+cut_n_e_max          = -1.0         # if nonneg., cutoff in n_e above which plasma is ignored
+cut_p_gas_min        = -1.0         # if nonneg., cutoff in p_gas below which plasma is ignored
+cut_p_gas_max        = -1.0         # if nonneg., cutoff in p_gas above which plasma is ignored
+cut_theta_e_min      = -1.0         # if nonneg., cutoff in Theta_e below which plasma is ignored
+cut_theta_e_max      = -1.0         # if nonneg., cutoff in Theta_e above which plasma is ignored
+cut_b_min            = -1.0         # if nonneg., cutoff in B below which plasma is ignored
+cut_b_max            = -1.0         # if nonneg., cutoff in B above which plasma is ignored
+cut_sigma_min        = -1.0         # if nonneg., cutoff in sigma below which plasma is ignored
+cut_sigma_max        = 1.0          # if nonneg., cutoff in sigma above which plasma is ignored
+cut_beta_inverse_min = -1.0         # if nonneg., cutoff in 1/beta below which plasma is ignored
+cut_beta_inverse_max = -1.0         # if nonneg., cutoff in 1/beta above which plasma is ignored
+cut_omit_near        = false        # flag indicating near half of simulation should be omitted
+cut_omit_far         = false        # flag indicating far half of simulation should be omitted
+cut_omit_in          = -1.0         # if nonneg., radius inside of which simulation is omitted
+cut_omit_out         = -1.0         # if nonneg., radius outside of which simulation is omitted
+cut_plane            = false        # flag for domain being excluded beyond a certain plane
+cut_plane_origin     = 0.0,0.0,0.0  # origin (x,y,z) of plane
+cut_plane_normal     = 0.0,0.0,1.0  # normal vector (x,y,z) on side of plane to keep
 
 # Fallback parameters
 fallback_nan   = true    # flag indicating any fallback should result in NaN for that ray

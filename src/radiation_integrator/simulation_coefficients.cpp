@@ -20,11 +20,11 @@
 // Outputs: (none)
 // Notes:
 //   Assumes geodesic_num_steps[adaptive_level], sample_num[adaptive_level],
-//       sample_pos[adaptive_level], sample_dir[adaptive_level], sample_rho[adaptive_level],
-//       sample_pgas[adaptive_level], sample_kappa[adaptive_level] (if needed),
-//       sample_uu1[adaptive_level], sample_uu2[adaptive_level], sample_uu3[adaptive_level],
-//       sample_bb1[adaptive_level], sample_bb2[adaptive_level], and sample_bb3[adaptive_level] have
-//       been set.
+//       sample_pos[adaptive_level], sample_dir[adaptive_level], sample_cut[adaptive_level],
+//       sample_rho[adaptive_level], sample_pgas[adaptive_level], sample_kappa[adaptive_level] (if
+//       needed), sample_uu1[adaptive_level], sample_uu2[adaptive_level],
+//       sample_uu3[adaptive_level], sample_bb1[adaptive_level], sample_bb2[adaptive_level], and
+//       sample_bb3[adaptive_level] have been set.
 //   Allocates and initializes j_i[adaptive_level] if image_light == true or image_emission == true
 //       or image_emission_ave == true.
 //   Allocates and initializes alpha_i[adaptive_level] if image_light == true or image_tau == true
@@ -40,8 +40,8 @@
 //   Transfer coefficients are calculated in their invariant forms, disagreeing with their
 //       definitions in (M) but agreeing with their usages in 2018 MNRAS 475 43.
 //   Tetrad is chosen such that j_U, alpha_U, rho_U = 0.
-//   Deallocates sample_rho[adaptive_level], sample_pgas[adaptive_level], and
-//       sample_kappa[adaptive_level] if adaptive_level > 0.
+//   Deallocates sample_cut[adaptive_level], sample_rho[adaptive_level],
+//       sample_pgas[adaptive_level], and sample_kappa[adaptive_level] if adaptive_level > 0.
 //   Dealllocates sample_uu1[adaptive_level], sample_uu2[adaptive_level],
 //       sample_uu3[adaptive_level], sample_bb1[adaptive_level], sample_bb2[adaptive_level], and
 //       sample_bb3[adaptive_level] if image_polarization == false and adaptive_level > 0.
@@ -238,18 +238,17 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
     Array<double> jacobian(4, 4);
     Array<double> tetrad(4, 4);
 
-    // Go through rays
+    // Go through rays and samples
     #pragma omp for schedule(static)
     for (int m = 0; m < num_pix; m++)
     {
-      // Check number of steps
       int num_steps = sample_num[adaptive_level](m);
-      if (num_steps <= 0)
-        continue;
-
-      // Go through samples
       for (int n = 0; n < num_steps; n++)
       {
+        // Skip coupling if in cut region
+        if (sample_cut[adaptive_level](m,n))
+          continue;
+
         // Extract geodesic position and covariant momentum
         double x1 = sample_pos[adaptive_level](m,n,1);
         double x2 = sample_pos[adaptive_level](m,n,2);
@@ -259,11 +258,6 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         kcov[1] = sample_dir[adaptive_level](m,n,1);
         kcov[2] = sample_dir[adaptive_level](m,n,2);
         kcov[3] = sample_dir[adaptive_level](m,n,3);
-
-        // Skip coupling if outside camera radius
-        double r = RadialGeodesicCoordinate(x1, x2, x3);
-        if (r > camera_r)
-          continue;
 
         // Extract model variables
         double rho = sample_rho[adaptive_level](m,n);
@@ -278,8 +272,10 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double bb2_sim = sample_bb2[adaptive_level](m,n);
         double bb3_sim = sample_bb3[adaptive_level](m,n);
 
-        // Calculate number densities
-        double n_cgs = rho * d_unit / (plasma_mu * Physics::m_p);
+        // Calculate densities and pressures
+        double rho_cgs = rho * d_unit;
+        double pgas_cgs = pgas * e_unit;
+        double n_cgs = rho_cgs / (plasma_mu * Physics::m_p);
         double n_e_cgs = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
 
         // Calculate simulation metric
@@ -322,10 +318,6 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double sigma = b_sq / rho;
         double beta_inv = b_sq / (2.0 * pgas);
 
-        // Skip coupling if considered to be vacuum
-        if (plasma_sigma_max >= 0.0 and sigma > plasma_sigma_max)
-          continue;
-
         // Calculate electron temperature for model with T_i/T_e a function of beta (E1 1)
         double kb_tt_e_cgs = std::numeric_limits<double>::quiet_NaN();
         double theta_e = std::numeric_limits<double>::quiet_NaN();
@@ -333,7 +325,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         {
           double tt_rat = (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv)
               / (1.0 + beta_inv * beta_inv);
-          double kb_tt_tot_cgs = plasma_mu * Physics::m_p * Physics::c * Physics::c * pgas / rho;
+          double kb_tt_tot_cgs = plasma_mu * Physics::m_p * pgas_cgs / rho_cgs;
           kb_tt_e_cgs = (plasma_ne_ni + 1.0) / (plasma_ne_ni + tt_rat) * kb_tt_tot_cgs;
           theta_e = kb_tt_e_cgs / (Physics::m_e * Physics::c * Physics::c);
         }
@@ -348,12 +340,29 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
           kb_tt_e_cgs = theta_e * Physics::m_e * Physics::c * Physics::c;
         }
 
+        // Skip coupling based on cell values
+        if ((cut_rho_min >= 0.0 and rho_cgs < cut_rho_min)
+            or (cut_rho_max >= 0.0 and rho_cgs > cut_rho_max)
+            or (cut_n_e_min >= 0.0 and n_e_cgs < cut_n_e_min)
+            or (cut_n_e_max >= 0.0 and n_e_cgs > cut_n_e_max)
+            or (cut_p_gas_min >= 0.0 and pgas_cgs < cut_p_gas_min)
+            or (cut_p_gas_max >= 0.0 and pgas_cgs > cut_p_gas_max)
+            or (cut_theta_e_min >= 0.0 and theta_e < cut_theta_e_min)
+            or (cut_theta_e_max >= 0.0 and theta_e > cut_theta_e_max)
+            or (cut_b_min >= 0.0 and bb_cgs < cut_b_min)
+            or (cut_b_max >= 0.0 and bb_cgs > cut_b_max)
+            or (cut_sigma_min >= 0.0 and sigma < cut_sigma_min)
+            or (cut_sigma_max >= 0.0 and sigma > cut_sigma_max)
+            or (cut_beta_inverse_min >= 0.0 and beta_inv < cut_beta_inverse_min)
+            or (cut_beta_inverse_max >= 0.0 and beta_inv > cut_beta_inverse_max))
+          continue;
+
         // Record cell values
         if (image_lambda_ave or image_emission_ave or image_tau_int or render_num_images > 0)
         {
-          cell_values[adaptive_level](static_cast<int>(CellValues::rho),m,n) = rho * d_unit;
+          cell_values[adaptive_level](static_cast<int>(CellValues::rho),m,n) = rho_cgs;
           cell_values[adaptive_level](static_cast<int>(CellValues::n_e),m,n) = n_e_cgs;
-          cell_values[adaptive_level](static_cast<int>(CellValues::p_gas),m,n) = pgas * e_unit;
+          cell_values[adaptive_level](static_cast<int>(CellValues::p_gas),m,n) = pgas_cgs;
           cell_values[adaptive_level](static_cast<int>(CellValues::theta_e),m,n) = theta_e;
           cell_values[adaptive_level](static_cast<int>(CellValues::bb),m,n) = bb_cgs;
           cell_values[adaptive_level](static_cast<int>(CellValues::sigma),m,n) = sigma;
@@ -665,6 +674,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
   // Free memory
   if (adaptive_level > 0)
   {
+    sample_cut[adaptive_level].Deallocate();
     sample_rho[adaptive_level].Deallocate();
     sample_pgas[adaptive_level].Deallocate();
     sample_kappa[adaptive_level].Deallocate();
