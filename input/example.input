@@ -16,17 +16,17 @@ checkpoint_sample_load   = false                 # flag indicating sampling shou
 checkpoint_sample_file   = output/sample.dat     # name of sampling checkpoint file
 
 # Simulation parameters (only used if model_type == simulation)
-simulation_file         = data/example.athdf  # file containing Athena++ data dump if needed
-simulation_multiple     = false               # flag for processing multiple files
-simulation_start        = 0                   # first file number (simulation_multiple == true)
-simulation_end          = 0                   # last file number (simulation_multiple == true)
-simulation_coord        = sph_ks              # simulation coordinates (sph_ks, cart_ks)
-simulation_m_msun       = 4.152e6             # black hole mass in solar masses
-simulation_a            = 0.9                 # dimensionless black hole spin
-simulation_rho_cgs      = 1.6e-16             # unit code density in g/cm^3
-simulation_kappa_name   = r0                  # name of variable containing electron entropy
-simulation_interp       = false               # flag indicating interpolation should be used
-simulation_block_interp = false               # flag indicating interpolation should cross blocks
+simulation_file         = data/mock.athdf  # file containing Athena++ data dump if needed
+simulation_multiple     = false            # flag for processing multiple files
+simulation_start        = 0                # first file number (simulation_multiple == true)
+simulation_end          = 0                # last file number (simulation_multiple == true)
+simulation_coord        = sph_ks           # simulation coordinates (sph_ks, cart_ks)
+simulation_m_msun       = 4.152e6          # black hole mass in solar masses
+simulation_a            = 0.0              # dimensionless black hole spin
+simulation_rho_cgs      = 1.0e-16          # unit code density in g/cm^3
+simulation_kappa_name   = r0               # name of variable containing electron entropy
+simulation_interp       = false            # flag indicating interpolation should be used
+simulation_block_interp = false            # flag indicating interpolation should cross blocks
 
 # Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
 formula_mass  = 6.0e11   # black hole mass in cm
@@ -99,7 +99,7 @@ render_1_2_opacity    = 0.2               # image 1, feature 2: opacity in [0,1]
 render_1_2_rgb        = 133,197,38        # image 1, feature 2: RGB colors in [0,255]
 render_1_3_quantity   = rho               # image 1, feature 3: quantity to use
 render_1_3_type       = fill              # image 1, feature 3: type (fill, thresh, rise, fall)
-render_1_3_min        = 1.0e-17           # image 1, feature 3: lower cutoff
+render_1_3_min        = 2.0e-17           # image 1, feature 3: lower cutoff
 render_1_3_max        = inf               # image 1, feature 3: upper cutoff
 render_1_3_tau_scale  = 1.5e13            # image 1, feature 3: optical depth length scale
 render_1_3_xyz        = 0.296,0.235,0.91  # image 1, feature 3: XYZ colors in [0,1]
