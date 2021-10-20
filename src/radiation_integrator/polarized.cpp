@@ -365,11 +365,11 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
           double rho_ss = rho_s[1] * ss_start[1] + rho_s[3] * ss_start[3];
           ss_end[0] = ss_start[0];
           ss_end[1] = ss_start[1] * cos_rho + 2.0 * rho_s[1] * rho_ss / rho_sq * sin_sq_rho
-              - rho_s[3] * ss_start[2] * sin_rho;
-          ss_end[2] =
-              ss_start[1] * cos_rho + (rho_s[3] * ss_start[1] - rho_s[1] * ss_start[3]) * sin_rho;
+              - rho_s[3] * ss_start[2] / rho_p * sin_rho;
+          ss_end[2] = ss_start[1] * cos_rho
+              + (rho_s[3] * ss_start[1] - rho_s[1] * ss_start[3]) / rho_p * sin_rho;
           ss_end[3] = ss_start[3] * cos_rho + 2.0 * rho_s[3] * rho_ss / rho_sq * sin_sq_rho
-              + rho_s[1] * ss_start[2] * sin_rho;
+              + rho_s[1] * ss_start[2] / rho_p * sin_rho;
           for (int a = 0; a < 4; a++)
             ss_end[a] += j_s[a] * delta_lambda_cgs;
         }
