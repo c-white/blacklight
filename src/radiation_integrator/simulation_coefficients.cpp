@@ -39,6 +39,9 @@
 //   References arxiv:2108.10359v1 (M) for transfer coefficients.
 //   Transfer coefficients are calculated in their invariant forms, disagreeing with their
 //       definitions in (M) but agreeing with their usages in 2018 MNRAS 475 43.
+//   Faraday coefficients have additional trap for when Theta_e ~ 0 (K_2(1/Theta_e) ~ 0), where
+//       rho_Q ~ 0 and rho_V is given by cold-plasma rotation measure considerations, but
+//       numerically one might get NaN, and the rho_V formula has the wrong asymptotic behavior.
 //   Tetrad is chosen such that j_U, alpha_U, rho_U = 0.
 //   Deallocates sample_cut[adaptive_level], sample_rho[adaptive_level],
 //       sample_pgas[adaptive_level], and sample_kappa[adaptive_level] if adaptive_level > 0.
@@ -523,8 +526,15 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
           double f_0 = var_a - var_b - var_c;
           double f_m = f_0 + (var_c - var_d) * var_e;
           double delta_jj_5 = 0.4379 * std::log(1.0 + 1.3414 * std::pow(xx, -0.7515));
-          rho_q[adaptive_level](m,n) = coefficient_q * f_m * (kk_1 / kk_2 + 6.0 * theta_e);
-          rho_v[adaptive_level](m,n) = coefficient_v * (kk_0 - delta_jj_5) / kk_2;
+          double factor_q = f_m * (kk_1 / kk_2 + 6.0 * theta_e);
+          double factor_v = (kk_0 - delta_jj_5) / kk_2;
+          if (kk_2 == 0.0 or factor_v > 2.0 * Math::pi)
+          {
+            factor_q = 0.0;
+            factor_v = 2.0 * Math::pi;
+          }
+          rho_q[adaptive_level](m,n) = coefficient_q * factor_q;
+          rho_v[adaptive_level](m,n) = coefficient_v * factor_v;
         }
 
         // Calculate power-law synchrotron emissivities (M 28,38)
