@@ -70,17 +70,17 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
     // Allocate scratch space
     double delta_lambda_old;
     double kcon_old[4];
-    Array<double> gcov(4, 4);
-    Array<double> gcon(4, 4);
-    Array<double> gcov_sim(4, 4);
-    Array<double> gcon_sim(4, 4);
-    Array<double> connection(4, 4, 4);
+    double gcov[4][4];
+    double gcon[4][4];
+    double gcov_sim[4][4];
+    double gcon_sim[4][4];
+    double connection[4][4][4];
     Array<double> connection_old(4, 4, 4);
-    Array<double> tetrad(4, 4);
+    double tetrad[4][4];
     Array<std::complex<double>> nn_con_temp(4, 4);
     Array<std::complex<double>> nn_tet_cov(4, 4);
     Array<std::complex<double>> nn_tet_con(4, 4);
-    Array<double> jacobian(4, 4);
+    double jacobian[4][4];
 
     // Go through pixels
     #pragma omp for schedule(static)
@@ -136,19 +136,19 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
           for (int mu = 0; mu < 4; mu++)
             for (int alpha = 0; alpha < 4; alpha++)
               for (int beta = 0; beta < 4; beta++)
-                connection_old(mu,alpha,beta) = connection(mu,alpha,beta);
+                connection_old(mu,alpha,beta) = connection[mu][alpha][beta];
         else
           for (int mu = 0; mu < 4; mu++)
             for (int alpha = 0; alpha < 4; alpha++)
               for (int beta = 0; beta < 4; beta++)
                 connection_old(mu,alpha,beta) =
-                    0.5 * (connection_old(mu,alpha,beta) + connection(mu,alpha,beta));
+                    0.5 * (connection_old(mu,alpha,beta) + connection[mu][alpha][beta]);
 
         // Calculate geodesic contravariant momentum
         double kcon[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            kcon[mu] += gcon(mu,nu) * kcov[nu];
+            kcon[mu] += gcon[mu][nu] * kcov[nu];
         if (n == 0)
           for (int mu = 0; mu < 4; mu++)
             kcon_old[mu] = kcon[mu];
@@ -181,14 +181,14 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         ContravariantSimulationMetric(x1, x2, x3, gcon_sim);
 
         // Calculate simulation velocity
-        double uu0_sim = std::sqrt(1.0 + gcov_sim(1,1) * uu1_sim * uu1_sim
-            + 2.0 * gcov_sim(1,2) * uu1_sim * uu2_sim + 2.0 * gcov_sim(1,3) * uu1_sim * uu3_sim
-            + gcov_sim(2,2) * uu2_sim * uu2_sim + 2.0 * gcov_sim(2,3) * uu2_sim * uu3_sim
-            + gcov_sim(3,3) * uu3_sim * uu3_sim);
-        double lapse_sim = 1.0 / std::sqrt(-gcon_sim(0,0));
-        double shift1_sim = -gcon_sim(0,1) / gcon_sim(0,0);
-        double shift2_sim = -gcon_sim(0,2) / gcon_sim(0,0);
-        double shift3_sim = -gcon_sim(0,3) / gcon_sim(0,0);
+        double uu0_sim = std::sqrt(1.0 + gcov_sim[1][1] * uu1_sim * uu1_sim
+            + 2.0 * gcov_sim[1][2] * uu1_sim * uu2_sim + 2.0 * gcov_sim[1][3] * uu1_sim * uu3_sim
+            + gcov_sim[2][2] * uu2_sim * uu2_sim + 2.0 * gcov_sim[2][3] * uu2_sim * uu3_sim
+            + gcov_sim[3][3] * uu3_sim * uu3_sim);
+        double lapse_sim = 1.0 / std::sqrt(-gcon_sim[0][0]);
+        double shift1_sim = -gcon_sim[0][1] / gcon_sim[0][0];
+        double shift2_sim = -gcon_sim[0][2] / gcon_sim[0][0];
+        double shift3_sim = -gcon_sim[0][3] / gcon_sim[0][0];
         double ucon_sim[4];
         ucon_sim[0] = uu0_sim / lapse_sim;
         ucon_sim[1] = uu1_sim - shift1_sim * uu0_sim / lapse_sim;
@@ -197,7 +197,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         double ucov_sim[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            ucov_sim[mu] += gcov_sim(mu,nu) * ucon_sim[nu];
+            ucov_sim[mu] += gcov_sim[mu][nu] * ucon_sim[nu];
 
         // Calculate simulation magnetic field
         double bcon_sim[4];
@@ -208,7 +208,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         double bcov_sim[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            bcov_sim[mu] += gcov_sim(mu,nu) * bcon_sim[nu];
+            bcov_sim[mu] += gcov_sim[mu][nu] * bcon_sim[nu];
         double b_sq = 0.0;
         for (int mu = 0; mu < 4; mu++)
           b_sq += bcov_sim[mu] * bcon_sim[mu];
@@ -220,21 +220,21 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         double ucon[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            ucon[mu] += jacobian(mu,nu) * ucon_sim[nu];
+            ucon[mu] += jacobian[mu][nu] * ucon_sim[nu];
         double bcon[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            bcon[mu] += jacobian(mu,nu) * bcon_sim[nu];
+            bcon[mu] += jacobian[mu][nu] * bcon_sim[nu];
 
         // Calculate covariant velocity and magnetic field
         double ucov[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            ucov[mu] += gcov(mu,nu) * ucon[nu];
+            ucov[mu] += gcov[mu][nu] * ucon[nu];
         double bcov[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            bcov[mu] += gcov(mu,nu) * bcon[nu];
+            bcov[mu] += gcov[mu][nu] * bcon[nu];
 
         // Calculate orthonormal tetrad
         double upcon[4] = {};
@@ -250,22 +250,22 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         for (int nu = 0; nu < 4; nu++)
           for (int alpha = 0; alpha < 4; alpha++)
             for (int beta = 0; beta < 4; beta++)
-              temp_b[nu][alpha] += gcov(nu,beta) * nn_con(m,alpha,beta);
+              temp_b[nu][alpha] += gcov[nu][beta] * nn_con(m,alpha,beta);
         std::complex<double> temp_c[4][4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
             for (int alpha = 0; alpha < 4; alpha++)
-              temp_c[mu][nu] += gcov(mu,alpha) * temp_b[nu][alpha];
+              temp_c[mu][nu] += gcov[mu][alpha] * temp_b[nu][alpha];
         std::complex<double> temp_d[4][4] = {};
         for (int b = 0; b < 4; b++)
           for (int mu = 0; mu < 4; mu++)
             for (int nu = 0; nu < 4; nu++)
-              temp_d[b][mu] += tetrad(b,nu) * temp_c[mu][nu];
+              temp_d[b][mu] += tetrad[b][nu] * temp_c[mu][nu];
         nn_tet_cov.Zero();
         for (int a = 0; a < 4; a++)
           for (int b = 0; b < 4; b++)
             for (int mu = 0; mu < 4; mu++)
-              nn_tet_cov(a,b) += tetrad(a,mu) * temp_d[b][mu];
+              nn_tet_cov(a,b) += tetrad[a][mu] * temp_d[b][mu];
 
         // Calculate orthonormal-frame Stokes quantities before coupling to fluid (I 14)
         double ss_start[4];
@@ -304,11 +304,11 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
           double temp_e[4] = {};
           for (int a = 1; a < 4; a++)
             for (int mu = 0; mu < 4; mu++)
-              temp_e[a] += (gcon(a,mu) - gcon(0,a) * gcon(0,mu) / gcon(0,0)) * kcov[mu];
+              temp_e[a] += (gcon[a][mu] - gcon[0][a] * gcon[0][mu] / gcon[0][0]) * kcov[mu];
           double dl_dlambda_sq = 0.0;
           for (int a = 1; a < 4; a++)
             for (int b = 1; b < 4; b++)
-              dl_dlambda_sq += gcov(a,b) * temp_e[a] * temp_e[b];
+              dl_dlambda_sq += gcov[a][b] * temp_e[a] * temp_e[b];
           image[adaptive_level](image_offset_length,m) +=
               std::sqrt(dl_dlambda_sq) * delta_lambda * x_unit;
         }
@@ -565,13 +565,13 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         for (int nu = 0; nu < 4; nu++)
           for (int a = 0; a < 4; a++)
             for (int b = 0; b < 4; b++)
-              temp_f[nu][a] += tetrad(b,nu) * nn_tet_con(a,b);
+              temp_f[nu][a] += tetrad[b][nu] * nn_tet_con(a,b);
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
           {
             nn_con(m,mu,nu) = 0.0;
             for (int a = 0; a < 4; a++)
-              nn_con(m,mu,nu) += tetrad(a,mu) * temp_f[nu][a];
+              nn_con(m,mu,nu) += tetrad[a][mu] * temp_f[nu][a];
           }
 
         // Parallel-transport N by second half step
@@ -582,7 +582,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         for (int mu = 0; mu < 4; mu++)
           for (int beta = 0; beta < 4; beta++)
             for (int alpha = 0; alpha < 4; alpha++)
-              temp_g[mu][beta] += kcon[alpha] * connection(mu,alpha,beta);
+              temp_g[mu][beta] += kcon[alpha] * connection[mu][alpha][beta];
         delta_lambda_local = (delta_lambda + delta_lambda_new) / 4.0;
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
@@ -601,7 +601,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         for (int mu = 0; mu < 4; mu++)
           for (int alpha = 0; alpha < 4; alpha++)
             for (int beta = 0; beta < 4; beta++)
-              connection_old(mu,alpha,beta) = connection(mu,alpha,beta);
+              connection_old(mu,alpha,beta) = connection[mu][alpha][beta];
       }
 
       // Store integrated quantities
@@ -633,7 +633,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
       kcov[2] = camera_dir[adaptive_level](m,2);
       kcov[3] = camera_dir[adaptive_level](m,3);
 
-      // Calculate metric and connection
+      // Calculate metric
       CovariantGeodesicMetric(x, y, z, gcov);
       ContravariantGeodesicMetric(x, y, z, gcon);
 
@@ -641,7 +641,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
       double kcon[4] = {};
       for (int mu = 0; mu < 4; mu++)
         for (int nu = 0; nu < 4; nu++)
-          kcon[mu] += gcon(mu,nu) * kcov[nu];
+          kcon[mu] += gcon[mu][nu] * kcov[nu];
 
       // Calculate orientation
       double up_con[4];
@@ -660,22 +660,22 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
       for (int nu = 0; nu < 4; nu++)
         for (int alpha = 0; alpha < 4; alpha++)
           for (int beta = 0; beta < 4; beta++)
-            temp_a[nu][alpha] += gcov(nu,beta) * nn_con(m,alpha,beta);
+            temp_a[nu][alpha] += gcov[nu][beta] * nn_con(m,alpha,beta);
       std::complex<double> temp_b[4][4] = {};
       for (int mu = 0; mu < 4; mu++)
         for (int nu = 0; nu < 4; nu++)
           for (int alpha = 0; alpha < 4; alpha++)
-            temp_b[mu][nu] += gcov(mu,alpha) * temp_a[nu][alpha];
+            temp_b[mu][nu] += gcov[mu][alpha] * temp_a[nu][alpha];
       std::complex<double> temp_c[4][4] = {};
       for (int b = 0; b < 4; b++)
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            temp_c[b][mu] += tetrad(b,nu) * temp_b[mu][nu];
+            temp_c[b][mu] += tetrad[b][nu] * temp_b[mu][nu];
       nn_tet_cov.Zero();
       for (int a = 0; a < 4; a++)
         for (int b = 0; b < 4; b++)
           for (int mu = 0; mu < 4; mu++)
-            nn_tet_cov(a,b) += tetrad(a,mu) * temp_c[b][mu];
+            nn_tet_cov(a,b) += tetrad[a][mu] * temp_c[b][mu];
 
       // Calculate orthonormal-frame Stokes quantities at camera location (I 14)
       image[adaptive_level](0,m) = 0.5 * (nn_tet_cov(1,1) + nn_tet_cov(2,2)).real();

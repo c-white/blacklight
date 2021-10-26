@@ -39,7 +39,7 @@ void GeodesicIntegrator::InitializeGeodesics()
   #pragma omp parallel
   {
     // Allocate scratch array
-    Array<double> gcov(4, 4);
+    double gcov[4][4];
 
     // Go though pixels
     #pragma omp for schedule(static)
@@ -60,14 +60,14 @@ void GeodesicIntegrator::InitializeGeodesics()
 
       // Calculate time component of momentum
       CovariantGeodesicMetric(x[1], x[2], x[3], gcov);
-      double temp_a = gcov(0,0);
+      double temp_a = gcov[0][0];
       double temp_b = 0.0;
       for (int a = 1; a < 4; a++)
-        temp_b += 2.0 * gcov(0,a) * p[a];
+        temp_b += 2.0 * gcov[0][a] * p[a];
       double temp_c = 0.0;
       for (int a = 1; a < 4; a++)
         for (int b = 1; b < 4; b++)
-          temp_c += gcov(a,b) * p[a] * p[b];
+          temp_c += gcov[a][b] * p[a] * p[b];
       double temp_d = std::sqrt(std::max(temp_b * temp_b - 4.0 * temp_a * temp_c, 0.0));
       p[0] = temp_a == 0.0 ? -temp_c / (2.0 * temp_b)
           : (temp_b < 0.0 ? 2.0 * temp_c / (temp_d - temp_b) : -(temp_b + temp_d) / (2.0 * temp_a));
@@ -77,7 +77,7 @@ void GeodesicIntegrator::InitializeGeodesics()
       {
         camera_dir[adaptive_level](m,mu) = 0.0;
         for (int nu = 0; nu < 4; nu++)
-          camera_dir[adaptive_level](m,mu) += gcov(mu,nu) * p[nu];
+          camera_dir[adaptive_level](m,mu) += gcov[mu][nu] * p[nu];
       }
     }
   }
@@ -162,9 +162,9 @@ void GeodesicIntegrator::IntegrateGeodesics()
   #pragma omp parallel
   {
     // Allocate scratch arrays
-    Array<double> gcov(4, 4);
-    Array<double> gcon(4, 4);
-    Array<double> dgcon(3, 4, 4);
+    double gcov[4][4];
+    double gcon[4][4];
+    double dgcon[3][4][4];
     double y_vals[9];
     double y_vals_temp[9];
     double y_vals_5[9];
@@ -366,11 +366,11 @@ void GeodesicIntegrator::IntegrateGeodesics()
         double temp_a = 0.0;
         for (int a = 1; a < 4; a++)
           for (int b = 1; b < 4; b++)
-            temp_a += gcon(a,b) * y_vals_5[4+a] * y_vals_5[4+b];
+            temp_a += gcon[a][b] * y_vals_5[4+a] * y_vals_5[4+b];
         double temp_b = 0.0;
         for (int a = 1; a < 4; a++)
-          temp_b += 2.0 * gcon(0,a) * y_vals_5[4] * y_vals_5[4+a];
-        double temp_c = gcon(0,0) * y_vals_5[4] * y_vals_5[4];
+          temp_b += 2.0 * gcon[0][a] * y_vals_5[4] * y_vals_5[4+a];
+        double temp_c = gcon[0][0] * y_vals_5[4] * y_vals_5[4];
         double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
         double factor =
             temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
@@ -427,11 +427,11 @@ void GeodesicIntegrator::IntegrateGeodesics()
         double temp_a = 0.0;
         for (int a = 1; a < 4; a++)
           for (int b = 1; b < 4; b++)
-            temp_a += gcon(a,b) * geodesic_dir(m,n,a) * geodesic_dir(m,n,b);
+            temp_a += gcon[a][b] * geodesic_dir(m,n,a) * geodesic_dir(m,n,b);
         double temp_b = 0.0;
         for (int a = 1; a < 4; a++)
-          temp_b += 2.0 * gcon(0,a) * geodesic_dir(m,n,0) * geodesic_dir(m,n,a);
-        double temp_c = gcon(0,0) * geodesic_dir(m,n,0) * geodesic_dir(m,n,0);
+          temp_b += 2.0 * gcon[0][a] * geodesic_dir(m,n,0) * geodesic_dir(m,n,a);
+        double temp_c = gcon[0][0] * geodesic_dir(m,n,0) * geodesic_dir(m,n,0);
         double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
         double factor =
             temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
@@ -529,6 +529,8 @@ void GeodesicIntegrator::ReverseGeodesics()
 //   gcon: components set
 //   dgcon: components set
 // Notes:
+//   Assumes gcov and gcon are allocated to be 4*4.
+//   Assumes dgcon is allocated to be 3*4*4.
 //   Integrates the following equations:
 //     d(x^mu) / d(lambda) = g^{mu nu} p_nu,
 //     d(p_0) / d(lambda) = 0,
@@ -536,8 +538,8 @@ void GeodesicIntegrator::ReverseGeodesics()
 //     d(s) / d(lambda) = -(g_{i j} (g^{i mu} - g^{0 i} g^{0 mu} / g^{0 0}) p_mu
 //         (g^{j nu} - g^{0 j} g^{0 nu} / g^{0 0}) p_nu)^(1/2).
 //   Assumes x^0 is ignorable.
-void GeodesicIntegrator::GeodesicSubstep(double y[9], double k[9], Array<double> &gcov,
-    Array<double> &gcon, Array<double> &dgcon)
+void GeodesicIntegrator::GeodesicSubstep(double y[9], double k[9], double gcov[4][4],
+    double gcon[4][4], double dgcon[3][4][4])
 {
   CovariantGeodesicMetric(y[1], y[2], y[3], gcov);
   ContravariantGeodesicMetric(y[1], y[2], y[3], gcon);
@@ -546,18 +548,18 @@ void GeodesicIntegrator::GeodesicSubstep(double y[9], double k[9], Array<double>
     k[p] = 0.0;
   for (int mu = 0; mu < 4; mu++)
     for (int nu = 0; nu < 4; nu++)
-      k[mu] += gcon(mu,nu) * y[4+nu];
+      k[mu] += gcon[mu][nu] * y[4+nu];
   for (int a = 1; a < 4; a++)
     for (int mu = 0; mu < 4; mu++)
       for (int nu = 0; nu < 4; nu++)
-        k[4+a] -= 0.5 * dgcon(a-1,mu,nu) * y[4+mu] * y[4+nu];
+        k[4+a] -= 0.5 * dgcon[a-1][mu][nu] * y[4+mu] * y[4+nu];
   double temp_a[4] = {};
   for (int a = 1; a < 4; a++)
     for (int mu = 0; mu < 4; mu++)
-      temp_a[a] += (gcon(a,mu) - gcon(0,a) * gcon(0,mu) / gcon(0,0)) * y[4+mu];
+      temp_a[a] += (gcon[a][mu] - gcon[0][a] * gcon[0][mu] / gcon[0][0]) * y[4+mu];
   for (int a = 1; a < 4; a++)
     for (int b = 1; b < 4; b++)
-      k[8] += gcov(a,b) * temp_a[a] * temp_a[b];
+      k[8] += gcov[a][b] * temp_a[a] * temp_a[b];
   k[8] = -std::sqrt(k[8]);
   return;
 }

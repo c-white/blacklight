@@ -46,8 +46,8 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
   #pragma omp parallel
   {
     // Allocate scratch space
-    Array<double> gcov(4, 4);
-    Array<double> gcon(4, 4);
+    double gcov[4][4];
+    double gcon[4][4];
 
     // Go through pixels
     #pragma omp for schedule(static)
@@ -112,11 +112,11 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
           double temp_a[4] = {};
           for (int a = 1; a < 4; a++)
             for (int mu = 0; mu < 4; mu++)
-              temp_a[a] += (gcon(a,mu) - gcon(0,a) * gcon(0,mu) / gcon(0,0)) * kcov[mu];
+              temp_a[a] += (gcon[a][mu] - gcon[0][a] * gcon[0][mu] / gcon[0][0]) * kcov[mu];
           double dl_dlambda_sq = 0.0;
           for (int a = 1; a < 4; a++)
             for (int b = 1; b < 4; b++)
-              dl_dlambda_sq += gcov(a,b) * temp_a[a] * temp_a[b];
+              dl_dlambda_sq += gcov[a][b] * temp_a[a] * temp_a[b];
           image[adaptive_level](image_offset_length,m) +=
               std::sqrt(dl_dlambda_sq) * delta_lambda * x_unit;
         }

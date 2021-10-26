@@ -60,7 +60,7 @@ void RadiationIntegrator::CKSToSKS(double *p_x1, double *p_x2, double *p_x3)
 // Notes:
 //   Assumes jacobian is allocated to be 4*4.
 //   Jacobian contains dx_geodesic^mu/dx_simulation^nu with indices (mu, nu).
-void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, Array<double> &jacobian)
+void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, double jacobian[4][4])
 {
   // Calculate Jacobian for spherical Kerr-Schild simulation
   if (simulation_coord == Coordinates::sph_ks)
@@ -77,32 +77,43 @@ void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, Array
     double cph = std::cos(ph);
 
     // Calculate Jacobian of transformation
-    jacobian(0,0) = 1.0;
-    jacobian(0,1) = 0.0;
-    jacobian(0,2) = 0.0;
-    jacobian(0,3) = 0.0;
-    jacobian(1,0) = 0.0;
-    jacobian(1,1) = sth * cph;
-    jacobian(1,2) = cth * (r * cph - bh_a * sph);
-    jacobian(1,3) = sth * (-r * sph - bh_a * cph);
-    jacobian(2,0) = 0.0;
-    jacobian(2,1) = sth * sph;
-    jacobian(2,2) = cth * (r * sph + bh_a * cph);
-    jacobian(2,3) = sth * (r * cph - bh_a * sph);
-    jacobian(3,0) = 0.0;
-    jacobian(3,1) = cth;
-    jacobian(3,2) = -r * sth;
-    jacobian(3,3) = 0.0;
+    jacobian[0][0] = 1.0;
+    jacobian[0][1] = 0.0;
+    jacobian[0][2] = 0.0;
+    jacobian[0][3] = 0.0;
+    jacobian[1][0] = 0.0;
+    jacobian[1][1] = sth * cph;
+    jacobian[1][2] = cth * (r * cph - bh_a * sph);
+    jacobian[1][3] = sth * (-r * sph - bh_a * cph);
+    jacobian[2][0] = 0.0;
+    jacobian[2][1] = sth * sph;
+    jacobian[2][2] = cth * (r * sph + bh_a * cph);
+    jacobian[2][3] = sth * (r * cph - bh_a * sph);
+    jacobian[3][0] = 0.0;
+    jacobian[3][1] = cth;
+    jacobian[3][2] = -r * sth;
+    jacobian[3][3] = 0.0;
   }
 
   // Calculate Jacobian for Cartesian Kerr-Schild simulation
   else if (simulation_coord == Coordinates::cart_ks)
   {
-    jacobian.Zero();
-    jacobian(0,0) = 1.0;
-    jacobian(1,1) = 1.0;
-    jacobian(2,2) = 1.0;
-    jacobian(3,3) = 1.0;
+    jacobian[0][0] = 1.0;
+    jacobian[0][1] = 0.0;
+    jacobian[0][2] = 0.0;
+    jacobian[0][3] = 0.0;
+    jacobian[1][0] = 0.0;
+    jacobian[1][1] = 1.0;
+    jacobian[1][2] = 0.0;
+    jacobian[1][3] = 0.0;
+    jacobian[2][0] = 0.0;
+    jacobian[2][1] = 0.0;
+    jacobian[2][2] = 1.0;
+    jacobian[2][3] = 0.0;
+    jacobian[3][0] = 0.0;
+    jacobian[3][1] = 0.0;
+    jacobian[3][2] = 0.0;
+    jacobian[3][3] = 1.0;
   }
   return;
 }
@@ -117,16 +128,27 @@ void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, Array
 // Notes:
 //   Assumes gcov is allocated to be 4*4.
 //   Assumes Minkowski coordinates if ray_flat == true.
-void RadiationIntegrator::CovariantGeodesicMetric(double x, double y, double z, Array<double> &gcov)
+void RadiationIntegrator::CovariantGeodesicMetric(double x, double y, double z, double gcov[4][4])
 {
   // Handle flat case
   if (ray_flat)
   {
-    gcov.Zero();
-    gcov(0,0) = -1.0;
-    gcov(1,1) = 1.0;
-    gcov(2,2) = 1.0;
-    gcov(3,3) = 1.0;
+    gcov[0][0] = -1.0;
+    gcov[0][1] = 0.0;
+    gcov[0][2] = 0.0;
+    gcov[0][3] = 0.0;
+    gcov[1][0] = 0.0;
+    gcov[1][1] = 1.0;
+    gcov[1][2] = 0.0;
+    gcov[1][3] = 0.0;
+    gcov[2][0] = 0.0;
+    gcov[2][1] = 0.0;
+    gcov[2][2] = 1.0;
+    gcov[2][3] = 0.0;
+    gcov[3][0] = 0.0;
+    gcov[3][1] = 0.0;
+    gcov[3][2] = 0.0;
+    gcov[3][3] = 1.0;
     return;
   }
 
@@ -144,22 +166,22 @@ void RadiationIntegrator::CovariantGeodesicMetric(double x, double y, double z, 
   double l_3 = z / r;
 
   // Calculate metric components
-  gcov(0,0) = f * l_0 * l_0 - 1.0;
-  gcov(0,1) = f * l_0 * l_1;
-  gcov(0,2) = f * l_0 * l_2;
-  gcov(0,3) = f * l_0 * l_3;
-  gcov(1,0) = f * l_1 * l_0;
-  gcov(1,1) = f * l_1 * l_1 + 1.0;
-  gcov(1,2) = f * l_1 * l_2;
-  gcov(1,3) = f * l_1 * l_3;
-  gcov(2,0) = f * l_2 * l_0;
-  gcov(2,1) = f * l_2 * l_1;
-  gcov(2,2) = f * l_2 * l_2 + 1.0;
-  gcov(2,3) = f * l_2 * l_3;
-  gcov(3,0) = f * l_3 * l_0;
-  gcov(3,1) = f * l_3 * l_1;
-  gcov(3,2) = f * l_3 * l_2;
-  gcov(3,3) = f * l_3 * l_3 + 1.0;
+  gcov[0][0] = f * l_0 * l_0 - 1.0;
+  gcov[0][1] = f * l_0 * l_1;
+  gcov[0][2] = f * l_0 * l_2;
+  gcov[0][3] = f * l_0 * l_3;
+  gcov[1][0] = f * l_1 * l_0;
+  gcov[1][1] = f * l_1 * l_1 + 1.0;
+  gcov[1][2] = f * l_1 * l_2;
+  gcov[1][3] = f * l_1 * l_3;
+  gcov[2][0] = f * l_2 * l_0;
+  gcov[2][1] = f * l_2 * l_1;
+  gcov[2][2] = f * l_2 * l_2 + 1.0;
+  gcov[2][3] = f * l_2 * l_3;
+  gcov[3][0] = f * l_3 * l_0;
+  gcov[3][1] = f * l_3 * l_1;
+  gcov[3][2] = f * l_3 * l_2;
+  gcov[3][3] = f * l_3 * l_3 + 1.0;
   return;
 }
 
@@ -174,16 +196,27 @@ void RadiationIntegrator::CovariantGeodesicMetric(double x, double y, double z, 
 //   Assumes gcon is allocated to be 4*4.
 //   Assumes Minkowski coordinates if ray_flat == true.
 void RadiationIntegrator::ContravariantGeodesicMetric(double x, double y, double z,
-    Array<double> &gcon)
+    double gcon[4][4])
 {
   // Handle flat case
   if (ray_flat)
   {
-    gcon.Zero();
-    gcon(0,0) = -1.0;
-    gcon(1,1) = 1.0;
-    gcon(2,2) = 1.0;
-    gcon(3,3) = 1.0;
+    gcon[0][0] = -1.0;
+    gcon[0][1] = 0.0;
+    gcon[0][2] = 0.0;
+    gcon[0][3] = 0.0;
+    gcon[1][0] = 0.0;
+    gcon[1][1] = 1.0;
+    gcon[1][2] = 0.0;
+    gcon[1][3] = 0.0;
+    gcon[2][0] = 0.0;
+    gcon[2][1] = 0.0;
+    gcon[2][2] = 1.0;
+    gcon[2][3] = 0.0;
+    gcon[3][0] = 0.0;
+    gcon[3][1] = 0.0;
+    gcon[3][2] = 0.0;
+    gcon[3][3] = 1.0;
     return;
   }
 
@@ -201,22 +234,22 @@ void RadiationIntegrator::ContravariantGeodesicMetric(double x, double y, double
   double l3 = z / r;
 
   // Calculate metric components
-  gcon(0,0) = -f * l0 * l0 - 1.0;
-  gcon(0,1) = -f * l0 * l1;
-  gcon(0,2) = -f * l0 * l2;
-  gcon(0,3) = -f * l0 * l3;
-  gcon(1,0) = -f * l1 * l0;
-  gcon(1,1) = -f * l1 * l1 + 1.0;
-  gcon(1,2) = -f * l1 * l2;
-  gcon(1,3) = -f * l1 * l3;
-  gcon(2,0) = -f * l2 * l0;
-  gcon(2,1) = -f * l2 * l1;
-  gcon(2,2) = -f * l2 * l2 + 1.0;
-  gcon(2,3) = -f * l2 * l3;
-  gcon(3,0) = -f * l3 * l0;
-  gcon(3,1) = -f * l3 * l1;
-  gcon(3,2) = -f * l3 * l2;
-  gcon(3,3) = -f * l3 * l3 + 1.0;
+  gcon[0][0] = -f * l0 * l0 - 1.0;
+  gcon[0][1] = -f * l0 * l1;
+  gcon[0][2] = -f * l0 * l2;
+  gcon[0][3] = -f * l0 * l3;
+  gcon[1][0] = -f * l1 * l0;
+  gcon[1][1] = -f * l1 * l1 + 1.0;
+  gcon[1][2] = -f * l1 * l2;
+  gcon[1][3] = -f * l1 * l3;
+  gcon[2][0] = -f * l2 * l0;
+  gcon[2][1] = -f * l2 * l1;
+  gcon[2][2] = -f * l2 * l2 + 1.0;
+  gcon[2][3] = -f * l2 * l3;
+  gcon[3][0] = -f * l3 * l0;
+  gcon[3][1] = -f * l3 * l1;
+  gcon[3][2] = -f * l3 * l2;
+  gcon[3][3] = -f * l3 * l3 + 1.0;
   return;
 }
 
@@ -231,12 +264,15 @@ void RadiationIntegrator::ContravariantGeodesicMetric(double x, double y, double
 //   Assumes connection is allocated to be 4*4*4.
 //   Assumes Minkowski coordinates if ray_flat == true.
 void RadiationIntegrator::GeodesicConnection(double x, double y, double z,
-    Array<double> &connection)
+    double connection[4][4][4])
 {
   // Handle flat case
   if (ray_flat)
   {
-    connection.Zero();
+    for (int mu = 0; mu < 4; mu++)
+      for (int alpha = 0; alpha < 4; alpha++)
+        for (int beta = 0; beta < 4; beta++)
+          connection[mu][alpha][beta] = 0.0;
     return;
   }
 
@@ -353,13 +389,15 @@ void RadiationIntegrator::GeodesicConnection(double x, double y, double z,
   dgcov[3][3][3] = +(df_dz * l3 * l3 + f * dl3_dz * l3 + f * l3 * dl3_dz);
 
   // Calculate connection coefficients
-  connection.Zero();
   for (int mu = 0; mu < 4; mu++)
     for (int alpha = 0; alpha < 4; alpha++)
       for (int beta = 0; beta < 4; beta++)
+      {
+        connection[mu][alpha][beta] = 0.0;
         for (int nu = 0; nu < 4; nu++)
-          connection(mu,alpha,beta) += 0.5 * gcon[mu][nu]
+          connection[mu][alpha][beta] += 0.5 * gcon[mu][nu]
               * (dgcov[alpha][beta][nu] + dgcov[beta][alpha][nu] - dgcov[nu][alpha][beta]);
+      }
   return;
 }
 
@@ -372,8 +410,7 @@ void RadiationIntegrator::GeodesicConnection(double x, double y, double z,
 //   gcov: components set
 // Notes:
 //   Assumes gcov is allocated to be 4*4.
-void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z,
-    Array<double> &gcov)
+void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z, double gcov[4][4])
 {
   // Calculate spherical Kerr-Schild metric
   if (simulation_coord == Coordinates::sph_ks)
@@ -389,22 +426,22 @@ void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z
     double sigma = r2 + a2 * cth2;
 
     // Calculate metric components
-    gcov(0,0) = -(1.0 - 2.0 * bh_m * r / sigma);
-    gcov(0,1) = 2.0 * bh_m * r / sigma;
-    gcov(0,2) = 0.0;
-    gcov(0,3) = -2.0 * bh_m * bh_a * r * sth2 / sigma;
-    gcov(1,0) = 2.0 * bh_m * r / sigma;
-    gcov(1,1) = 1.0 + 2.0 * bh_m * r / sigma;
-    gcov(1,2) = 0.0;
-    gcov(1,3) = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth2;
-    gcov(2,0) = 0.0;
-    gcov(2,1) = 0.0;
-    gcov(2,2) = sigma;
-    gcov(2,3) = 0.0;
-    gcov(3,0) = -2.0 * bh_m * bh_a * r * sth2 / sigma;
-    gcov(3,1) = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth2;
-    gcov(3,2) = 0.0;
-    gcov(3,3) = (r2 + a2 + 2.0 * bh_m * a2 * r * sth2 / sigma) * sth2;
+    gcov[0][0] = -(1.0 - 2.0 * bh_m * r / sigma);
+    gcov[0][1] = 2.0 * bh_m * r / sigma;
+    gcov[0][2] = 0.0;
+    gcov[0][3] = -2.0 * bh_m * bh_a * r * sth2 / sigma;
+    gcov[1][0] = 2.0 * bh_m * r / sigma;
+    gcov[1][1] = 1.0 + 2.0 * bh_m * r / sigma;
+    gcov[1][2] = 0.0;
+    gcov[1][3] = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth2;
+    gcov[2][0] = 0.0;
+    gcov[2][1] = 0.0;
+    gcov[2][2] = sigma;
+    gcov[2][3] = 0.0;
+    gcov[3][0] = -2.0 * bh_m * bh_a * r * sth2 / sigma;
+    gcov[3][1] = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth2;
+    gcov[3][2] = 0.0;
+    gcov[3][3] = (r2 + a2 + 2.0 * bh_m * a2 * r * sth2 / sigma) * sth2;
   }
 
   // Calculate Cartesian Kerr-Schild metric
@@ -424,22 +461,22 @@ void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z
     double l_3 = z / r;
 
     // Calculate metric components
-    gcov(0,0) = f * l_0 * l_0 - 1.0;
-    gcov(0,1) = f * l_0 * l_1;
-    gcov(0,2) = f * l_0 * l_2;
-    gcov(0,3) = f * l_0 * l_3;
-    gcov(1,0) = f * l_1 * l_0;
-    gcov(1,1) = f * l_1 * l_1 + 1.0;
-    gcov(1,2) = f * l_1 * l_2;
-    gcov(1,3) = f * l_1 * l_3;
-    gcov(2,0) = f * l_2 * l_0;
-    gcov(2,1) = f * l_2 * l_1;
-    gcov(2,2) = f * l_2 * l_2 + 1.0;
-    gcov(2,3) = f * l_2 * l_3;
-    gcov(3,0) = f * l_3 * l_0;
-    gcov(3,1) = f * l_3 * l_1;
-    gcov(3,2) = f * l_3 * l_2;
-    gcov(3,3) = f * l_3 * l_3 + 1.0;
+    gcov[0][0] = f * l_0 * l_0 - 1.0;
+    gcov[0][1] = f * l_0 * l_1;
+    gcov[0][2] = f * l_0 * l_2;
+    gcov[0][3] = f * l_0 * l_3;
+    gcov[1][0] = f * l_1 * l_0;
+    gcov[1][1] = f * l_1 * l_1 + 1.0;
+    gcov[1][2] = f * l_1 * l_2;
+    gcov[1][3] = f * l_1 * l_3;
+    gcov[2][0] = f * l_2 * l_0;
+    gcov[2][1] = f * l_2 * l_1;
+    gcov[2][2] = f * l_2 * l_2 + 1.0;
+    gcov[2][3] = f * l_2 * l_3;
+    gcov[3][0] = f * l_3 * l_0;
+    gcov[3][1] = f * l_3 * l_1;
+    gcov[3][2] = f * l_3 * l_2;
+    gcov[3][3] = f * l_3 * l_3 + 1.0;
   }
   return;
 }
@@ -454,7 +491,7 @@ void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z
 // Notes:
 //   Assumes gcon is allocated to be 4*4.
 void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, double z,
-    Array<double> &gcon)
+    double gcon[4][4])
 {
   // Calculate spherical Kerr-Schild metric
   if (simulation_coord == Coordinates::sph_ks)
@@ -471,22 +508,22 @@ void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, doub
     double sigma = r2 + a2 * cth2;
 
     // Calculate metric components
-    gcon(0,0) = -(1.0 + 2.0 * bh_m * r / sigma);
-    gcon(0,1) = 2.0 * bh_m * r / sigma;
-    gcon(0,2) = 0.0;
-    gcon(0,3) = 0.0;
-    gcon(1,0) = 2.0 * bh_m * r / sigma;
-    gcon(1,1) = delta / sigma;
-    gcon(1,2) = 0.0;
-    gcon(1,3) = bh_a / sigma;
-    gcon(2,0) = 0.0;
-    gcon(2,1) = 0.0;
-    gcon(2,2) = 1.0 / sigma;
-    gcon(2,3) = 0.0;
-    gcon(3,0) = 0.0;
-    gcon(3,1) = bh_a / sigma;
-    gcon(3,2) = 0.0;
-    gcon(3,3) = 1.0 / (sigma * sth2);
+    gcon[0][0] = -(1.0 + 2.0 * bh_m * r / sigma);
+    gcon[0][1] = 2.0 * bh_m * r / sigma;
+    gcon[0][2] = 0.0;
+    gcon[0][3] = 0.0;
+    gcon[1][0] = 2.0 * bh_m * r / sigma;
+    gcon[1][1] = delta / sigma;
+    gcon[1][2] = 0.0;
+    gcon[1][3] = bh_a / sigma;
+    gcon[2][0] = 0.0;
+    gcon[2][1] = 0.0;
+    gcon[2][2] = 1.0 / sigma;
+    gcon[2][3] = 0.0;
+    gcon[3][0] = 0.0;
+    gcon[3][1] = bh_a / sigma;
+    gcon[3][2] = 0.0;
+    gcon[3][3] = 1.0 / (sigma * sth2);
   }
 
   // Calculate Cartesian Kerr-Schild metric
@@ -506,22 +543,22 @@ void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, doub
     double l3 = z / r;
 
     // Calculate metric components
-    gcon(0,0) = -f * l0 * l0 - 1.0;
-    gcon(0,1) = -f * l0 * l1;
-    gcon(0,2) = -f * l0 * l2;
-    gcon(0,3) = -f * l0 * l3;
-    gcon(1,0) = -f * l1 * l0;
-    gcon(1,1) = -f * l1 * l1 + 1.0;
-    gcon(1,2) = -f * l1 * l2;
-    gcon(1,3) = -f * l1 * l3;
-    gcon(2,0) = -f * l2 * l0;
-    gcon(2,1) = -f * l2 * l1;
-    gcon(2,2) = -f * l2 * l2 + 1.0;
-    gcon(2,3) = -f * l2 * l3;
-    gcon(3,0) = -f * l3 * l0;
-    gcon(3,1) = -f * l3 * l1;
-    gcon(3,2) = -f * l3 * l2;
-    gcon(3,3) = -f * l3 * l3 + 1.0;
+    gcon[0][0] = -f * l0 * l0 - 1.0;
+    gcon[0][1] = -f * l0 * l1;
+    gcon[0][2] = -f * l0 * l2;
+    gcon[0][3] = -f * l0 * l3;
+    gcon[1][0] = -f * l1 * l0;
+    gcon[1][1] = -f * l1 * l1 + 1.0;
+    gcon[1][2] = -f * l1 * l2;
+    gcon[1][3] = -f * l1 * l3;
+    gcon[2][0] = -f * l2 * l0;
+    gcon[2][1] = -f * l2 * l1;
+    gcon[2][2] = -f * l2 * l2 + 1.0;
+    gcon[2][3] = -f * l2 * l3;
+    gcon[3][0] = -f * l3 * l0;
+    gcon[3][1] = -f * l3 * l1;
+    gcon[3][2] = -f * l3 * l2;
+    gcon[3][3] = -f * l3 * l3 + 1.0;
   }
   return;
 }
@@ -549,8 +586,8 @@ void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, doub
 //   Generalizes 2012 ApJ 752 123 to case where up direction is not magnetic field, and changes
 //       ordering of basis vectors.
 void RadiationIntegrator::Tetrad(const double ucon[4], const double ucov[4], const double kcon[4],
-    const double kcov[4], const double up_con[4], const Array<double> &gcov,
-    const Array<double> &gcon, Array<double> &tetrad)
+    const double kcov[4], const double up_con[4], const double gcov[4][4], const double gcon[4][4],
+    double tetrad[4][4])
 {
   // Calculate fluid-frame frequency
   double omega = 0.0;
@@ -571,42 +608,42 @@ void RadiationIntegrator::Tetrad(const double ucon[4], const double ucov[4], con
 
   // Calculate components of unit vector in 0-direction
   for (int mu = 0; mu < 4; mu++)
-    tetrad(0,mu) = ucon[mu];
+    tetrad[0][mu] = ucon[mu];
 
   // Calculate components of unit vector in 3-direction
   for (int mu = 0; mu < 4; mu++)
-    tetrad(3,mu) = kcon[mu] / omega - ucon[mu];
+    tetrad[3][mu] = kcon[mu] / omega - ucon[mu];
 
   // Calculate components of unit vector in 2-direction
   for (int mu = 0; mu < 4; mu++)
-    tetrad(2,mu) = up_con[mu] - k_up_over_omega * tetrad(3,mu) + u_up_over_omega * kcon[mu];
+    tetrad[2][mu] = up_con[mu] - k_up_over_omega * tetrad[3][mu] + u_up_over_omega * kcon[mu];
   double norm = 0.0;
   for (int mu = 0; mu < 4; mu++)
     for (int nu = 0; nu < 4; nu++)
-      norm += gcov(mu,nu) * tetrad(2,mu) * tetrad(2,nu);
+      norm += gcov[mu][nu] * tetrad[2][mu] * tetrad[2][nu];
   norm = std::sqrt(norm);
   for (int mu = 0; mu < 4; mu++)
-    tetrad(2,mu) /= norm;
+    tetrad[2][mu] /= norm;
 
   // Calculate components of unit vector in 1-direction
   double tetrad_1_cov[4];
-  tetrad_1_cov[0] = tetrad(0,1) * (tetrad(2,3) * tetrad(3,2) - tetrad(2,2) * tetrad(3,3))
-      + tetrad(0,2) * (tetrad(2,1) * tetrad(3,3) - tetrad(2,3) * tetrad(3,1))
-      + tetrad(0,3) * (tetrad(2,2) * tetrad(3,1) - tetrad(2,1) * tetrad(3,2));
-  tetrad_1_cov[1] = tetrad(0,0) * (tetrad(2,2) * tetrad(3,3) - tetrad(2,3) * tetrad(3,2))
-      + tetrad(0,2) * (tetrad(2,3) * tetrad(3,0) - tetrad(2,0) * tetrad(3,3))
-      + tetrad(0,3) * (tetrad(2,0) * tetrad(3,2) - tetrad(2,2) * tetrad(3,0));
-  tetrad_1_cov[2] = tetrad(0,0) * (tetrad(2,3) * tetrad(3,1) - tetrad(2,1) * tetrad(3,3))
-      + tetrad(0,1) * (tetrad(2,0) * tetrad(3,3) - tetrad(2,3) * tetrad(3,0))
-      + tetrad(0,3) * (tetrad(2,1) * tetrad(3,0) - tetrad(2,0) * tetrad(3,1));
-  tetrad_1_cov[3] = tetrad(0,0) * (tetrad(2,1) * tetrad(3,2) - tetrad(2,2) * tetrad(3,1))
-      + tetrad(0,1) * (tetrad(2,2) * tetrad(3,0) - tetrad(2,0) * tetrad(3,2))
-      + tetrad(0,2) * (tetrad(2,0) * tetrad(3,1) - tetrad(2,1) * tetrad(3,0));
+  tetrad_1_cov[0] = tetrad[0][1] * (tetrad[2][3] * tetrad[3][2] - tetrad[2][2] * tetrad[3][3])
+      + tetrad[0][2] * (tetrad[2][1] * tetrad[3][3] - tetrad[2][3] * tetrad[3][1])
+      + tetrad[0][3] * (tetrad[2][2] * tetrad[3][1] - tetrad[2][1] * tetrad[3][2]);
+  tetrad_1_cov[1] = tetrad[0][0] * (tetrad[2][2] * tetrad[3][3] - tetrad[2][3] * tetrad[3][2])
+      + tetrad[0][2] * (tetrad[2][3] * tetrad[3][0] - tetrad[2][0] * tetrad[3][3])
+      + tetrad[0][3] * (tetrad[2][0] * tetrad[3][2] - tetrad[2][2] * tetrad[3][0]);
+  tetrad_1_cov[2] = tetrad[0][0] * (tetrad[2][3] * tetrad[3][1] - tetrad[2][1] * tetrad[3][3])
+      + tetrad[0][1] * (tetrad[2][0] * tetrad[3][3] - tetrad[2][3] * tetrad[3][0])
+      + tetrad[0][3] * (tetrad[2][1] * tetrad[3][0] - tetrad[2][0] * tetrad[3][1]);
+  tetrad_1_cov[3] = tetrad[0][0] * (tetrad[2][1] * tetrad[3][2] - tetrad[2][2] * tetrad[3][1])
+      + tetrad[0][1] * (tetrad[2][2] * tetrad[3][0] - tetrad[2][0] * tetrad[3][2])
+      + tetrad[0][2] * (tetrad[2][0] * tetrad[3][1] - tetrad[2][1] * tetrad[3][0]);
   for (int mu = 0; mu < 4; mu++)
   {
-    tetrad(1,mu) = 0.0;
+    tetrad[1][mu] = 0.0;
     for (int nu = 0; nu < 4; nu++)
-      tetrad(1,mu) += gcon(mu,nu) * tetrad_1_cov[nu];
+      tetrad[1][mu] += gcon[mu][nu] * tetrad_1_cov[nu];
   }
   return;
 }

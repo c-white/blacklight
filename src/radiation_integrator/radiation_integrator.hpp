@@ -314,15 +314,15 @@ struct RadiationIntegrator
   // Internal functions - radiation_geometry.cpp
   double RadialGeodesicCoordinate(double x, double y, double z);
   void CKSToSKS(double *p_x1, double *p_x2, double *p_x3);
-  void CoordinateJacobian(double x, double y, double z, Array<double> &jacobian);
-  void CovariantGeodesicMetric(double x, double y, double z, Array<double> &gcov);
-  void ContravariantGeodesicMetric(double x, double y, double z, Array<double> &gcon);
-  void GeodesicConnection(double x, double y, double z, Array<double> &connection);
-  void CovariantSimulationMetric(double x, double y, double z, Array<double> &gcov);
-  void ContravariantSimulationMetric(double x, double y, double z, Array<double> &gcon);
+  void CoordinateJacobian(double x, double y, double z, double jacobian[4][4]);
+  void CovariantGeodesicMetric(double x, double y, double z, double gcov[4][4]);
+  void ContravariantGeodesicMetric(double x, double y, double z, double gcon[4][4]);
+  void GeodesicConnection(double x, double y, double z, double connection[4][4][4]);
+  void CovariantSimulationMetric(double x, double y, double z, double gcov[4][4]);
+  void ContravariantSimulationMetric(double x, double y, double z, double gcon[4][4]);
   void Tetrad(const double ucon[4], const double ucov[4], const double kcon[4],
-      const double kcov[4], const double up_con[4], const Array<double> &gcov,
-      const Array<double> &gcon, Array<double> &tetrad);
+      const double kcov[4], const double up_con[4], const double gcov[4][4],
+      const double gcon[4][4], double tetrad[4][4]);
 };
 
 #endif

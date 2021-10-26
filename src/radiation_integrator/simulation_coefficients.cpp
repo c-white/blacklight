@@ -234,12 +234,12 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
   #pragma omp parallel
   {
     // Allocate scratch space
-    Array<double> gcov_sim(4, 4);
-    Array<double> gcon_sim(4, 4);
-    Array<double> gcov(4, 4);
-    Array<double> gcon(4, 4);
-    Array<double> jacobian(4, 4);
-    Array<double> tetrad(4, 4);
+    double gcov_sim[4][4];
+    double gcon_sim[4][4];
+    double gcov[4][4];
+    double gcon[4][4];
+    double jacobian[4][4];
+    double tetrad[4][4];
 
     // Go through rays and samples
     #pragma omp for schedule(static)
@@ -286,14 +286,14 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         ContravariantSimulationMetric(x1, x2, x3, gcon_sim);
 
         // Calculate simulation velocity
-        double uu0_sim = std::sqrt(1.0 + gcov_sim(1,1) * uu1_sim * uu1_sim
-            + 2.0 * gcov_sim(1,2) * uu1_sim * uu2_sim + 2.0 * gcov_sim(1,3) * uu1_sim * uu3_sim
-            + gcov_sim(2,2) * uu2_sim * uu2_sim + 2.0 * gcov_sim(2,3) * uu2_sim * uu3_sim
-            + gcov_sim(3,3) * uu3_sim * uu3_sim);
-        double lapse_sim = 1.0 / std::sqrt(-gcon_sim(0,0));
-        double shift1_sim = -gcon_sim(0,1) / gcon_sim(0,0);
-        double shift2_sim = -gcon_sim(0,2) / gcon_sim(0,0);
-        double shift3_sim = -gcon_sim(0,3) / gcon_sim(0,0);
+        double uu0_sim = std::sqrt(1.0 + gcov_sim[1][1] * uu1_sim * uu1_sim
+            + 2.0 * gcov_sim[1][2] * uu1_sim * uu2_sim + 2.0 * gcov_sim[1][3] * uu1_sim * uu3_sim
+            + gcov_sim[2][2] * uu2_sim * uu2_sim + 2.0 * gcov_sim[2][3] * uu2_sim * uu3_sim
+            + gcov_sim[3][3] * uu3_sim * uu3_sim);
+        double lapse_sim = 1.0 / std::sqrt(-gcon_sim[0][0]);
+        double shift1_sim = -gcon_sim[0][1] / gcon_sim[0][0];
+        double shift2_sim = -gcon_sim[0][2] / gcon_sim[0][0];
+        double shift3_sim = -gcon_sim[0][3] / gcon_sim[0][0];
         double ucon_sim[4];
         ucon_sim[0] = uu0_sim / lapse_sim;
         ucon_sim[1] = uu1_sim - shift1_sim * uu0_sim / lapse_sim;
@@ -302,7 +302,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double ucov_sim[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            ucov_sim[mu] += gcov_sim(mu,nu) * ucon_sim[nu];
+            ucov_sim[mu] += gcov_sim[mu][nu] * ucon_sim[nu];
 
         // Calculate simulation magnetic field
         double bcon_sim[4];
@@ -313,7 +313,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double bcov_sim[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            bcov_sim[mu] += gcov_sim(mu,nu) * bcon_sim[nu];
+            bcov_sim[mu] += gcov_sim[mu][nu] * bcon_sim[nu];
         double b_sq = 0.0;
         for (int mu = 0; mu < 4; mu++)
           b_sq += bcov_sim[mu] * bcon_sim[mu];
@@ -387,11 +387,11 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double ucon[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            ucon[mu] += jacobian(mu,nu) * ucon_sim[nu];
+            ucon[mu] += jacobian[mu][nu] * ucon_sim[nu];
         double bcon[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            bcon[mu] += jacobian(mu,nu) * bcon_sim[nu];
+            bcon[mu] += jacobian[mu][nu] * bcon_sim[nu];
 
         // Calculate geodesic metric
         CovariantGeodesicMetric(x1, x2, x3, gcov);
@@ -401,17 +401,17 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double kcon[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            kcon[mu] += gcon(mu,nu) * kcov[nu];
+            kcon[mu] += gcon[mu][nu] * kcov[nu];
 
         // Calculate covariant velocity and magnetic field
         double ucov[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            ucov[mu] += gcov(mu,nu) * ucon[nu];
+            ucov[mu] += gcov[mu][nu] * ucon[nu];
         double bcov[4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            bcov[mu] += gcov(mu,nu) * bcon[nu];
+            bcov[mu] += gcov[mu][nu] * bcon[nu];
 
         // Calculate orthonormal tetrad
         Tetrad(ucon, ucov, kcon, kcov, bcon, gcov, gcon, tetrad);
@@ -425,12 +425,12 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double b_tet_3 = 0.0;
         for (int mu = 0; mu < 4; mu++)
         {
-          k_tet_1 += tetrad(1,mu) * kcov[mu];
-          k_tet_2 += tetrad(2,mu) * kcov[mu];
-          k_tet_3 += tetrad(3,mu) * kcov[mu];
-          b_tet_1 += tetrad(1,mu) * bcov[mu];
-          b_tet_2 += tetrad(2,mu) * bcov[mu];
-          b_tet_3 += tetrad(3,mu) * bcov[mu];
+          k_tet_1 += tetrad[1][mu] * kcov[mu];
+          k_tet_2 += tetrad[2][mu] * kcov[mu];
+          k_tet_3 += tetrad[3][mu] * kcov[mu];
+          b_tet_1 += tetrad[1][mu] * bcov[mu];
+          b_tet_2 += tetrad[2][mu] * bcov[mu];
+          b_tet_3 += tetrad[3][mu] * bcov[mu];
         }
         double k_sq_tet = k_tet_1 * k_tet_1 + k_tet_2 * k_tet_2 + k_tet_3 * k_tet_3;
         double b_sq_tet = b_tet_1 * b_tet_1 + b_tet_2 * b_tet_2 + b_tet_3 * b_tet_3;

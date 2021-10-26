@@ -115,13 +115,13 @@ void GeodesicIntegrator::InitializeCamera()
   u_con[1] = dx_dr * ur + dx_dth * uth + dx_dph * uph;
   u_con[2] = dy_dr * ur + dy_dth * uth + dy_dph * uph;
   u_con[3] = dz_dr * ur + dz_dth * uth + dz_dph * uph;
-  Array<double> g_cov(4, 4);
+  double g_cov[4][4];
   CovariantGeodesicMetric(cam_x[1], cam_x[2], cam_x[3], g_cov);
   for (int mu = 0; mu < 4; mu++)
   {
     u_cov[mu] = 0.0;
     for (int nu = 0; nu < 4; nu++)
-      u_cov[mu] += g_cov(mu,nu) * u_con[nu];
+      u_cov[mu] += g_cov[mu][nu] * u_con[nu];
   }
 
   // Calculate photon momentum in spherical coordinates
@@ -177,14 +177,14 @@ void GeodesicIntegrator::InitializeCamera()
     momentum_factor = -image_frequency / k_t;
 
   // Calculate contravariant metric in camera frame
-  Array<double> g_con(4, 4);
+  double g_con[4][4];
   ContravariantGeodesicMetric(cam_x[1], cam_x[2], cam_x[3], g_con);
-  double g_con_xc_xc = g_con(1,1) + u_con[1] * u_con[1];
-  double g_con_xc_yc = g_con(1,2) + u_con[1] * u_con[2];
-  double g_con_xc_zc = g_con(1,3) + u_con[1] * u_con[3];
-  double g_con_yc_yc = g_con(2,2) + u_con[2] * u_con[2];
-  double g_con_yc_zc = g_con(2,3) + u_con[2] * u_con[3];
-  double g_con_zc_zc = g_con(3,3) + u_con[3] * u_con[3];
+  double g_con_xc_xc = g_con[1][1] + u_con[1] * u_con[1];
+  double g_con_xc_yc = g_con[1][2] + u_con[1] * u_con[2];
+  double g_con_xc_zc = g_con[1][3] + u_con[1] * u_con[3];
+  double g_con_yc_yc = g_con[2][2] + u_con[2] * u_con[2];
+  double g_con_yc_zc = g_con[2][3] + u_con[2] * u_con[3];
+  double g_con_zc_zc = g_con[3][3] + u_con[3] * u_con[3];
 
   // Calculate camera normal direction in camera frame
   double norm_cov_xc = k_x - u_cov[1] / u_cov[0] * k_t;
@@ -221,18 +221,24 @@ void GeodesicIntegrator::InitializeCamera()
   }
 
   // Calculate covariant metric in camera frame
-  double g_cov_xc_xc = g_cov(1,1) - u_cov[1] / u_cov[0] * g_cov(1,0)
-      - u_cov[1] / u_cov[0] * g_cov(1,0) + u_cov[1] * u_cov[1] / (u_cov[0] * u_cov[0]) * g_cov(0,0);
-  double g_cov_xc_yc = g_cov(1,2) - u_cov[1] / u_cov[0] * g_cov(2,0)
-      - u_cov[2] / u_cov[0] * g_cov(1,0) + u_cov[1] * u_cov[2] / (u_cov[0] * u_cov[0]) * g_cov(0,0);
-  double g_cov_xc_zc = g_cov(1,3) - u_cov[1] / u_cov[0] * g_cov(3,0)
-      - u_cov[3] / u_cov[0] * g_cov(1,0) + u_cov[1] * u_cov[3] / (u_cov[0] * u_cov[0]) * g_cov(0,0);
-  double g_cov_yc_yc = g_cov(2,2) - u_cov[2] / u_cov[0] * g_cov(2,0)
-      - u_cov[2] / u_cov[0] * g_cov(2,0) + u_cov[2] * u_cov[2] / (u_cov[0] * u_cov[0]) * g_cov(0,0);
-  double g_cov_yc_zc = g_cov(2,3) - u_cov[2] / u_cov[0] * g_cov(3,0)
-      - u_cov[3] / u_cov[0] * g_cov(2,0) + u_cov[2] * u_cov[3] / (u_cov[0] * u_cov[0]) * g_cov(0,0);
-  double g_cov_zc_zc = g_cov(3,3) - u_cov[3] / u_cov[0] * g_cov(3,0)
-      - u_cov[3] / u_cov[0] * g_cov(3,0) + u_cov[3] * u_cov[3] / (u_cov[0] * u_cov[0]) * g_cov(0,0);
+  double g_cov_xc_xc = g_cov[1][1] - u_cov[1] / u_cov[0] * g_cov[1][0]
+      - u_cov[1] / u_cov[0] * g_cov[1][0]
+      + u_cov[1] * u_cov[1] / (u_cov[0] * u_cov[0]) * g_cov[0][0];
+  double g_cov_xc_yc = g_cov[1][2] - u_cov[1] / u_cov[0] * g_cov[2][0]
+      - u_cov[2] / u_cov[0] * g_cov[1][0]
+      + u_cov[1] * u_cov[2] / (u_cov[0] * u_cov[0]) * g_cov[0][0];
+  double g_cov_xc_zc = g_cov[1][3] - u_cov[1] / u_cov[0] * g_cov[3][0]
+      - u_cov[3] / u_cov[0] * g_cov[1][0]
+      + u_cov[1] * u_cov[3] / (u_cov[0] * u_cov[0]) * g_cov[0][0];
+  double g_cov_yc_yc = g_cov[2][2] - u_cov[2] / u_cov[0] * g_cov[2][0]
+      - u_cov[2] / u_cov[0] * g_cov[2][0]
+      + u_cov[2] * u_cov[2] / (u_cov[0] * u_cov[0]) * g_cov[0][0];
+  double g_cov_yc_zc = g_cov[2][3] - u_cov[2] / u_cov[0] * g_cov[3][0]
+      - u_cov[3] / u_cov[0] * g_cov[2][0]
+      + u_cov[2] * u_cov[3] / (u_cov[0] * u_cov[0]) * g_cov[0][0];
+  double g_cov_zc_zc = g_cov[3][3] - u_cov[3] / u_cov[0] * g_cov[3][0]
+      - u_cov[3] / u_cov[0] * g_cov[3][0]
+      + u_cov[3] * u_cov[3] / (u_cov[0] * u_cov[0]) * g_cov[0][0];
 
   // Calculate camera vertical direction without rotation in camera frame
   double up_norm = up_con_xc * norm_cov_xc + up_con_yc * norm_cov_yc + up_con_zc * norm_cov_zc;

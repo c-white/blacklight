@@ -125,14 +125,14 @@ struct GeodesicIntegrator
   void InitializeGeodesics();
   void IntegrateGeodesics();
   void ReverseGeodesics();
-  void GeodesicSubstep(double y[9], double k[9], Array<double> &gcov, Array<double> &gcon,
-      Array<double> &dgcon);
+  void GeodesicSubstep(double y[9], double k[9], double gcov[4][4], double gcon[4][4],
+      double dgcon[3][4][4]);
 
   // Internal functions - geodesic_geometry.cpp
   double RadialGeodesicCoordinate(double x, double y, double z);
-  void CovariantGeodesicMetric(double x, double y, double z, Array<double> &gcov);
-  void ContravariantGeodesicMetric(double x, double y, double z, Array<double> &gcon);
-  void ContravariantGeodesicMetricDerivative(double x, double y, double z, Array<double> &dgcon);
+  void CovariantGeodesicMetric(double x, double y, double z, double gcov[4][4]);
+  void ContravariantGeodesicMetric(double x, double y, double z, double gcon[4][4]);
+  void ContravariantGeodesicMetricDerivative(double x, double y, double z, double dgcon[3][4][4]);
 };
 
 #endif
