@@ -109,13 +109,14 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
         {
           CovariantGeodesicMetric(x1, x2, x3, gcov);
           ContravariantGeodesicMetric(x1, x2, x3, gcon);
+          double temp_a[4] = {};
+          for (int a = 1; a < 4; a++)
+            for (int mu = 0; mu < 4; mu++)
+              temp_a[a] += (gcon(a,mu) - gcon(0,a) * gcon(0,mu) / gcon(0,0)) * kcov[mu];
           double dl_dlambda_sq = 0.0;
           for (int a = 1; a < 4; a++)
             for (int b = 1; b < 4; b++)
-              for (int mu = 0; mu < 4; mu++)
-                for (int nu = 0; nu < 4; nu++)
-                  dl_dlambda_sq += gcov(a,b) * (gcon(a,mu) - gcon(0,a) * gcon(0,mu) / gcon(0,0))
-                      * (gcon(b,nu) - gcon(0,b) * gcon(0,nu) / gcon(0,0)) * kcov[mu] * kcov[nu];
+              dl_dlambda_sq += gcov(a,b) * temp_a[a] * temp_a[b];
           image[adaptive_level](image_offset_length,m) +=
               std::sqrt(dl_dlambda_sq) * delta_lambda * x_unit;
         }

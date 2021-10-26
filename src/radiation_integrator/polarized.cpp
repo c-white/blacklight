@@ -157,15 +157,20 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
             kcon_old[mu] = 0.5 * (kcon_old[mu] + kcon[mu]);
 
         // Parallel-transport N by first half step
+        double temp_a[4][4] = {};
+        for (int mu = 0; mu < 4; mu++)
+          for (int beta = 0; beta < 4; beta++)
+            for (int alpha = 0; alpha < 4; alpha++)
+              temp_a[mu][beta] += kcon_old[alpha] * connection_old(mu,alpha,beta);
+        double delta_lambda_local = (delta_lambda_old + delta_lambda) / 2.0;
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
           {
             std::complex<double> dnn_dlambda = 0.0;
-            for (int alpha = 0; alpha < 4; alpha++)
-              for (int beta = 0; beta < 4; beta++)
-                dnn_dlambda -= kcon_old[alpha] * (connection_old(mu,alpha,beta) * nn_con(m,beta,nu)
-                    + connection_old(nu,alpha,beta) * nn_con(m,mu,beta));
-            nn_con_temp(mu,nu) += dnn_dlambda * (delta_lambda_old + delta_lambda) / 2.0;
+            for (int beta = 0; beta < 4; beta++)
+              dnn_dlambda -=
+                  temp_a[mu][beta] * nn_con(m,beta,nu) + temp_a[nu][beta] * nn_con(m,mu,beta);
+            nn_con_temp(mu,nu) += dnn_dlambda * delta_lambda_local;
           }
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
@@ -241,15 +246,26 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         Tetrad(ucon, ucov, kcon, kcov, upcon, gcov, gcon, tetrad);
 
         // Transform N into orthonormal frame
+        std::complex<double> temp_b[4][4] = {};
+        for (int nu = 0; nu < 4; nu++)
+          for (int alpha = 0; alpha < 4; alpha++)
+            for (int beta = 0; beta < 4; beta++)
+              temp_b[nu][alpha] += gcov(nu,beta) * nn_con(m,alpha,beta);
+        std::complex<double> temp_c[4][4] = {};
+        for (int mu = 0; mu < 4; mu++)
+          for (int nu = 0; nu < 4; nu++)
+            for (int alpha = 0; alpha < 4; alpha++)
+              temp_c[mu][nu] += gcov(mu,alpha) * temp_b[nu][alpha];
+        std::complex<double> temp_d[4][4] = {};
+        for (int b = 0; b < 4; b++)
+          for (int mu = 0; mu < 4; mu++)
+            for (int nu = 0; nu < 4; nu++)
+              temp_d[b][mu] += tetrad(b,nu) * temp_c[mu][nu];
         nn_tet_cov.Zero();
         for (int a = 0; a < 4; a++)
           for (int b = 0; b < 4; b++)
             for (int mu = 0; mu < 4; mu++)
-              for (int nu = 0; nu < 4; nu++)
-                for (int alpha = 0; alpha < 4; alpha++)
-                  for (int beta = 0; beta < 4; beta++)
-                    nn_tet_cov(a,b) += tetrad(a,mu) * tetrad(b,nu) * gcov(mu,alpha) * gcov(nu,beta)
-                        * nn_con(m,alpha,beta);
+              nn_tet_cov(a,b) += tetrad(a,mu) * temp_d[b][mu];
 
         // Calculate orthonormal-frame Stokes quantities before coupling to fluid (I 14)
         double ss_start[4];
@@ -285,13 +301,14 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
               std::min(image[adaptive_level](image_offset_time,m), t_cgs);
         if (image_length)
         {
+          double temp_e[4] = {};
+          for (int a = 1; a < 4; a++)
+            for (int mu = 0; mu < 4; mu++)
+              temp_e[a] += (gcon(a,mu) - gcon(0,a) * gcon(0,mu) / gcon(0,0)) * kcov[mu];
           double dl_dlambda_sq = 0.0;
           for (int a = 1; a < 4; a++)
             for (int b = 1; b < 4; b++)
-              for (int mu = 0; mu < 4; mu++)
-                for (int nu = 0; nu < 4; nu++)
-                  dl_dlambda_sq += gcov(a,b) * (gcon(a,mu) - gcon(0,a) * gcon(0,mu) / gcon(0,0))
-                      * (gcon(b,nu) - gcon(0,b) * gcon(0,nu) / gcon(0,0)) * kcov[mu] * kcov[nu];
+              dl_dlambda_sq += gcov(a,b) * temp_e[a] * temp_e[b];
           image[adaptive_level](image_offset_length,m) +=
               std::sqrt(dl_dlambda_sq) * delta_lambda * x_unit;
         }
@@ -544,28 +561,37 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         nn_tet_con(2,1) = ss_end[2] + Math::i * ss_end[3];
 
         // Transform N into coordinate frame
+        std::complex<double> temp_f[4][4] = {};
+        for (int nu = 0; nu < 4; nu++)
+          for (int a = 0; a < 4; a++)
+            for (int b = 0; b < 4; b++)
+              temp_f[nu][a] += tetrad(b,nu) * nn_tet_con(a,b);
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
           {
             nn_con(m,mu,nu) = 0.0;
             for (int a = 0; a < 4; a++)
-              for (int b = 0; b < 4; b++)
-                nn_con(m,mu,nu) += tetrad(a,mu) * tetrad(b,nu) * nn_tet_con(a,b);
+              nn_con(m,mu,nu) += tetrad(a,mu) * temp_f[nu][a];
           }
 
         // Parallel-transport N by second half step
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
             nn_con_temp(mu,nu) = nn_con(m,mu,nu);
+        double temp_g[4][4] = {};
+        for (int mu = 0; mu < 4; mu++)
+          for (int beta = 0; beta < 4; beta++)
+            for (int alpha = 0; alpha < 4; alpha++)
+              temp_g[mu][beta] += kcon[alpha] * connection(mu,alpha,beta);
+        delta_lambda_local = (delta_lambda + delta_lambda_new) / 4.0;
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
           {
             std::complex<double> dnn_dlambda = 0.0;
-            for (int alpha = 0; alpha < 4; alpha++)
-              for (int beta = 0; beta < 4; beta++)
-                dnn_dlambda -= kcon[alpha] * (connection(mu,alpha,beta) * nn_con_temp(beta,nu)
-                    + connection(nu,alpha,beta) * nn_con_temp(mu,beta));
-            nn_con(m,mu,nu) += dnn_dlambda * (delta_lambda + delta_lambda_new) / 4.0;
+            for (int beta = 0; beta < 4; beta++)
+              dnn_dlambda -=
+                  temp_g[mu][beta] * nn_con_temp(beta,nu) + temp_g[nu][beta] * nn_con_temp(mu,beta);
+            nn_con(m,mu,nu) += dnn_dlambda * delta_lambda_local;
           }
 
         // Store values in registers for next step
@@ -630,15 +656,26 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
       Tetrad(camera_u_con, camera_u_cov, kcon, kcov, up_con, gcov, gcon, tetrad);
 
       // Transform N into orthonormal frame
+      std::complex<double> temp_a[4][4] = {};
+      for (int nu = 0; nu < 4; nu++)
+        for (int alpha = 0; alpha < 4; alpha++)
+          for (int beta = 0; beta < 4; beta++)
+            temp_a[nu][alpha] += gcov(nu,beta) * nn_con(m,alpha,beta);
+      std::complex<double> temp_b[4][4] = {};
+      for (int mu = 0; mu < 4; mu++)
+        for (int nu = 0; nu < 4; nu++)
+          for (int alpha = 0; alpha < 4; alpha++)
+            temp_b[mu][nu] += gcov(mu,alpha) * temp_a[nu][alpha];
+      std::complex<double> temp_c[4][4] = {};
+      for (int b = 0; b < 4; b++)
+        for (int mu = 0; mu < 4; mu++)
+          for (int nu = 0; nu < 4; nu++)
+            temp_c[b][mu] += tetrad(b,nu) * temp_b[mu][nu];
       nn_tet_cov.Zero();
       for (int a = 0; a < 4; a++)
         for (int b = 0; b < 4; b++)
           for (int mu = 0; mu < 4; mu++)
-            for (int nu = 0; nu < 4; nu++)
-              for (int alpha = 0; alpha < 4; alpha++)
-                for (int beta = 0; beta < 4; beta++)
-                  nn_tet_cov(a,b) += tetrad(a,mu) * tetrad(b,nu) * gcov(mu,alpha) * gcov(nu,beta)
-                      * nn_con(m,alpha,beta);
+            nn_tet_cov(a,b) += tetrad(a,mu) * temp_c[b][mu];
 
       // Calculate orthonormal-frame Stokes quantities at camera location (I 14)
       image[adaptive_level](0,m) = 0.5 * (nn_tet_cov(1,1) + nn_tet_cov(2,2)).real();

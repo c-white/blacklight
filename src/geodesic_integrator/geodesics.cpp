@@ -551,12 +551,13 @@ void GeodesicIntegrator::GeodesicSubstep(double y[9], double k[9], Array<double>
     for (int mu = 0; mu < 4; mu++)
       for (int nu = 0; nu < 4; nu++)
         k[4+a] -= 0.5 * dgcon(a-1,mu,nu) * y[4+mu] * y[4+nu];
+  double temp_a[4] = {};
+  for (int a = 1; a < 4; a++)
+    for (int mu = 0; mu < 4; mu++)
+      temp_a[a] += (gcon(a,mu) - gcon(0,a) * gcon(0,mu) / gcon(0,0)) * y[4+mu];
   for (int a = 1; a < 4; a++)
     for (int b = 1; b < 4; b++)
-      for (int mu = 0; mu < 4; mu++)
-        for (int nu = 0; nu < 4; nu++)
-          k[8] += gcov(a,b) * (gcon(a,mu) - gcon(0,a) * gcon(0,mu) / gcon(0,0))
-              * (gcon(b,nu) - gcon(0,b) * gcon(0,nu) / gcon(0,0)) * y[4+mu] * y[4+nu];
+      k[8] += gcov(a,b) * temp_a[a] * temp_a[b];
   k[8] = -std::sqrt(k[8]);
   return;
 }
