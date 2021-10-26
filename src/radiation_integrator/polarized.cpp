@@ -56,9 +56,8 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
     image[adaptive_level].Allocate(image_num_quantities, num_pix);
   image[adaptive_level].Zero();
 
-  // Allocate and initialize coherency tensor array
-  Array<std::complex<double>> nn_con(num_pix, 4, 4);
-  nn_con.Zero();
+  // Allocate coherency tensor array
+  Array<std::complex<double>> nn(num_pix, 4, 4);
 
   // Calculate units
   double x_unit = Physics::gg_msun * mass_msun / (Physics::c * Physics::c);
@@ -75,11 +74,12 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
     double gcov_sim[4][4];
     double gcon_sim[4][4];
     double connection[4][4][4];
-    Array<double> connection_old(4, 4, 4);
+    double connection_old[4][4][4];
     double tetrad[4][4];
-    Array<std::complex<double>> nn_con_temp(4, 4);
-    Array<std::complex<double>> nn_tet_cov(4, 4);
-    Array<std::complex<double>> nn_tet_con(4, 4);
+    std::complex<double> nn_con[4][4];
+    std::complex<double> nn_con_temp[4][4];
+    std::complex<double> nn_tet_cov[4][4];
+    std::complex<double> nn_tet_con[4][4];
     double jacobian[4][4];
 
     // Go through pixels
@@ -93,7 +93,12 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
 
       // Zero registers
       delta_lambda_old = 0.0;
-      nn_con_temp.Zero();
+      for (int mu = 0; mu < 4; mu++)
+        for (int nu = 0; nu < 4; nu++)
+        {
+          nn_con[mu][nu] = 0.0;
+          nn_con_temp[mu][nu] = 0.0;
+        }
 
       // Prepare integrated quantities
       double integrated_lambda = 0.0;
@@ -136,13 +141,13 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
           for (int mu = 0; mu < 4; mu++)
             for (int alpha = 0; alpha < 4; alpha++)
               for (int beta = 0; beta < 4; beta++)
-                connection_old(mu,alpha,beta) = connection[mu][alpha][beta];
+                connection_old[mu][alpha][beta] = connection[mu][alpha][beta];
         else
           for (int mu = 0; mu < 4; mu++)
             for (int alpha = 0; alpha < 4; alpha++)
               for (int beta = 0; beta < 4; beta++)
-                connection_old(mu,alpha,beta) =
-                    0.5 * (connection_old(mu,alpha,beta) + connection[mu][alpha][beta]);
+                connection_old[mu][alpha][beta] =
+                    0.5 * (connection_old[mu][alpha][beta] + connection[mu][alpha][beta]);
 
         // Calculate geodesic contravariant momentum
         double kcon[4] = {};
@@ -161,7 +166,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         for (int mu = 0; mu < 4; mu++)
           for (int beta = 0; beta < 4; beta++)
             for (int alpha = 0; alpha < 4; alpha++)
-              temp_a[mu][beta] += kcon_old[alpha] * connection_old(mu,alpha,beta);
+              temp_a[mu][beta] += kcon_old[alpha] * connection_old[mu][alpha][beta];
         double delta_lambda_local = (delta_lambda_old + delta_lambda) / 2.0;
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
@@ -169,12 +174,12 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
             std::complex<double> dnn_dlambda = 0.0;
             for (int beta = 0; beta < 4; beta++)
               dnn_dlambda -=
-                  temp_a[mu][beta] * nn_con(m,beta,nu) + temp_a[nu][beta] * nn_con(m,mu,beta);
-            nn_con_temp(mu,nu) += dnn_dlambda * delta_lambda_local;
+                  temp_a[mu][beta] * nn_con[beta][nu] + temp_a[nu][beta] * nn_con[mu][beta];
+            nn_con_temp[mu][nu] += dnn_dlambda * delta_lambda_local;
           }
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            nn_con(m,mu,nu) = nn_con_temp(mu,nu);
+            nn_con[mu][nu] = nn_con_temp[mu][nu];
 
         // Calculate simulation metric
         CovariantSimulationMetric(x1, x2, x3, gcov_sim);
@@ -250,7 +255,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         for (int nu = 0; nu < 4; nu++)
           for (int alpha = 0; alpha < 4; alpha++)
             for (int beta = 0; beta < 4; beta++)
-              temp_b[nu][alpha] += gcov[nu][beta] * nn_con(m,alpha,beta);
+              temp_b[nu][alpha] += gcov[nu][beta] * nn_con[alpha][beta];
         std::complex<double> temp_c[4][4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
@@ -261,18 +266,20 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
           for (int mu = 0; mu < 4; mu++)
             for (int nu = 0; nu < 4; nu++)
               temp_d[b][mu] += tetrad[b][nu] * temp_c[mu][nu];
-        nn_tet_cov.Zero();
         for (int a = 0; a < 4; a++)
           for (int b = 0; b < 4; b++)
+          {
+            nn_tet_cov[a][b] = 0.0;
             for (int mu = 0; mu < 4; mu++)
-              nn_tet_cov(a,b) += tetrad[a][mu] * temp_d[b][mu];
+              nn_tet_cov[a][b] += tetrad[a][mu] * temp_d[b][mu];
+          }
 
         // Calculate orthonormal-frame Stokes quantities before coupling to fluid (I 14)
         double ss_start[4];
-        ss_start[0] = 0.5 * (nn_tet_cov(1,1) + nn_tet_cov(2,2)).real();
-        ss_start[1] = 0.5 * (nn_tet_cov(1,1) - nn_tet_cov(2,2)).real();
-        ss_start[2] = 0.5 * (nn_tet_cov(1,2) + nn_tet_cov(2,1)).real();
-        ss_start[3] = 0.5 * (nn_tet_cov(2,1) - nn_tet_cov(1,2)).imag();
+        ss_start[0] = 0.5 * (nn_tet_cov[1][1] + nn_tet_cov[2][2]).real();
+        ss_start[1] = 0.5 * (nn_tet_cov[1][1] - nn_tet_cov[2][2]).real();
+        ss_start[2] = 0.5 * (nn_tet_cov[1][2] + nn_tet_cov[2][1]).real();
+        ss_start[3] = 0.5 * (nn_tet_cov[2][1] - nn_tet_cov[1][2]).imag();
 
         // Extract emissivity coefficients
         double j_s[4] = {};
@@ -554,30 +561,32 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         }
 
         // Calculate orthonormal-frame N after coupling to fluid (I 13)
-        nn_tet_con.Zero();
-        nn_tet_con(1,1) = ss_end[0] + ss_end[1];
-        nn_tet_con(2,2) = ss_end[0] - ss_end[1];
-        nn_tet_con(1,2) = ss_end[2] - Math::i * ss_end[3];
-        nn_tet_con(2,1) = ss_end[2] + Math::i * ss_end[3];
+        for (int mu = 0; mu < 4; mu++)
+          for (int nu = 0; nu < 4; nu++)
+            nn_tet_con[mu][nu] = 0.0;
+        nn_tet_con[1][1] = ss_end[0] + ss_end[1];
+        nn_tet_con[2][2] = ss_end[0] - ss_end[1];
+        nn_tet_con[1][2] = ss_end[2] - Math::i * ss_end[3];
+        nn_tet_con[2][1] = ss_end[2] + Math::i * ss_end[3];
 
         // Transform N into coordinate frame
         std::complex<double> temp_f[4][4] = {};
         for (int nu = 0; nu < 4; nu++)
           for (int a = 0; a < 4; a++)
             for (int b = 0; b < 4; b++)
-              temp_f[nu][a] += tetrad[b][nu] * nn_tet_con(a,b);
+              temp_f[nu][a] += tetrad[b][nu] * nn_tet_con[a][b];
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
           {
-            nn_con(m,mu,nu) = 0.0;
+            nn_con[mu][nu] = 0.0;
             for (int a = 0; a < 4; a++)
-              nn_con(m,mu,nu) += tetrad[a][mu] * temp_f[nu][a];
+              nn_con[mu][nu] += tetrad[a][mu] * temp_f[nu][a];
           }
 
         // Parallel-transport N by second half step
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
-            nn_con_temp(mu,nu) = nn_con(m,mu,nu);
+            nn_con_temp[mu][nu] = nn_con[mu][nu];
         double temp_g[4][4] = {};
         for (int mu = 0; mu < 4; mu++)
           for (int beta = 0; beta < 4; beta++)
@@ -589,9 +598,9 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
           {
             std::complex<double> dnn_dlambda = 0.0;
             for (int beta = 0; beta < 4; beta++)
-              dnn_dlambda -=
-                  temp_g[mu][beta] * nn_con_temp(beta,nu) + temp_g[nu][beta] * nn_con_temp(mu,beta);
-            nn_con(m,mu,nu) += dnn_dlambda * delta_lambda_local;
+              dnn_dlambda -= temp_g[mu][beta] * nn_con_temp[beta][nu]
+                  + temp_g[nu][beta] * nn_con_temp[mu][beta];
+            nn_con[mu][nu] += dnn_dlambda * delta_lambda_local;
           }
 
         // Store values in registers for next step
@@ -601,8 +610,13 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         for (int mu = 0; mu < 4; mu++)
           for (int alpha = 0; alpha < 4; alpha++)
             for (int beta = 0; beta < 4; beta++)
-              connection_old(mu,alpha,beta) = connection[mu][alpha][beta];
+              connection_old[mu][alpha][beta] = connection[mu][alpha][beta];
       }
+
+      // Store coherency tensor
+      for (int mu = 0; mu < 4; mu++)
+        for (int nu = 0; nu < 4; nu++)
+          nn(m,mu,nu) = nn_con[mu][nu];
 
       // Store integrated quantities
       if (image_lambda)
@@ -660,7 +674,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
       for (int nu = 0; nu < 4; nu++)
         for (int alpha = 0; alpha < 4; alpha++)
           for (int beta = 0; beta < 4; beta++)
-            temp_a[nu][alpha] += gcov[nu][beta] * nn_con(m,alpha,beta);
+            temp_a[nu][alpha] += gcov[nu][beta] * nn(m,alpha,beta);
       std::complex<double> temp_b[4][4] = {};
       for (int mu = 0; mu < 4; mu++)
         for (int nu = 0; nu < 4; nu++)
@@ -671,17 +685,19 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
         for (int mu = 0; mu < 4; mu++)
           for (int nu = 0; nu < 4; nu++)
             temp_c[b][mu] += tetrad[b][nu] * temp_b[mu][nu];
-      nn_tet_cov.Zero();
       for (int a = 0; a < 4; a++)
         for (int b = 0; b < 4; b++)
+        {
+          nn_tet_cov[a][b] = 0.0;
           for (int mu = 0; mu < 4; mu++)
-            nn_tet_cov(a,b) += tetrad[a][mu] * temp_c[b][mu];
+            nn_tet_cov[a][b] += tetrad[a][mu] * temp_c[b][mu];
+        }
 
       // Calculate orthonormal-frame Stokes quantities at camera location (I 14)
-      image[adaptive_level](0,m) = 0.5 * (nn_tet_cov(1,1) + nn_tet_cov(2,2)).real();
-      image[adaptive_level](1,m) = 0.5 * (nn_tet_cov(1,1) - nn_tet_cov(2,2)).real();
-      image[adaptive_level](2,m) = 0.5 * (nn_tet_cov(1,2) + nn_tet_cov(2,1)).real();
-      image[adaptive_level](3,m) = 0.5 * (nn_tet_cov(2,1) - nn_tet_cov(1,2)).imag();
+      image[adaptive_level](0,m) = 0.5 * (nn_tet_cov[1][1] + nn_tet_cov[2][2]).real();
+      image[adaptive_level](1,m) = 0.5 * (nn_tet_cov[1][1] - nn_tet_cov[2][2]).real();
+      image[adaptive_level](2,m) = 0.5 * (nn_tet_cov[1][2] + nn_tet_cov[2][1]).real();
+      image[adaptive_level](3,m) = 0.5 * (nn_tet_cov[2][1] - nn_tet_cov[1][2]).imag();
     }
 
     // Transform invariant Stokes quantities (e.g. I_nu/nu^3) to standard ones (e.g. I_nu)

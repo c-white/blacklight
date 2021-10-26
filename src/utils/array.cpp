@@ -6,9 +6,6 @@
 #include <cstring>  // memcpy
 #include <limits>   // numeric_limits
 
-// Library headers
-#include <omp.h>  // pragmas
-
 // Blacklight headers
 #include "array.hpp"
 #include "exceptions.hpp"  // BlacklightException
@@ -578,7 +575,6 @@ template<typename type> void Array<type>::Slice(int dimension, int index)
 template<typename type> void Array<type>::Zero()
 {
   if (allocated)
-    #pragma omp parallel for schedule(static)
     for (int n = 0; n < n_tot; n++)
       data[n] = static_cast<type>(0);
   return;
@@ -594,7 +590,6 @@ template<typename type> void Array<type>::Zero()
 template<> void Array<float>::SetNaN()
 {
   if (allocated)
-    #pragma omp parallel for schedule(static)
     for (int n = 0; n < n_tot; n++)
       data[n] = std::numeric_limits<float>::quiet_NaN();
   return;
@@ -610,7 +605,6 @@ template<> void Array<float>::SetNaN()
 template<> void Array<double>::SetNaN()
 {
   if (allocated)
-    #pragma omp parallel for schedule(static)
     for (int n = 0; n < n_tot; n++)
       data[n] = std::numeric_limits<double>::quiet_NaN();
   return;
