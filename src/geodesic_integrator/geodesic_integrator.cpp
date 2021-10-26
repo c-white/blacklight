@@ -79,40 +79,23 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   }
 
   // Set and calculate geometry data
-  switch (model_type)
+  if (model_type == ModelType::simulation)
   {
-    case ModelType::simulation:
-    {
-      bh_m = 1.0;
-      bh_a = p_input_reader->simulation_a.value();
-      break;
-    }
-    case ModelType::formula:
-    {
-      bh_m = 1.0;
-      bh_a = p_input_reader->formula_spin.value();
-      break;
-    }
+    bh_m = 1.0;
+    bh_a = p_input_reader->simulation_a.value();
+  }
+  else if (model_type == ModelType::formula)
+  {
+    bh_m = 1.0;
+    bh_a = p_input_reader->formula_spin.value();
   }
   double r_horizon = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
-  switch (ray_terminate)
-  {
-    case RayTerminate::photon:
-    {
-      r_terminate = 2.0 * bh_m * (1.0 + std::cos(2.0 / 3.0 * std::acos(-std::abs(bh_a) / bh_m)));
-      break;
-    }
-    case RayTerminate::multiplicative:
-    {
-      r_terminate = r_horizon * ray_factor;
-      break;
-    }
-    case RayTerminate::additive:
-    {
-      r_terminate = r_horizon + ray_factor;
-      break;
-    }
-  }
+  if (ray_terminate == RayTerminate::photon)
+    r_terminate = 2.0 * bh_m * (1.0 + std::cos(2.0 / 3.0 * std::acos(-std::abs(bh_a) / bh_m)));
+  else if (ray_terminate == RayTerminate::multiplicative)
+    r_terminate = r_horizon * ray_factor;
+  else if (ray_terminate == RayTerminate::additive)
+    r_terminate = r_horizon + ray_factor;
 
   // Calculate number of pixels
   camera_num_pix = camera_resolution * camera_resolution;

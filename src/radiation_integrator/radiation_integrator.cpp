@@ -373,22 +373,17 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     extrapolation_tolerance = p_athena_reader->extrapolation_tolerance;
 
   // Set and calculate geometry data
-  switch (model_type)
+  if (model_type == ModelType::simulation)
   {
-    case ModelType::simulation:
-    {
-      bh_m = 1.0;
-      bh_a = p_input_reader->simulation_a.value();
-      mass_msun = simulation_m_msun;
-      break;
-    }
-    case ModelType::formula:
-    {
-      bh_m = 1.0;
-      bh_a = p_input_reader->formula_spin.value();
-      mass_msun = formula_mass * Physics::c * Physics::c / Physics::gg_msun;
-      break;
-    }
+    bh_m = 1.0;
+    bh_a = p_input_reader->simulation_a.value();
+    mass_msun = simulation_m_msun;
+  }
+  else if (model_type == ModelType::formula)
+  {
+    bh_m = 1.0;
+    bh_a = p_input_reader->formula_spin.value();
+    mass_msun = formula_mass * Physics::c * Physics::c / Physics::gg_msun;
   }
 
   // Allocate space for image data

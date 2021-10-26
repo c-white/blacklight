@@ -238,24 +238,12 @@ void OutputWriter::Write(int snapshot)
     throw BlacklightException("Could not open output file.");
 
   // Write image data based on desired file format
-  switch (output_format)
-  {
-    case OutputFormat::raw:
-    {
-      WriteRaw();
-      break;
-    }
-    case OutputFormat::npy:
-    {
-      WriteNpy();
-      break;
-    }
-    case OutputFormat::npz:
-    {
-      WriteNpz();
-      break;
-    }
-  }
+  if (output_format == OutputFormat::raw)
+    WriteRaw();
+  else if (output_format == OutputFormat::npy)
+    WriteNpy();
+  else if (output_format == OutputFormat::npz)
+    WriteNpz();
 
   // Close output file
   delete p_output_stream;

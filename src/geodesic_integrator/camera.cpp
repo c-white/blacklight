@@ -171,19 +171,10 @@ void GeodesicIntegrator::InitializeCamera()
   double k_tc = u_con[0] * k_t + u_con[1] * k_x + u_con[2] * k_y + u_con[3] * k_z;
 
   // Calculate momentum normalization
-  switch (image_normalization)
-  {
-    case FrequencyNormalization::camera:
-    {
-      momentum_factor = -image_frequency / k_tc;
-      break;
-    }
-    case FrequencyNormalization::infinity:
-    {
-      momentum_factor = -image_frequency / k_t;
-      break;
-    }
-  }
+  if (image_normalization == FrequencyNormalization::camera)
+    momentum_factor = -image_frequency / k_tc;
+  else if (image_normalization == FrequencyNormalization::infinity)
+    momentum_factor = -image_frequency / k_t;
 
   // Calculate contravariant metric in camera frame
   Array<double> g_con(4, 4);

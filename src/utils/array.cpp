@@ -504,76 +504,64 @@ template<typename type> void Array<type>::Slice(int dimension, int index)
   if (not is_copy)
     throw BlacklightException("Attempting to slice array that is not shallow copy.");
 
-  // Slice array
-  switch (dimension)
+  // Take 1D slice
+  if (dimension == 1)
   {
-    // 1D
-    case 1:
-    {
-      if (index < 0 or index >= n1)
-        throw BlacklightException("Attempting to slice outside array bounds.");
-      data += index;
-      n1 = 1;
-      n2 = 1;
-      n3 = 1;
-      n4 = 1;
-      n5 = 1;
-      break;
-    }
-
-    // 2D
-    case 2:
-    {
-      if (index < 0 or index >= n2)
-        throw BlacklightException("Attempting to slice outside array bounds.");
-      data += index * n1;
-      n2 = 1;
-      n3 = 1;
-      n4 = 1;
-      n5 = 1;
-      break;
-    }
-
-    // 3D
-    case 3:
-    {
-      if (index < 0 or index >= n3)
-        throw BlacklightException("Attempting to slice outside array bounds.");
-      data += index * n2 * n1;
-      n3 = 1;
-      n4 = 1;
-      n5 = 1;
-      break;
-    }
-
-    // 4D
-    case 4:
-    {
-      if (index < 0 or index >= n4)
-        throw BlacklightException("Attempting to slice outside array bounds.");
-      data += index * n3 * n2 * n1;
-      n4 = 1;
-      n5 = 1;
-      break;
-    }
-
-    // 5D
-    case 5:
-    {
-      if (index < 0 or index >= n5)
-        throw BlacklightException("Attempting to slice outside array bounds.");
-      data += index * n4 * n3 * n2 * n1;
-      n5 = 1;
-      break;
-    }
-
-    // Invalid dimension
-    default:
-    {
-      if (dimension < 1 or dimension > max_dims)
-        throw BlacklightException("Attempting to slice at invalid dimension.");
-    }
+    if (index < 0 or index >= n1)
+      throw BlacklightException("Attempting to slice outside array bounds.");
+    data += index;
+    n1 = 1;
+    n2 = 1;
+    n3 = 1;
+    n4 = 1;
+    n5 = 1;
   }
+
+  // Take 2D slice
+  else if (dimension == 2)
+  {
+    if (index < 0 or index >= n2)
+      throw BlacklightException("Attempting to slice outside array bounds.");
+    data += index * n1;
+    n2 = 1;
+    n3 = 1;
+    n4 = 1;
+    n5 = 1;
+  }
+
+  // Take 3D slice
+  else if (dimension == 3)
+  {
+    if (index < 0 or index >= n3)
+      throw BlacklightException("Attempting to slice outside array bounds.");
+    data += index * n2 * n1;
+    n3 = 1;
+    n4 = 1;
+    n5 = 1;
+  }
+
+  // Take 4D slice
+  else if (dimension == 4)
+  {
+    if (index < 0 or index >= n4)
+      throw BlacklightException("Attempting to slice outside array bounds.");
+    data += index * n3 * n2 * n1;
+    n4 = 1;
+    n5 = 1;
+  }
+
+  // Take 5D slice
+  else if (dimension == 5)
+  {
+    if (index < 0 or index >= n5)
+      throw BlacklightException("Attempting to slice outside array bounds.");
+    data += index * n4 * n3 * n2 * n1;
+    n5 = 1;
+  }
+
+  // Account for invalid dimension
+  else
+    throw BlacklightException("Attempting to slice at invalid dimension.");
 
   // Recalculate number of elements
   n_tot = n1 * n2 * n3 * n4 * n5;
