@@ -105,6 +105,7 @@ struct InputReader
   std::optional<FrequencySpacing> image_frequency_spacing;
   std::optional<FrequencyNormalization> image_normalization;
   std::optional<bool> image_polarization;
+  std::optional<bool> image_rotation_split;
   std::optional<bool> image_time;
   std::optional<bool> image_length;
   std::optional<bool> image_lambda;

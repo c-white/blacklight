@@ -78,6 +78,7 @@ image_frequency_max     = 2.3e11    # maximum frequency in Hz if image_frequency
 image_frequency_spacing = log       # frequency spacing (lin_frequency, lin_wavelength, log)
 image_normalization     = infinity  # frequency location (camera [w/ velocity], infinity [rest])
 image_polarization      = false     # flag indicating transport should be polarized
+image_rotation_split    = false     # flag for Strang splitting rotation from emission/absorption
 image_time              = false     # flag for producing image of geodesic times
 image_length            = false     # flag for producing image of geodesic lengths
 image_lambda            = false     # flag for producing image of affine path lengths

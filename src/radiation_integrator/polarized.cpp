@@ -1,7 +1,7 @@
 // Blacklight radiation integrator - polarized radiation integration
 
 // C++ headers
-#include <algorithm>  // min
+#include <algorithm>  // max, min
 #include <cmath>      // cos, cosh, exp, expm1, isnan, sin, sinh, sqrt
 #include <complex>    // complex
 
@@ -45,7 +45,9 @@
 //   Uses the definitions of nu_c and nu_s from (S); nu_{s,alt} is what (G) calls nu_c, and nu_c is
 //       what (G) calls nu_B.
 //   Tetrad is chosen such that j_U, alpha_U, rho_U = 0.
-//   Integration proceeds via Strang splitting as in (I).
+//   Integration proceeds via Strang splitting of coupling from transport as in (I).
+//   Optionally, coupling proceeds via Strang splitting of rotativity from emissivity and
+//       absorptivity as in the implementation of (I).
 void RadiationIntegrator::IntegratePolarizedRadiation()
 {
   // Allocate image array
@@ -368,209 +370,409 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
           double rho_p = std::sqrt(rho_sq);
           double ss_end[4] = {};
 
-          // Couple with no absorptivity or rotativity
-          if (alpha_s[0] == 0.0 and rho_p == 0.0)
-            for (int a = 0; a < 4; a++)
-              ss_end[a] = ss_start[a] + j_s[a] * delta_lambda_cgs;
-
-          // Couple with no polarized absorptivity or rotativity but with nonzero absorptivity
-          else if (alpha_p == 0.0 and rho_p == 0.0)
+          // Couple via splitting of rotativity from absorptivity/emissivity
+          if (image_rotation_split)
           {
-            // Optically thin case
-            if (optically_thin)
-            {
-              double exp_neg = std::exp(-delta_tau);
-              double expm1 = std::expm1(delta_tau);
+            // Couple first half with no absorptivity
+            if (alpha_s[0] == 0.0)
               for (int a = 0; a < 4; a++)
-                ss_end[a] = exp_neg * (ss_start[a] + j_s[a] / alpha_s[0] * expm1);
-            }
+                ss_end[a] = ss_start[a] + j_s[a] * delta_lambda_cgs / 2.0;
 
-            // Optically thick case
-            else
-              for (int a = 0; a < 4; a++)
-                ss_end[a] = j_s[a] / alpha_s[0];
-          }
-
-          // Couple with no absorptivity but nonzero rotativity (I A2-A5)
-          else if (alpha_s[0] == 0.0)
-          {
-            double cos_rho = std::cos(rho_p * delta_lambda_cgs);
-            double sin_rho = std::sin(rho_p * delta_lambda_cgs);
-            double sin_sq_rho = std::sin(rho_p * delta_lambda_cgs / 2.0);
-            sin_sq_rho = sin_sq_rho * sin_sq_rho;
-            double rho_ss = rho_s[1] * ss_start[1] + rho_s[3] * ss_start[3];
-            ss_end[0] = ss_start[0];
-            ss_end[1] = ss_start[1] * cos_rho + 2.0 * rho_s[1] * rho_ss / rho_sq * sin_sq_rho
-                - rho_s[3] * ss_start[2] / rho_p * sin_rho;
-            ss_end[2] = ss_start[1] * cos_rho
-                + (rho_s[3] * ss_start[1] - rho_s[1] * ss_start[3]) / rho_p * sin_rho;
-            ss_end[3] = ss_start[3] * cos_rho + 2.0 * rho_s[3] * rho_ss / rho_sq * sin_sq_rho
-                + rho_s[1] * ss_start[2] / rho_p * sin_rho;
-            for (int a = 0; a < 4; a++)
-              ss_end[a] += j_s[a] * delta_lambda_cgs;
-          }
-
-          // Couple with no rotativity but nonzero polarized absorptivity
-          else if (rho_p == 0.0)
-          {
-            // Optically thin case (I A14-A17)
-            if (optically_thin)
+            // Couple first half with no polarized absorptivity but with nonzero absorptivity
+            else if (alpha_p == 0.0)
             {
-              double exp_neg_i = std::exp(-delta_tau);
-              double exp_neg_p = std::exp(-alpha_p * delta_lambda_cgs);
-              double sinh_p = std::sinh(alpha_p * delta_lambda_cgs);
-              double cosh_p = std::cosh(alpha_p * delta_lambda_cgs);
-              double coshm1_p = 0.5 * (std::expm1(alpha_p * delta_lambda_cgs) + exp_neg_p - 1.0);
-              double alpha_ss = alpha_s[1] * ss_start[1] + alpha_s[3] * ss_start[3];
-              double alpha_j = alpha_s[1] * j_s[1] + alpha_s[3] * j_s[3];
-              double alpha_i_p_factor = 1.0 / (alpha_s[0] * alpha_s[0] - alpha_sq);
-              ss_end[0] = (ss_start[0] * cosh_p - alpha_ss / alpha_p * sinh_p) * exp_neg_i + alpha_j
-                  * alpha_i_p_factor * (-1.0 + (alpha_s[0] * sinh_p + alpha_p * cosh_p) / alpha_p
-                  * exp_neg_p) + alpha_s[0] * j_s[0] * alpha_i_p_factor * (1.0 - (alpha_s[0]
-                  * cosh_p + alpha_p * sinh_p) / alpha_s[0] * exp_neg_p);
-              for (int a = 1; a < 4; a++)
+              // Optically thin case
+              if (optically_thin)
               {
-                double term_1 = (ss_start[a] + alpha_s[a] * alpha_ss / alpha_sq * coshm1_p
-                    - ss_start[0] * alpha_s[a] / alpha_p * sinh_p) * exp_neg_i;
-                double term_2 = j_s[a] * (1.0 - exp_neg_i) / alpha_s[0];
-                double term_3 = alpha_j * alpha_s[a] / alpha_s[0] * alpha_i_p_factor * (1.0 - (1.0
-                    - alpha_s[0] * alpha_s[0] / alpha_sq - alpha_s[0] / alpha_sq * (alpha_s[0]
-                    * cosh_p + alpha_p * sinh_p)) * exp_neg_i);
-                double term_4 = j_s[0] * alpha_s[a] / alpha_p * alpha_i_p_factor * (-alpha_p +
-                    (alpha_p * cosh_p + alpha_s[0] * sinh_p) * exp_neg_i);
-                ss_end[a] = term_1 + term_2 + term_3 + term_4;
+                double exp_neg = std::exp(-delta_tau / 2.0);
+                double expm1 = std::expm1(delta_tau / 2.0);
+                for (int a = 0; a < 4; a++)
+                  ss_end[a] = exp_neg * (ss_start[a] + j_s[a] / alpha_s[0] * expm1);
               }
+
+              // Optically thick case
+              else
+                for (int a = 0; a < 4; a++)
+                  ss_end[a] = j_s[a] / alpha_s[0];
             }
 
-            // Optically thick case
+            // Couple first half with nonzero polarized absorptivity
             else
             {
-              double alpha_j = alpha_s[1] * j_s[1] + alpha_s[3] * j_s[3];
-              ss_end[0] = (alpha_s[0] * j_s[0] - alpha_j) / (alpha_s[0] * alpha_s[0] - alpha_sq);
-              for (int a = 1; a < 4; a++)
-                ss_end[a] = (j_s[a] - alpha_s[a] * ss_end[0]) / alpha_s[0];
-            }
-          }
-
-          // Couple with nonzero absorptivity and rotativity
-          else
-          {
-            // Calculate coefficients needed for coupling matrices
-            double alpha_rho = alpha_s[1] * rho_s[1] + alpha_s[3] * rho_s[3];
-            double alpha_sq_rho_sq = alpha_sq - rho_sq;
-            double lambda_a =
-                std::sqrt(alpha_sq_rho_sq * alpha_sq_rho_sq / 4.0 + alpha_rho * alpha_rho);
-            double lambda_b = alpha_sq_rho_sq / 2.0;
-            double lambda_1 = std::sqrt(lambda_a + lambda_b);
-            double lambda_2 = std::sqrt(lambda_a - lambda_b);
-            double coefficient_theta = lambda_1 * lambda_1 + lambda_2 * lambda_2;
-            double s = alpha_rho >= 0.0 ? 1.0 : -1.0;
-
-            // Calculate coupling matrix 1
-            double mm_1[4][4] = {};
-            for (int a = 0; a < 4; a++)
-              mm_1[a][a] = 1.0;
-
-            // Calculate coupling matrix 2
-            double mm_2[4][4] = {};
-            mm_2[0][1] = lambda_2 * alpha_s[1] - s * lambda_1 * rho_s[1];
-            mm_2[0][3] = lambda_2 * alpha_s[3] - s * lambda_1 * rho_s[3];
-            mm_2[1][2] = s * lambda_1 * alpha_s[3] + lambda_2 * rho_s[3];
-            mm_2[1][2] = s * lambda_1 * alpha_s[1] + lambda_2 * rho_s[1];
-            mm_2[1][0] = mm_2[0][1];
-            mm_2[2][0] = mm_2[0][2];
-            mm_2[3][0] = mm_2[0][3];
-            mm_2[2][1] = -mm_2[1][2];
-            mm_2[3][1] = -mm_2[1][3];
-            mm_2[3][2] = -mm_2[2][3];
-            for (int a = 0; a < 4; a++)
-              for (int b = 0; b < 4; b++)
-                mm_2[a][b] *= 1.0 / coefficient_theta;
-
-            // Calculate coupling matrix 3
-            double mm_3[4][4] = {};
-            mm_3[0][1] = lambda_1 * alpha_s[1] + s * lambda_2 * rho_s[1];
-            mm_3[0][3] = lambda_1 * alpha_s[3] + s * lambda_2 * rho_s[3];
-            mm_3[1][2] = -(s * lambda_2 * alpha_s[3] - lambda_1 * rho_s[3]);
-            mm_3[1][2] = -(s * lambda_2 * alpha_s[1] - lambda_1 * rho_s[1]);
-            mm_3[1][0] = mm_3[0][1];
-            mm_3[2][0] = mm_3[0][2];
-            mm_3[3][0] = mm_3[0][3];
-            mm_3[2][1] = -mm_3[1][2];
-            mm_3[3][1] = -mm_3[1][3];
-            mm_3[3][2] = -mm_3[2][3];
-            for (int a = 0; a < 4; a++)
-              for (int b = 0; b < 4; b++)
-                mm_3[a][b] *= 1.0 / coefficient_theta;
-
-            // Calculate coupling matrix 4
-            double mm_4[4][4] = {};
-            mm_4[0][0] = (alpha_sq + rho_sq) / 2.0;
-            mm_4[1][1] = alpha_s[1] * alpha_s[1] + rho_s[1] * rho_s[1] - (alpha_sq + rho_sq) / 2.0;
-            mm_4[2][2] = -(alpha_sq + rho_sq) / 2.0;
-            mm_4[3][3] = alpha_s[3] * alpha_s[3] + rho_s[3] * rho_s[3] - (alpha_sq + rho_sq) / 2.0;
-            mm_4[0][2] = alpha_s[1] * rho_s[3] - alpha_s[3] * rho_s[1];
-            mm_4[1][3] = alpha_s[3] * alpha_s[1] + rho_s[3] * rho_s[1];
-            mm_4[1][0] = -mm_4[0][1];
-            mm_4[2][0] = -mm_4[0][2];
-            mm_4[3][0] = -mm_4[0][3];
-            mm_4[2][1] = mm_4[1][2];
-            mm_4[3][1] = mm_4[1][3];
-            mm_4[3][2] = mm_4[2][3];
-            for (int a = 0; a < 4; a++)
-              for (int b = 0; b < 4; b++)
-                mm_4[a][b] *= 2.0 / coefficient_theta;
-
-            // Calculate coupling polynomial O (L 10)
-            double exp, sin, cos, sinh, cosh;
-            double oo[4][4] = {};
-            if (optically_thin)
-            {
-              exp = std::exp(-delta_tau);
-              sin = std::sin(lambda_2 * delta_lambda_cgs);
-              cos = std::cos(lambda_2 * delta_lambda_cgs);
-              sinh = std::sinh(lambda_1 * delta_lambda_cgs);
-              cosh = std::cosh(lambda_1 * delta_lambda_cgs);
-              for (int a = 0; a < 4; a++)
-                for (int b = 0; b < 4; b++)
-                  oo[a][b] = exp * (0.5 * (mm_1[a][b] + mm_4[a][b]) * cosh
-                      + 0.5 * (mm_1[a][b] - mm_4[a][b]) * cos - mm_2[a][b] * sin
-                      - mm_3[a][b] * sinh);
-            }
-
-            // Calculate coupling polynomial integral P (I 24)
-            double pp[4][4] = {};
-            double f_1 = 1.0 / (alpha_s[0] * alpha_s[0] - lambda_1 * lambda_1);
-            double f_2 = 1.0 / (alpha_s[0] * alpha_s[0] + lambda_2 * lambda_2);
-            for (int a = 0; a < 4; a++)
-              for (int b = 0; b < 4; b++)
+              // Optically thin case (I A14-A17)
+              if (optically_thin)
               {
-                double cosh_term = -lambda_1 * f_1 * mm_3[a][b]
-                    + 0.5 * alpha_s[0] * f_1 * (mm_1[a][b] + mm_4[a][b]);
-                double cos_term = -lambda_2 * f_2 * mm_2[a][b]
-                    + 0.5 * alpha_s[0] * f_2 * (mm_1[a][b] - mm_4[a][b]);
-                pp[a][b] = cosh_term + cos_term;
-                if (optically_thin)
+                double exp_neg_i = std::exp(-delta_tau / 2.0);
+                double exp_neg_p = std::exp(-alpha_p * delta_lambda_cgs / 2.0);
+                double sinh_p = std::sinh(alpha_p * delta_lambda_cgs / 2.0);
+                double cosh_p = std::cosh(alpha_p * delta_lambda_cgs / 2.0);
+                double coshm1_p =
+                    0.5 * (std::expm1(alpha_p * delta_lambda_cgs / 2.0) + exp_neg_p - 1.0);
+                double alpha_ss = alpha_s[1] * ss_start[1] + alpha_s[3] * ss_start[3];
+                double alpha_j = alpha_s[1] * j_s[1] + alpha_s[3] * j_s[3];
+                double alpha_i_p_factor = 1.0 / (alpha_s[0] * alpha_s[0] - alpha_sq);
+                ss_end[0] = (ss_start[0] * cosh_p - alpha_ss / alpha_p * sinh_p) * exp_neg_i
+                    + alpha_j * alpha_i_p_factor * (-1.0 + (alpha_s[0] * sinh_p + alpha_p * cosh_p)
+                    / alpha_p * exp_neg_p) + alpha_s[0] * j_s[0] * alpha_i_p_factor * (1.0
+                    - (alpha_s[0] * cosh_p + alpha_p * sinh_p) / alpha_s[0] * exp_neg_p);
+
+                for (int a = 1; a < 4; a++)
                 {
-                  double sin_term = -alpha_s[0] * f_2 * mm_2[a][b]
-                      - 0.5 * lambda_2 * f_2 * (mm_1[a][b] - mm_4[a][b]);
-                  double sinh_term = -alpha_s[0] * f_1 * mm_3[a][b]
-                      + 0.5 * lambda_1 * f_1 * (mm_1[a][b] + mm_4[a][b]);
-                  pp[a][b] -=
-                      exp * (cosh_term * cosh + cos_term * cos + sin_term * sin + sinh_term * sinh);
+                  double term_1 = (ss_start[a] + alpha_s[a] * alpha_ss / alpha_sq * coshm1_p
+                      - ss_start[0] * alpha_s[a] / alpha_p * sinh_p) * exp_neg_i;
+                  double term_2 = j_s[a] * (1.0 - exp_neg_i) / alpha_s[0];
+                  double term_3 = alpha_j * alpha_s[a] / alpha_s[0] * alpha_i_p_factor * (1.0 - (1.0
+                      - alpha_s[0] * alpha_s[0] / alpha_sq - alpha_s[0] / alpha_sq * (alpha_s[0]
+                      * cosh_p + alpha_p * sinh_p)) * exp_neg_i);
+                  double term_4 = j_s[0] * alpha_s[a] / alpha_p * alpha_i_p_factor * (-alpha_p +
+                      (alpha_p * cosh_p + alpha_s[0] * sinh_p) * exp_neg_i);
+                  ss_end[a] = term_1 + term_2 + term_3 + term_4;
                 }
               }
 
+              // Optically thick case
+              else
+              {
+                double alpha_j = alpha_s[1] * j_s[1] + alpha_s[3] * j_s[3];
+                ss_end[0] = (alpha_s[0] * j_s[0] - alpha_j) / (alpha_s[0] * alpha_s[0] - alpha_sq);
+                for (int a = 1; a < 4; a++)
+                  ss_end[a] = (j_s[a] - alpha_s[a] * ss_end[0]) / alpha_s[0];
+              }
+            }
 
-            // Apply coupling polynomials
-            if (optically_thin)
+            // Ensure state is physically admissible
+            ss_end[0] = std::max(ss_end[0], 0.0);
+            double ss_pol = ss_end[1] * ss_end[1] + ss_end[2] * ss_end[2] + ss_end[3] * ss_end[3];
+            if (ss_pol > ss_end[0] * ss_end[0])
+            {
+              double factor = std::sqrt(ss_end[0] * ss_end[0] / ss_pol);
+              ss_end[1] *= factor;
+              ss_end[2] *= factor;
+              ss_end[3] *= factor;
+            }
+
+            // Reset starting Stokes parameters
+            for (int a = 0; a < 4; a++)
+              ss_start[a] = ss_end[a];
+
+            // Couple with no absorptivity but nonzero rotativity (I A2-A5)
+            if (rho_p != 0.0)
+            {
+              double cos_rho = std::cos(rho_p * delta_lambda_cgs);
+              double sin_rho = std::sin(rho_p * delta_lambda_cgs);
+              double sin_sq_rho = std::sin(rho_p * delta_lambda_cgs / 2.0);
+              sin_sq_rho = sin_sq_rho * sin_sq_rho;
+              double rho_ss = rho_s[1] * ss_start[1] + rho_s[3] * ss_start[3];
+              ss_end[0] = ss_start[0];
+              ss_end[1] = ss_start[1] * cos_rho + 2.0 * rho_s[1] * rho_ss / rho_sq * sin_sq_rho
+                  - rho_s[3] * ss_start[2] / rho_p * sin_rho;
+              ss_end[2] = ss_start[1] * cos_rho
+                  + (rho_s[3] * ss_start[1] - rho_s[1] * ss_start[3]) / rho_p * sin_rho;
+              ss_end[3] = ss_start[3] * cos_rho + 2.0 * rho_s[3] * rho_ss / rho_sq * sin_sq_rho
+                  + rho_s[1] * ss_start[2] / rho_p * sin_rho;
+            }
+
+            // Ensure state is physically admissible
+            ss_pol = ss_end[1] * ss_end[1] + ss_end[2] * ss_end[2] + ss_end[3] * ss_end[3];
+            if (ss_pol > ss_end[0] * ss_end[0])
+            {
+              double factor = std::sqrt(ss_end[0] * ss_end[0] / ss_pol);
+              ss_end[1] *= factor;
+              ss_end[2] *= factor;
+              ss_end[3] *= factor;
+            }
+
+            // Reset starting Stokes parameters
+            for (int a = 0; a < 4; a++)
+              ss_start[a] = ss_end[a];
+
+            // Couple second half with no absorptivity
+            if (alpha_s[0] == 0.0)
               for (int a = 0; a < 4; a++)
-                for (int b = 0; b < 4; b++)
-                  ss_end[a] += pp[a][b] * j_s[b] + oo[a][b] * ss_start[b];
+                ss_end[a] = ss_start[a] + j_s[a] * delta_lambda_cgs / 2.0;
+
+            // Couple second half with no polarized absorptivity but with nonzero absorptivity
+            else if (alpha_p == 0.0)
+            {
+              // Optically thin case
+              if (optically_thin)
+              {
+                double exp_neg = std::exp(-delta_tau / 2.0);
+                double expm1 = std::expm1(delta_tau / 2.0);
+                for (int a = 0; a < 4; a++)
+                  ss_end[a] = exp_neg * (ss_start[a] + j_s[a] / alpha_s[0] * expm1);
+              }
+
+              // Optically thick case
+              else
+                for (int a = 0; a < 4; a++)
+                  ss_end[a] = j_s[a] / alpha_s[0];
+            }
+
+            // Couple second half with nonzero polarized absorptivity
             else
+            {
+              // Optically thin case (I A14-A17)
+              if (optically_thin)
+              {
+                double exp_neg_i = std::exp(-delta_tau / 2.0);
+                double exp_neg_p = std::exp(-alpha_p * delta_lambda_cgs / 2.0);
+                double sinh_p = std::sinh(alpha_p * delta_lambda_cgs / 2.0);
+                double cosh_p = std::cosh(alpha_p * delta_lambda_cgs / 2.0);
+                double coshm1_p =
+                    0.5 * (std::expm1(alpha_p * delta_lambda_cgs / 2.0) + exp_neg_p - 1.0);
+                double alpha_ss = alpha_s[1] * ss_start[1] + alpha_s[3] * ss_start[3];
+                double alpha_j = alpha_s[1] * j_s[1] + alpha_s[3] * j_s[3];
+                double alpha_i_p_factor = 1.0 / (alpha_s[0] * alpha_s[0] - alpha_sq);
+                ss_end[0] = (ss_start[0] * cosh_p - alpha_ss / alpha_p * sinh_p) * exp_neg_i
+                    + alpha_j * alpha_i_p_factor * (-1.0 + (alpha_s[0] * sinh_p + alpha_p * cosh_p)
+                    / alpha_p * exp_neg_p) + alpha_s[0] * j_s[0] * alpha_i_p_factor * (1.0
+                    - (alpha_s[0] * cosh_p + alpha_p * sinh_p) / alpha_s[0] * exp_neg_p);
+                for (int a = 1; a < 4; a++)
+                {
+                  double term_1 = (ss_start[a] + alpha_s[a] * alpha_ss / alpha_sq * coshm1_p
+                      - ss_start[0] * alpha_s[a] / alpha_p * sinh_p) * exp_neg_i;
+                  double term_2 = j_s[a] * (1.0 - exp_neg_i) / alpha_s[0];
+                  double term_3 = alpha_j * alpha_s[a] / alpha_s[0] * alpha_i_p_factor * (1.0 - (1.0
+                      - alpha_s[0] * alpha_s[0] / alpha_sq - alpha_s[0] / alpha_sq * (alpha_s[0]
+                      * cosh_p + alpha_p * sinh_p)) * exp_neg_i);
+                  double term_4 = j_s[0] * alpha_s[a] / alpha_p * alpha_i_p_factor * (-alpha_p +
+                      (alpha_p * cosh_p + alpha_s[0] * sinh_p) * exp_neg_i);
+                  ss_end[a] = term_1 + term_2 + term_3 + term_4;
+                }
+              }
+
+              // Optically thick case
+              else
+              {
+                double alpha_j = alpha_s[1] * j_s[1] + alpha_s[3] * j_s[3];
+                ss_end[0] = (alpha_s[0] * j_s[0] - alpha_j) / (alpha_s[0] * alpha_s[0] - alpha_sq);
+                for (int a = 1; a < 4; a++)
+                  ss_end[a] = (j_s[a] - alpha_s[a] * ss_end[0]) / alpha_s[0];
+              }
+            }
+          }
+
+          // Couple with no splitting
+          else
+          {
+            // Couple with no absorptivity or rotativity
+            if (alpha_s[0] == 0.0 and rho_p == 0.0)
+              for (int a = 0; a < 4; a++)
+                ss_end[a] = ss_start[a] + j_s[a] * delta_lambda_cgs;
+
+            // Couple with no polarized absorptivity or rotativity but with nonzero absorptivity
+            else if (alpha_p == 0.0 and rho_p == 0.0)
+            {
+              // Optically thin case
+              if (optically_thin)
+              {
+                double exp_neg = std::exp(-delta_tau);
+                double expm1 = std::expm1(delta_tau);
+                for (int a = 0; a < 4; a++)
+                  ss_end[a] = exp_neg * (ss_start[a] + j_s[a] / alpha_s[0] * expm1);
+              }
+
+              // Optically thick case
+              else
+                for (int a = 0; a < 4; a++)
+                  ss_end[a] = j_s[a] / alpha_s[0];
+            }
+
+            // Couple with no absorptivity but nonzero rotativity (I A2-A5)
+            else if (alpha_s[0] == 0.0)
+            {
+              double cos_rho = std::cos(rho_p * delta_lambda_cgs);
+              double sin_rho = std::sin(rho_p * delta_lambda_cgs);
+              double sin_sq_rho = std::sin(rho_p * delta_lambda_cgs / 2.0);
+              sin_sq_rho = sin_sq_rho * sin_sq_rho;
+              double rho_ss = rho_s[1] * ss_start[1] + rho_s[3] * ss_start[3];
+              ss_end[0] = ss_start[0];
+              ss_end[1] = ss_start[1] * cos_rho + 2.0 * rho_s[1] * rho_ss / rho_sq * sin_sq_rho
+                  - rho_s[3] * ss_start[2] / rho_p * sin_rho;
+              ss_end[2] = ss_start[1] * cos_rho
+                  + (rho_s[3] * ss_start[1] - rho_s[1] * ss_start[3]) / rho_p * sin_rho;
+              ss_end[3] = ss_start[3] * cos_rho + 2.0 * rho_s[3] * rho_ss / rho_sq * sin_sq_rho
+                  + rho_s[1] * ss_start[2] / rho_p * sin_rho;
+              for (int a = 0; a < 4; a++)
+                ss_end[a] += j_s[a] * delta_lambda_cgs;
+            }
+
+            // Couple with no rotativity but nonzero polarized absorptivity
+            else if (rho_p == 0.0)
+            {
+              // Optically thin case (I A14-A17)
+              if (optically_thin)
+              {
+                double exp_neg_i = std::exp(-delta_tau);
+                double exp_neg_p = std::exp(-alpha_p * delta_lambda_cgs);
+                double sinh_p = std::sinh(alpha_p * delta_lambda_cgs);
+                double cosh_p = std::cosh(alpha_p * delta_lambda_cgs);
+                double coshm1_p = 0.5 * (std::expm1(alpha_p * delta_lambda_cgs) + exp_neg_p - 1.0);
+                double alpha_ss = alpha_s[1] * ss_start[1] + alpha_s[3] * ss_start[3];
+                double alpha_j = alpha_s[1] * j_s[1] + alpha_s[3] * j_s[3];
+                double alpha_i_p_factor = 1.0 / (alpha_s[0] * alpha_s[0] - alpha_sq);
+                ss_end[0] = (ss_start[0] * cosh_p - alpha_ss / alpha_p * sinh_p) * exp_neg_i
+                    + alpha_j * alpha_i_p_factor * (-1.0 + (alpha_s[0] * sinh_p + alpha_p * cosh_p)
+                    / alpha_p * exp_neg_p) + alpha_s[0] * j_s[0] * alpha_i_p_factor * (1.0
+                    - (alpha_s[0] * cosh_p + alpha_p * sinh_p) / alpha_s[0] * exp_neg_p);
+                for (int a = 1; a < 4; a++)
+                {
+                  double term_1 = (ss_start[a] + alpha_s[a] * alpha_ss / alpha_sq * coshm1_p
+                      - ss_start[0] * alpha_s[a] / alpha_p * sinh_p) * exp_neg_i;
+                  double term_2 = j_s[a] * (1.0 - exp_neg_i) / alpha_s[0];
+                  double term_3 = alpha_j * alpha_s[a] / alpha_s[0] * alpha_i_p_factor * (1.0 - (1.0
+                      - alpha_s[0] * alpha_s[0] / alpha_sq - alpha_s[0] / alpha_sq * (alpha_s[0]
+                      * cosh_p + alpha_p * sinh_p)) * exp_neg_i);
+                  double term_4 = j_s[0] * alpha_s[a] / alpha_p * alpha_i_p_factor * (-alpha_p +
+                      (alpha_p * cosh_p + alpha_s[0] * sinh_p) * exp_neg_i);
+                  ss_end[a] = term_1 + term_2 + term_3 + term_4;
+                }
+              }
+
+              // Optically thick case
+              else
+              {
+                double alpha_j = alpha_s[1] * j_s[1] + alpha_s[3] * j_s[3];
+                ss_end[0] = (alpha_s[0] * j_s[0] - alpha_j) / (alpha_s[0] * alpha_s[0] - alpha_sq);
+                for (int a = 1; a < 4; a++)
+                  ss_end[a] = (j_s[a] - alpha_s[a] * ss_end[0]) / alpha_s[0];
+              }
+            }
+
+            // Couple with nonzero absorptivity and rotativity
+            else
+            {
+              // Calculate coefficients needed for coupling matrices
+              double alpha_rho = alpha_s[1] * rho_s[1] + alpha_s[3] * rho_s[3];
+              double alpha_sq_rho_sq = alpha_sq - rho_sq;
+              double lambda_a =
+                  std::sqrt(alpha_sq_rho_sq * alpha_sq_rho_sq / 4.0 + alpha_rho * alpha_rho);
+              double lambda_b = alpha_sq_rho_sq / 2.0;
+              double lambda_1 = std::sqrt(lambda_a + lambda_b);
+              double lambda_2 = std::sqrt(lambda_a - lambda_b);
+              double coefficient_theta = lambda_1 * lambda_1 + lambda_2 * lambda_2;
+              double s = alpha_rho >= 0.0 ? 1.0 : -1.0;
+
+              // Calculate coupling matrix 1
+              double mm_1[4][4] = {};
+              for (int a = 0; a < 4; a++)
+                mm_1[a][a] = 1.0;
+
+              // Calculate coupling matrix 2
+              double mm_2[4][4] = {};
+              mm_2[0][1] = lambda_2 * alpha_s[1] - s * lambda_1 * rho_s[1];
+              mm_2[0][3] = lambda_2 * alpha_s[3] - s * lambda_1 * rho_s[3];
+              mm_2[1][2] = s * lambda_1 * alpha_s[3] + lambda_2 * rho_s[3];
+              mm_2[1][2] = s * lambda_1 * alpha_s[1] + lambda_2 * rho_s[1];
+              mm_2[1][0] = mm_2[0][1];
+              mm_2[2][0] = mm_2[0][2];
+              mm_2[3][0] = mm_2[0][3];
+              mm_2[2][1] = -mm_2[1][2];
+              mm_2[3][1] = -mm_2[1][3];
+              mm_2[3][2] = -mm_2[2][3];
               for (int a = 0; a < 4; a++)
                 for (int b = 0; b < 4; b++)
-                  ss_end[a] += pp[a][b] * j_s[b];
+                  mm_2[a][b] *= 1.0 / coefficient_theta;
+
+              // Calculate coupling matrix 3
+              double mm_3[4][4] = {};
+              mm_3[0][1] = lambda_1 * alpha_s[1] + s * lambda_2 * rho_s[1];
+              mm_3[0][3] = lambda_1 * alpha_s[3] + s * lambda_2 * rho_s[3];
+              mm_3[1][2] = -(s * lambda_2 * alpha_s[3] - lambda_1 * rho_s[3]);
+              mm_3[1][2] = -(s * lambda_2 * alpha_s[1] - lambda_1 * rho_s[1]);
+              mm_3[1][0] = mm_3[0][1];
+              mm_3[2][0] = mm_3[0][2];
+              mm_3[3][0] = mm_3[0][3];
+              mm_3[2][1] = -mm_3[1][2];
+              mm_3[3][1] = -mm_3[1][3];
+              mm_3[3][2] = -mm_3[2][3];
+              for (int a = 0; a < 4; a++)
+                for (int b = 0; b < 4; b++)
+                  mm_3[a][b] *= 1.0 / coefficient_theta;
+
+              // Calculate coupling matrix 4
+              double mm_4[4][4] = {};
+              mm_4[0][0] = (alpha_sq + rho_sq) / 2.0;
+              mm_4[1][1] =
+                  alpha_s[1] * alpha_s[1] + rho_s[1] * rho_s[1] - (alpha_sq + rho_sq) / 2.0;
+              mm_4[2][2] = -(alpha_sq + rho_sq) / 2.0;
+              mm_4[3][3] =
+                  alpha_s[3] * alpha_s[3] + rho_s[3] * rho_s[3] - (alpha_sq + rho_sq) / 2.0;
+              mm_4[0][2] = alpha_s[1] * rho_s[3] - alpha_s[3] * rho_s[1];
+              mm_4[1][3] = alpha_s[3] * alpha_s[1] + rho_s[3] * rho_s[1];
+              mm_4[1][0] = -mm_4[0][1];
+              mm_4[2][0] = -mm_4[0][2];
+              mm_4[3][0] = -mm_4[0][3];
+              mm_4[2][1] = mm_4[1][2];
+              mm_4[3][1] = mm_4[1][3];
+              mm_4[3][2] = mm_4[2][3];
+              for (int a = 0; a < 4; a++)
+                for (int b = 0; b < 4; b++)
+                  mm_4[a][b] *= 2.0 / coefficient_theta;
+
+              // Calculate coupling polynomial O (L 10)
+              double exp, sin, cos, sinh, cosh;
+              double oo[4][4] = {};
+              if (optically_thin)
+              {
+                exp = std::exp(-delta_tau);
+                sin = std::sin(lambda_2 * delta_lambda_cgs);
+                cos = std::cos(lambda_2 * delta_lambda_cgs);
+                sinh = std::sinh(lambda_1 * delta_lambda_cgs);
+                cosh = std::cosh(lambda_1 * delta_lambda_cgs);
+                for (int a = 0; a < 4; a++)
+                  for (int b = 0; b < 4; b++)
+                    oo[a][b] = exp * (0.5 * (mm_1[a][b] + mm_4[a][b]) * cosh
+                        + 0.5 * (mm_1[a][b] - mm_4[a][b]) * cos - mm_2[a][b] * sin
+                        - mm_3[a][b] * sinh);
+              }
+
+              // Calculate coupling polynomial integral P (I 24)
+              double pp[4][4] = {};
+              double f_1 = 1.0 / (alpha_s[0] * alpha_s[0] - lambda_1 * lambda_1);
+              double f_2 = 1.0 / (alpha_s[0] * alpha_s[0] + lambda_2 * lambda_2);
+              for (int a = 0; a < 4; a++)
+                for (int b = 0; b < 4; b++)
+                {
+                  double cosh_term = -lambda_1 * f_1 * mm_3[a][b]
+                      + 0.5 * alpha_s[0] * f_1 * (mm_1[a][b] + mm_4[a][b]);
+                  double cos_term = -lambda_2 * f_2 * mm_2[a][b]
+                      + 0.5 * alpha_s[0] * f_2 * (mm_1[a][b] - mm_4[a][b]);
+                  pp[a][b] = cosh_term + cos_term;
+                  if (optically_thin)
+                  {
+                    double sin_term = -alpha_s[0] * f_2 * mm_2[a][b]
+                        - 0.5 * lambda_2 * f_2 * (mm_1[a][b] - mm_4[a][b]);
+                    double sinh_term = -alpha_s[0] * f_1 * mm_3[a][b]
+                        + 0.5 * lambda_1 * f_1 * (mm_1[a][b] + mm_4[a][b]);
+                    pp[a][b] -= exp
+                        * (cosh_term * cosh + cos_term * cos + sin_term * sin + sinh_term * sinh);
+                  }
+                }
+
+
+              // Apply coupling polynomials
+              if (optically_thin)
+                for (int a = 0; a < 4; a++)
+                  for (int b = 0; b < 4; b++)
+                    ss_end[a] += pp[a][b] * j_s[b] + oo[a][b] * ss_start[b];
+              else
+                for (int a = 0; a < 4; a++)
+                  for (int b = 0; b < 4; b++)
+                    ss_end[a] += pp[a][b] * j_s[b];
+            }
+          }
+
+          // Ensure state is physically admissible
+          ss_end[0] = std::max(ss_end[0], 0.0);
+          double ss_pol = ss_end[1] * ss_end[1] + ss_end[2] * ss_end[2] + ss_end[3] * ss_end[3];
+          if (ss_pol > ss_end[0] * ss_end[0])
+          {
+            double factor = std::sqrt(ss_end[0] * ss_end[0] / ss_pol);
+            ss_end[1] *= factor;
+            ss_end[2] *= factor;
+            ss_end[3] *= factor;
           }
 
           // Calculate orthonormal-frame N after coupling to fluid (I 13)

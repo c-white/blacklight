@@ -94,6 +94,8 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     else if (p_input_reader->image_polarization.has_value()
         and p_input_reader->image_polarization.value())
       BlacklightWarning("Ignoring image_polarization selection.");
+    if (image_polarization)
+      image_rotation_split = p_input_reader->image_rotation_split.value();
   }
   else if (p_input_reader->image_polarization.has_value()
       and p_input_reader->image_polarization.value())

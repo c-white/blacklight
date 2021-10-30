@@ -64,6 +64,7 @@ struct RadiationIntegrator
   bool image_light;
   int image_num_frequencies;
   bool image_polarization;
+  bool image_rotation_split;
   bool image_time;
   bool image_length;
   bool image_lambda;

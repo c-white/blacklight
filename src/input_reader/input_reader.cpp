@@ -239,6 +239,8 @@ int InputReader::Read()
       image_normalization = ReadFrequencyNormalization(val);
     else if (key == "image_polarization")
       image_polarization = ReadBool(val);
+    else if (key == "image_rotation_split")
+      image_rotation_split = ReadBool(val);
     else if (key == "image_time")
       image_time = ReadBool(val);
     else if (key == "image_length")
