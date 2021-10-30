@@ -478,8 +478,8 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
               j_i[adaptive_level](l,m,n) = j_i_val;
             if (image_light and image_polarization)
             {
-              double var_d =
-                  (7.0 * std::pow(theta_e, 0.96) + 35.0) / (10.0 * std::pow(theta_e, 0.96)) * var_b;
+              double var_d = (7.0 * std::pow(theta_e, 0.96) + 35.0)
+                  / (10.0 * std::pow(theta_e, 0.96) + 75.0) * var_b;
               double var_e = xx_1_2 + var_d * xx_1_6;
               double var_f = cos_theta_b / theta_e;
               double var_g = Math::pi / 3.0 + Math::pi / 3.0 * xx_1_3 + 2.0 / 300.0 * xx_1_2
