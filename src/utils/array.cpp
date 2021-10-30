@@ -489,25 +489,32 @@ template<typename type> void Array<type>::Swap(Array<type> &other)
 // Multidimensional array slicing
 // Inputs:
 //   dimension: dimension of slice starting at 1 for innermost dimension
-//   index: index of slice starting at 0 for first slice in given dimension
+//   index_start: index (inclusive) of first slice in slab, starting at 0 for first slice in given
+//       dimension
+//   index_end: index (inclusive) of last slice in slab, starting at 0 for first slice in given
+//       dimension
 // Outputs: (none)
 // Notes:
 //   Moves data pointer and redefines data shape.
 //   Checks to make sure only a shallow copy is being sliced so that destructor will not try to
 //       deallocate memory.
-template<typename type> void Array<type>::Slice(int dimension, int index)
+template<typename type> void Array<type>::Slice(int dimension, int index_start, int index_end)
 {
   // Check that this is a shallow copy
   if (not is_copy)
     throw BlacklightException("Attempting to slice array that is not shallow copy.");
 
+  // Check that indices are valid
+  if (index_start < 0 or index_end < 0 or index_start > index_end)
+    throw BlacklightException("Invalid slicing indices.");
+
   // Take 1D slice
   if (dimension == 1)
   {
-    if (index < 0 or index >= n1)
+    if (index_end >= n1)
       throw BlacklightException("Attempting to slice outside array bounds.");
-    data += index;
-    n1 = 1;
+    data += index_start;
+    n1 = index_end - index_start + 1;
     n2 = 1;
     n3 = 1;
     n4 = 1;
@@ -517,10 +524,10 @@ template<typename type> void Array<type>::Slice(int dimension, int index)
   // Take 2D slice
   else if (dimension == 2)
   {
-    if (index < 0 or index >= n2)
+    if (index_end > n2)
       throw BlacklightException("Attempting to slice outside array bounds.");
-    data += index * n1;
-    n2 = 1;
+    data += index_start * n1;
+    n2 = index_end - index_start + 1;
     n3 = 1;
     n4 = 1;
     n5 = 1;
@@ -529,10 +536,10 @@ template<typename type> void Array<type>::Slice(int dimension, int index)
   // Take 3D slice
   else if (dimension == 3)
   {
-    if (index < 0 or index >= n3)
+    if (index_end > n3)
       throw BlacklightException("Attempting to slice outside array bounds.");
-    data += index * n2 * n1;
-    n3 = 1;
+    data += index_start * n2 * n1;
+    n3 = index_end - index_start + 1;
     n4 = 1;
     n5 = 1;
   }
@@ -540,20 +547,20 @@ template<typename type> void Array<type>::Slice(int dimension, int index)
   // Take 4D slice
   else if (dimension == 4)
   {
-    if (index < 0 or index >= n4)
+    if (index_end > n4)
       throw BlacklightException("Attempting to slice outside array bounds.");
-    data += index * n3 * n2 * n1;
-    n4 = 1;
+    data += index_start * n3 * n2 * n1;
+    n4 = index_end - index_start + 1;
     n5 = 1;
   }
 
   // Take 5D slice
   else if (dimension == 5)
   {
-    if (index < 0 or index >= n5)
+    if (index_end > n5)
       throw BlacklightException("Attempting to slice outside array bounds.");
-    data += index * n4 * n3 * n2 * n1;
-    n5 = 1;
+    data += index_start * n4 * n3 * n2 * n1;
+    n4 = index_end - index_start + 1;
   }
 
   // Account for invalid dimension
@@ -562,6 +569,26 @@ template<typename type> void Array<type>::Slice(int dimension, int index)
 
   // Recalculate number of elements
   n_tot = n1 * n2 * n3 * n4 * n5;
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Multidimensional array deep copying
+// Inputs:
+//   other: array from which data should be copied
+//   offset_src: 1D index in source array of first element to copy
+//   offset_dest: 1D index in destination array of first element to be overwritten
+//   num_elements: number of elements to copy
+// Outputs: (none)
+template<typename type> void Array<type>::CopyFrom(const Array<type> &other, int offset_src,
+    int offset_dest, int num_elements)
+{
+  if (offset_src < 0 or offset_dest < 0 or num_elements <= 0
+      or offset_src + num_elements > other.n_tot or offset_dest + num_elements > n_tot)
+    throw BlacklightException("Invalid deep copy.");
+  std::memcpy(data + offset_dest, other.data + offset_src,
+      static_cast<std::size_t>(num_elements) * sizeof(type));
   return;
 }
 

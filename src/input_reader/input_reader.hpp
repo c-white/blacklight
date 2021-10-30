@@ -98,7 +98,11 @@ struct InputReader
 
   // Data - image parameters
   std::optional<bool> image_light;
+  std::optional<int> image_num_frequencies;
   std::optional<double> image_frequency;
+  std::optional<double> image_frequency_min;
+  std::optional<double> image_frequency_max;
+  std::optional<FrequencySpacing> image_frequency_spacing;
   std::optional<FrequencyNormalization> image_normalization;
   std::optional<bool> image_polarization;
   std::optional<bool> image_time;
@@ -136,6 +140,7 @@ struct InputReader
   // Data - adaptive parameters
   std::optional<int> adaptive_max_level;
   std::optional<int> adaptive_block_size;
+  std::optional<int> adaptive_frequency_num;
   std::optional<double> adaptive_val_cut;
   std::optional<double> adaptive_val_frac;
   std::optional<double> adaptive_abs_grad_cut;
@@ -209,10 +214,11 @@ struct InputReader
   ModelType ReadModelType(const std::string &string);
   OutputFormat ReadOutputFormat(const std::string &string);
   Coordinates ReadCoordinates(const std::string &string);
-  PlasmaModel ReadPlasmaModel(const std::string &string);
   Camera ReadCamera(const std::string &string);
-  FrequencyNormalization ReadFrequencyNormalization(const std::string &string);
   RayTerminate ReadRayTerminate(const std::string &string);
+  FrequencySpacing ReadFrequencySpacing(const std::string &string);
+  FrequencyNormalization ReadFrequencyNormalization(const std::string &string);
+  PlasmaModel ReadPlasmaModel(const std::string &string);
 };
 
 #endif

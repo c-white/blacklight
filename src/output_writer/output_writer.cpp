@@ -54,6 +54,9 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
 
   // Copy image parameters
   image_light = p_input_reader->image_light.value();
+  image_num_frequencies = p_input_reader->image_num_frequencies.value();
+  if (image_num_frequencies > 1 and not (output_format == OutputFormat::npz))
+    throw BlacklightException("Only npz support multiple frequencies.");
   if (image_light and model_type == ModelType::simulation)
   {
     image_polarization = p_input_reader->image_polarization.value();
@@ -99,11 +102,10 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   if (output_format == OutputFormat::npz)
   {
     mass_msun_array.Allocate(1);
-    camera_width_array.Allocate(1);
-    image_frequency_array.Allocate(1);
     mass_msun_array(0) = p_radiation_integrator->mass_msun;
+    camera_width_array.Allocate(1);
     camera_width_array(0) = p_input_reader->camera_width.value();
-    image_frequency_array(0) = p_input_reader->image_frequency.value();
+    image_frequencies = p_geodesic_integrator->image_frequencies;
   }
 
   // Allocate space for camera data

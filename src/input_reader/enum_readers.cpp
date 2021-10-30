@@ -76,27 +76,6 @@ Coordinates InputReader::ReadCoordinates(const std::string &string)
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for interpreting strings as PlasmaModel enums
-// Inputs:
-//   string: string to be interpreted
-// Outputs:
-//   returned value: valid PlasmaModel
-// Notes:
-//   Valid options:
-//     "ti_te_beta": spherical Kerr-Schild
-//     "code_kappa": Cartesian Kerr-Schild
-PlasmaModel InputReader::ReadPlasmaModel(const std::string &string)
-{
-  if (string == "ti_te_beta")
-    return PlasmaModel::ti_te_beta;
-  else if (string == "code_kappa")
-    return PlasmaModel::code_kappa;
-  else
-    throw BlacklightException("Unknown string used for PlasmaModel value.");
-}
-
-//--------------------------------------------------------------------------------------------------
-
 // Function for interpreting strings as Camera enums
 // Inputs:
 //   string: string to be interpreted
@@ -116,32 +95,6 @@ Camera InputReader::ReadCamera(const std::string &string)
     return Camera::pinhole;
   else
     throw BlacklightException("Unknown string used for Camera value.");
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// Function for interpreting strings as FrequencyNormalization enums
-// Inputs:
-//   string: string to be interpreted
-// Outputs:
-//   returned value: valid FrequencyNormalization
-// Notes:
-//   Valid options:
-//     "camera": input image_frequency is taken to be the frequency as seen by the center of the
-//         camera, accounting for its position and velocity; that is, the covariant time component
-//         of photon momentum in the camera frame at the camera location is -image_frequency
-//     "infinity": input image_frequency is taken to be the frequency of the light at the center of
-//         the camera were it to be transported along geodesics to infinity and measured by an
-//         observer at rest; that is, the covariant time component of photon momentum in the
-//         coordinate frame is -image_frequency
-FrequencyNormalization InputReader::ReadFrequencyNormalization(const std::string &string)
-{
-  if (string == "camera")
-    return FrequencyNormalization::camera;
-  else if (string == "infinity")
-    return FrequencyNormalization::infinity;
-  else
-    throw BlacklightException("Unknown string used for FrequencyNormalization value.");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -168,4 +121,81 @@ RayTerminate InputReader::ReadRayTerminate(const std::string &string)
     return RayTerminate::additive;
   else
     throw BlacklightException("Unknown string used for RayTerminate value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as FrequencySpacing enums
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid FrequencySpacing
+// Notes:
+//   Valid options:
+//     "lin_frequency": frequencies are linearly spaced from image_frequency_min to
+//         image_frequency_max
+//     "lin_wavelength": wavelengths are linearly spaced from c / image_frequency_min to
+//         c / image_frequency_max
+//     "log": frequencies are logarithmically spaced from image_frequency_min to image_frequency_max
+//         (and thus wavelengths are logarithmically spaced from c / image_frequency_min to
+//         c / image_frequency_max)
+FrequencySpacing InputReader::ReadFrequencySpacing(const std::string &string)
+{
+  if (string == "lin_frequency")
+    return FrequencySpacing::lin_frequency;
+  else if (string == "lin_wavelength")
+    return FrequencySpacing::lin_wavelength;
+  else if (string == "log")
+    return FrequencySpacing::log;
+  else
+    throw BlacklightException("Unknown string used for FrequencySpacing value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as FrequencyNormalization enums
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid FrequencyNormalization
+// Notes:
+//   Valid options:
+//     "camera": input image_frequency (or each frequency from image_frequency_min to
+//         image_frequency_max) is taken to be the frequency as seen by the center of the camera,
+//         accounting for its position and velocity; that is, the covariant time component of photon
+//         momentum in the camera frame at the camera location is -image_frequency
+//     "infinity": input image_frequency (or each frequency from image_frequency_min to
+//         image_frequency_max) is taken to be the frequency of the light at the center of the
+//         camera were it to be transported along geodesics to infinity and measured by an observer
+//         at rest; that is, the covariant time component of photon momentum in the coordinate frame
+//         is -image_frequency
+FrequencyNormalization InputReader::ReadFrequencyNormalization(const std::string &string)
+{
+  if (string == "camera")
+    return FrequencyNormalization::camera;
+  else if (string == "infinity")
+    return FrequencyNormalization::infinity;
+  else
+    throw BlacklightException("Unknown string used for FrequencyNormalization value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as PlasmaModel enums
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid PlasmaModel
+// Notes:
+//   Valid options:
+//     "ti_te_beta": spherical Kerr-Schild
+//     "code_kappa": Cartesian Kerr-Schild
+PlasmaModel InputReader::ReadPlasmaModel(const std::string &string)
+{
+  if (string == "ti_te_beta")
+    return PlasmaModel::ti_te_beta;
+  else if (string == "code_kappa")
+    return PlasmaModel::code_kappa;
+  else
+    throw BlacklightException("Unknown string used for PlasmaModel value.");
 }

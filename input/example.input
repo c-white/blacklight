@@ -70,18 +70,22 @@ ray_min_factor  = 0.2             # minimum ratio of new to old step size
 ray_max_factor  = 10.0            # maximum ratio of new to old step size
 
 # Image parameters
-image_light         = true      # flag indicating real image of radiation should be produced
-image_frequency     = 2.3e11    # frequency of observation in Hz
-image_normalization = infinity  # image_frequency location (camera [w/ velocity], infinity [rest])
-image_polarization  = false     # flag indicating transport should be polarized
-image_time          = false     # flag indicating image of geodesic times should be produced
-image_length        = false     # flag indicating image of geodesic lengths should be produced
-image_lambda        = false     # flag indicating image of affine path lengths should be produced
-image_emission      = false     # flag indicating image of emission coefficients should be produced
-image_tau           = false     # flag indicating image of optical depths should be produced
-image_lambda_ave    = false     # flag indicating lambda-averaged images should be produced
-image_emission_ave  = false     # flag indicating emission-averaged images should be produced
-image_tau_int       = false     # flag indicating tau-integrated images should be produced
+image_light             = true      # flag indicating real image of radiation should be produced
+image_num_frequencies   = 1         # number of observation frequencies
+image_frequency         = 2.3e11    # frequency in Hz if image_frequency_num = 1
+image_frequency_min     = 2.3e11    # minimum frequency in Hz if image_frequency_num > 1
+image_frequency_max     = 2.3e11    # maximum frequency in Hz if image_frequency_num > 1
+image_frequency_spacing = log       # frequency spacing (lin_frequency, lin_wavelength, log)
+image_normalization     = infinity  # frequency location (camera [w/ velocity], infinity [rest])
+image_polarization      = false     # flag indicating transport should be polarized
+image_time              = false     # flag for producing image of geodesic times
+image_length            = false     # flag for producing image of geodesic lengths
+image_lambda            = false     # flag for producing image of affine path lengths
+image_emission          = false     # flag for producing image of emission coefficients
+image_tau               = false     # flag for producing image of optical depths
+image_lambda_ave        = false     # flag for producing lambda-averaged images
+image_emission_ave      = false     # flag for producing emission-averaged images
+image_tau_int           = false     # flag for producing tau-integrated images
 
 # Rendering parameters
 render_num_images     = 0                 # number of false-color renderings
@@ -116,6 +120,7 @@ slow_offset     = 0      # offset to use for numbering slow-light output files
 # Adaptive parameters
 adaptive_max_level     = 0       # maximum number of adaptive levels beyond root
 adaptive_block_size    = 8       # linear size of adaptively refined blocks of pixels
+adaptive_frequency_num = 1       # index (1-indexed) of frequency to use for evaluating refinement
 adaptive_val_cut       = 4.0e-4  # absolute value minimum for signaling refinement
 adaptive_val_frac      = 0.0     # minimum fraction of cells exceeding cut for triggering refinement
 adaptive_abs_grad_cut  = 0.0     # absolute gradient minimum for signaling refinement

@@ -67,7 +67,8 @@ template<typename type> struct Array
 
   // Functions - miscellaneous
   void Swap(Array<type> &other);
-  void Slice(int dimension, int index);
+  void Slice(int dimension, int index_start, int index_end);
+  void CopyFrom(const Array<type> &other, int offset_src, int offset_dest, int num_elements);
   void Zero();
   void SetNaN();
   std::size_t GetNumBytes() const;

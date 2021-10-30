@@ -53,18 +53,19 @@ ray_min_factor  = 0.2             # minimum ratio of new to old step size
 ray_max_factor  = 10.0            # maximum ratio of new to old step size
 
 # Image parameters
-image_light         = true      # flag indicating real image of radiation should be produced
-image_frequency     = 2.3e11    # frequency of observation in Hz
-image_normalization = infinity  # image_frequency location (camera [w/ velocity], infinity [rest])
-image_polarization  = true      # flag indicating transport should be polarized
-image_time          = false     # flag indicating image of geodesic times should be produced
-image_length        = false     # flag indicating image of geodesic lengths should be produced
-image_lambda        = false     # flag indicating image of affine path lengths should be produced
-image_emission      = false     # flag indicating image of emission coefficients should be produced
-image_tau           = false     # flag indicating image of optical depths should be produced
-image_lambda_ave    = false     # flag indicating lambda-averaged images should be produced
-image_emission_ave  = false     # flag indicating emission-averaged images should be produced
-image_tau_int       = false     # flag indicating tau-integrated images should be produced
+image_light           = true      # flag indicating real image of radiation should be produced
+image_num_frequencies = 1         # number of observation frequencies
+image_frequency       = 2.3e11    # frequency in Hz if image_frequency_num = 1
+image_normalization   = infinity  # frequency location (camera [w/ velocity], infinity [rest])
+image_polarization    = true      # flag indicating transport should be polarized
+image_time            = false     # flag for producing image of geodesic times
+image_length          = false     # flag for producing image of geodesic lengths
+image_lambda          = false     # flag for producing image of affine path lengths
+image_emission        = false     # flag for producing image of emission coefficients
+image_tau             = false     # flag for producing image of optical depths
+image_lambda_ave      = false     # flag for producing lambda-averaged images
+image_emission_ave    = false     # flag for producing emission-averaged images
+image_tau_int         = false     # flag for producing tau-integrated images
 
 # Rendering parameters
 render_num_images = 0  # number of false-color renderings

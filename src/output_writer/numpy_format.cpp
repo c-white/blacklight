@@ -79,7 +79,7 @@ void OutputWriter::WriteNpz()
       data_lengths[array_offset], "width", &local_header_buffers[array_offset]);
   array_offset++;
   data_lengths[array_offset] =
-      GenerateNpyFromArray(image_frequency_array, 1, &data_buffers[array_offset]);
+      GenerateNpyFromArray(image_frequencies, 1, &data_buffers[array_offset]);
   local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
       data_lengths[array_offset], "frequency", &local_header_buffers[array_offset]);
   array_offset++;
@@ -121,79 +121,99 @@ void OutputWriter::WriteNpz()
     array_offset++;
   }
 
-  // Write root image data and metadata to buffers
-  Array<double> image_copy;
+  // Write root intensity image data and metadata to buffers
+  Array<double> image_deep_copy;
+  if (image_light or image_lambda_ave or image_emission_ave or image_tau_int)
+    image_deep_copy.Allocate(image_num_frequencies, camera_resolution, camera_resolution);
+  int num_pix = camera_resolution * camera_resolution;
+  int num_dims = image_num_frequencies == 1 ? 2 : 3;
+  int image_stride =
+      image_light and model_type == ModelType::simulation and image_polarization ? 4 : 1;
   if (image_light)
   {
-    image_copy = image[0];
-    image_copy.Slice(3, 0);
-    data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+    for (int l = 0; l < image_num_frequencies; l++)
+      image_deep_copy.CopyFrom(image[0], l * image_stride * num_pix, l * num_pix, num_pix);
+    data_lengths[array_offset] =
+        GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
     local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
         data_lengths[array_offset], "I_nu", &local_header_buffers[array_offset]);
     array_offset++;
     if (model_type == ModelType::simulation and image_polarization)
     {
-      image_copy = image[0];
-      image_copy.Slice(3, 1);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+      for (int l = 0; l < image_num_frequencies; l++)
+        image_deep_copy.CopyFrom(image[0], (l * image_stride + 1) * num_pix, l * num_pix, num_pix);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], "Q_nu", &local_header_buffers[array_offset]);
       array_offset++;
-      image_copy = image[0];
-      image_copy.Slice(3, 2);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+      for (int l = 0; l < image_num_frequencies; l++)
+        image_deep_copy.CopyFrom(image[0], (l * image_stride + 1) * num_pix, l * num_pix, num_pix);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], "U_nu", &local_header_buffers[array_offset]);
       array_offset++;
-      image_copy = image[0];
-      image_copy.Slice(3, 3);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+      for (int l = 0; l < image_num_frequencies; l++)
+        image_deep_copy.CopyFrom(image[0], (l * image_stride + 1) * num_pix, l * num_pix, num_pix);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], "V_nu", &local_header_buffers[array_offset]);
       array_offset++;
     }
   }
+
+  // Write root alternate image data and metadata to buffers
+  Array<double> image_shallow_copy;
   if (image_time)
   {
-    image_copy = image[0];
-    image_copy.Slice(3, image_offset_time);
-    data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+    image_shallow_copy = image[0];
+    image_shallow_copy.Slice(3, image_offset_time, image_offset_time);
+    data_lengths[array_offset] =
+        GenerateNpyFromArray(image_shallow_copy, 2, &data_buffers[array_offset]);
     local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
         data_lengths[array_offset], "time", &local_header_buffers[array_offset]);
     array_offset++;
   }
   if (image_length)
   {
-    image_copy = image[0];
-    image_copy.Slice(3, image_offset_length);
-    data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+    image_shallow_copy = image[0];
+    image_shallow_copy.Slice(3, image_offset_length, image_offset_length);
+    data_lengths[array_offset] =
+        GenerateNpyFromArray(image_shallow_copy, 2, &data_buffers[array_offset]);
     local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
         data_lengths[array_offset], "length", &local_header_buffers[array_offset]);
     array_offset++;
   }
   if (image_lambda)
   {
-    image_copy = image[0];
-    image_copy.Slice(3, image_offset_lambda);
-    data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+    image_shallow_copy = image[0];
+    image_shallow_copy.Slice(3, image_offset_lambda,
+        image_offset_lambda + image_num_frequencies - 1);
+    data_lengths[array_offset] =
+        GenerateNpyFromArray(image_shallow_copy, num_dims, &data_buffers[array_offset]);
     local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
         data_lengths[array_offset], "lambda", &local_header_buffers[array_offset]);
     array_offset++;
   }
   if (image_emission)
   {
-    image_copy = image[0];
-    image_copy.Slice(3, image_offset_emission);
-    data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+    image_shallow_copy = image[0];
+    image_shallow_copy.Slice(3, image_offset_emission,
+        image_offset_emission + image_num_frequencies - 1);
+    data_lengths[array_offset] =
+        GenerateNpyFromArray(image_shallow_copy, num_dims, &data_buffers[array_offset]);
     local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
         data_lengths[array_offset], "emission", &local_header_buffers[array_offset]);
     array_offset++;
   }
   if (image_tau)
   {
-    image_copy = image[0];
-    image_copy.Slice(3, image_offset_tau);
-    data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+    image_shallow_copy = image[0];
+    image_shallow_copy.Slice(3, image_offset_tau, image_offset_tau + image_num_frequencies - 1);
+    data_lengths[array_offset] =
+        GenerateNpyFromArray(image_shallow_copy, num_dims, &data_buffers[array_offset]);
     local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
         data_lengths[array_offset], "tau", &local_header_buffers[array_offset]);
     array_offset++;
@@ -204,9 +224,12 @@ void OutputWriter::WriteNpz()
       int num_written = std::snprintf(name_buffer, max_name_length, "lambda_ave_%s", cell_names[n]);
       if (num_written < 0 or num_written >= max_name_length)
         throw BlacklightException("Error naming output array.");
-      image_copy = image[0];
-      image_copy.Slice(3, image_offset_lambda_ave + n);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+      for (int l = 0; l < image_num_frequencies; l++)
+        image_deep_copy.CopyFrom(image[0],
+            (image_offset_lambda_ave + l * CellValues::num_cell_values + n) * num_pix, l * num_pix,
+            num_pix);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       array_offset++;
@@ -218,9 +241,12 @@ void OutputWriter::WriteNpz()
           std::snprintf(name_buffer, max_name_length, "emission_ave_%s", cell_names[n]);
       if (num_written < 0 or num_written >= max_name_length)
         throw BlacklightException("Error naming output array.");
-      image_copy = image[0];
-      image_copy.Slice(3, image_offset_emission_ave + n);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+      for (int l = 0; l < image_num_frequencies; l++)
+        image_deep_copy.CopyFrom(image[0],
+            (image_offset_emission_ave + l * CellValues::num_cell_values + n) * num_pix,
+            l * num_pix, num_pix);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       array_offset++;
@@ -231,13 +257,17 @@ void OutputWriter::WriteNpz()
       int num_written = std::snprintf(name_buffer, max_name_length, "tau_int_%s", cell_names[n]);
       if (num_written < 0 or num_written >= max_name_length)
         throw BlacklightException("Error naming output array.");
-      image_copy = image[0];
-      image_copy.Slice(3, image_offset_tau_int + n);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 2, &data_buffers[array_offset]);
+      for (int l = 0; l < image_num_frequencies; l++)
+        image_deep_copy.CopyFrom(image[0],
+            (image_offset_tau_int + l * CellValues::num_cell_values + n) * num_pix, l * num_pix,
+            num_pix);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       array_offset++;
     }
+  image_deep_copy.Deallocate();
 
   // Write root render data and metadata to buffers
   if (render_num_images > 0)
@@ -249,6 +279,7 @@ void OutputWriter::WriteNpz()
   }
 
   // Write adaptive data and metadata to buffers
+  num_dims++;
   for (int level = 1; level <= adaptive_num_levels_array(0); level++)
   {
     // Write adaptive refinement structure and metadata to buffers
@@ -287,15 +318,20 @@ void OutputWriter::WriteNpz()
       array_offset++;
     }
 
-    // Write adaptive image data and metadata to buffers
+    // Write adaptive intensity image data and metadata to buffers
+    if (image_light or image_lambda_ave or image_emission_ave or image_tau_int)
+      image_deep_copy.Allocate(image_num_frequencies, block_counts_array(level),
+          adaptive_block_size, adaptive_block_size);
+    num_pix = block_counts_array(level) * adaptive_block_size * adaptive_block_size;
     if (image_light)
     {
       num_written = std::snprintf(name_buffer, max_name_length, "adaptive_I_nu_%d", level);
       if (num_written < 0 or num_written >= max_name_length)
         throw BlacklightException("Error naming output array.");
-      image_copy = image[level];
-      image_copy.Slice(4, 0);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+      for (int l = 0; l < image_num_frequencies; l++)
+        image_deep_copy.CopyFrom(image[0], l * image_stride * num_pix, l * num_pix, num_pix);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       array_offset++;
@@ -304,43 +340,49 @@ void OutputWriter::WriteNpz()
         num_written = std::snprintf(name_buffer, max_name_length, "adaptive_Q_nu_%d", level);
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
-        image_copy = image[level];
-        image_copy.Slice(4, 1);
+        for (int l = 0; l < image_num_frequencies; l++)
+          image_deep_copy.CopyFrom(image[0], (l * image_stride + 1) * num_pix, l * num_pix,
+              num_pix);
         data_lengths[array_offset] =
-            GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+            GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
         local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
             data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
         array_offset++;
         num_written = std::snprintf(name_buffer, max_name_length, "adaptive_U_nu_%d", level);
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
-        image_copy = image[level];
-        image_copy.Slice(4, 2);
+        for (int l = 0; l < image_num_frequencies; l++)
+          image_deep_copy.CopyFrom(image[0], (l * image_stride + 2) * num_pix, l * num_pix,
+              num_pix);
         data_lengths[array_offset] =
-            GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+            GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
         local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
             data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
         array_offset++;
         num_written = std::snprintf(name_buffer, max_name_length, "adaptive_V_nu_%d", level);
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
-        image_copy = image[level];
-        image_copy.Slice(4, 3);
+        for (int l = 0; l < image_num_frequencies; l++)
+          image_deep_copy.CopyFrom(image[0], (l * image_stride + 3) * num_pix, l * num_pix,
+              num_pix);
         data_lengths[array_offset] =
-            GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+            GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
         local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
             data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
         array_offset++;
       }
     }
+
+    // Write adaptive alternate image data and metadata to buffers
     if (image_time)
     {
       num_written = std::snprintf(name_buffer, max_name_length, "adaptive_time_%d", level);
       if (num_written < 0 or num_written >= max_name_length)
         throw BlacklightException("Error naming output array.");
-      image_copy = image[level];
-      image_copy.Slice(4, image_offset_time);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+      image_shallow_copy = image[level];
+      image_shallow_copy.Slice(4, image_offset_time, image_offset_time);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_shallow_copy, 3, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       array_offset++;
@@ -350,9 +392,10 @@ void OutputWriter::WriteNpz()
       num_written = std::snprintf(name_buffer, max_name_length, "adaptive_length_%d", level);
       if (num_written < 0 or num_written >= max_name_length)
         throw BlacklightException("Error naming output array.");
-      image_copy = image[level];
-      image_copy.Slice(4, image_offset_length);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+      image_shallow_copy = image[level];
+      image_shallow_copy.Slice(4, image_offset_length, image_offset_length);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_shallow_copy, 3, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       array_offset++;
@@ -362,9 +405,11 @@ void OutputWriter::WriteNpz()
       num_written = std::snprintf(name_buffer, max_name_length, "adaptive_lambda_%d", level);
       if (num_written < 0 or num_written >= max_name_length)
         throw BlacklightException("Error naming output array.");
-      image_copy = image[level];
-      image_copy.Slice(4, image_offset_lambda);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+      image_shallow_copy = image[level];
+      image_shallow_copy.Slice(4, image_offset_lambda,
+          image_offset_lambda + image_num_frequencies - 1);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_shallow_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       array_offset++;
@@ -374,9 +419,11 @@ void OutputWriter::WriteNpz()
       num_written = std::snprintf(name_buffer, max_name_length, "adaptive_emission_%d", level);
       if (num_written < 0 or num_written >= max_name_length)
         throw BlacklightException("Error naming output array.");
-      image_copy = image[level];
-      image_copy.Slice(4, image_offset_emission);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+      image_shallow_copy = image[level];
+      image_shallow_copy.Slice(4, image_offset_emission,
+          image_offset_emission + image_num_frequencies - 1);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_shallow_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       array_offset++;
@@ -386,9 +433,10 @@ void OutputWriter::WriteNpz()
       num_written = std::snprintf(name_buffer, max_name_length, "adaptive_tau_%d", level);
       if (num_written < 0 or num_written >= max_name_length)
         throw BlacklightException("Error naming output array.");
-      image_copy = image[level];
-      image_copy.Slice(4, image_offset_tau);
-      data_lengths[array_offset] = GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+      image_shallow_copy = image[level];
+      image_shallow_copy.Slice(4, image_offset_tau, image_offset_tau + image_num_frequencies - 1);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_shallow_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       array_offset++;
@@ -400,10 +448,12 @@ void OutputWriter::WriteNpz()
             cell_names[n], level);
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
-        image_copy = image[level];
-        image_copy.Slice(4, image_offset_lambda_ave + n);
+        for (int l = 0; l < image_num_frequencies; l++)
+          image_deep_copy.CopyFrom(image[0],
+              (image_offset_lambda_ave + l * CellValues::num_cell_values + n) * num_pix,
+              l * num_pix, num_pix);
         data_lengths[array_offset] =
-            GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+            GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
         local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
             data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
         array_offset++;
@@ -415,10 +465,12 @@ void OutputWriter::WriteNpz()
             cell_names[n], level);
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
-        image_copy = image[level];
-        image_copy.Slice(4, image_offset_emission_ave + n);
+        for (int l = 0; l < image_num_frequencies; l++)
+          image_deep_copy.CopyFrom(image[0],
+              (image_offset_emission_ave + l * CellValues::num_cell_values + n) * num_pix,
+              l * num_pix, num_pix);
         data_lengths[array_offset] =
-            GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+            GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
         local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
             data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
         array_offset++;
@@ -430,14 +482,17 @@ void OutputWriter::WriteNpz()
             cell_names[n], level);
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
-        image_copy = image[level];
-        image_copy.Slice(4, image_offset_tau_int + n);
+        for (int l = 0; l < image_num_frequencies; l++)
+          image_deep_copy.CopyFrom(image[0],
+              (image_offset_tau_int + l * CellValues::num_cell_values + n) * num_pix, l * num_pix,
+              num_pix);
         data_lengths[array_offset] =
-            GenerateNpyFromArray(image_copy, 3, &data_buffers[array_offset]);
+            GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
         local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
             data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
         array_offset++;
       }
+    image_deep_copy.Deallocate();
 
     // Write adaptive render data and metadata to buffers
     if (render_num_images > 0)

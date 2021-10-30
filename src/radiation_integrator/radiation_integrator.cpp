@@ -86,9 +86,9 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
 
   // Copy image parameters
   image_light = p_input_reader->image_light.value();
+  image_num_frequencies = p_input_reader->image_num_frequencies.value();
   if (image_light)
   {
-    image_frequency = p_input_reader->image_frequency.value();
     if (model_type == ModelType::simulation)
       image_polarization = p_input_reader->image_polarization.value();
     else if (p_input_reader->image_polarization.has_value()
@@ -215,6 +215,10 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       throw BlacklightException("Must have positive adaptive_block_size.");
     if (camera_resolution % adaptive_block_size != 0)
       throw BlacklightException("Must have adaptive_block_size divide camera_resolution.");
+    if (image_num_frequencies > 1)
+      adaptive_frequency_num = p_input_reader->adaptive_frequency_num.value() - 1;
+    else
+      adaptive_frequency_num = 0;
     adaptive_val_frac = p_input_reader->adaptive_val_frac.value();
     if (adaptive_val_frac >= 0.0)
       adaptive_val_cut = p_input_reader->adaptive_val_cut.value();
@@ -317,7 +321,6 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   }
 
   // Copy camera data
-  momentum_factor = p_geodesic_integrator->momentum_factor;
   for (int mu = 0; mu < 4; mu++)
   {
     camera_x[mu] = p_geodesic_integrator->cam_x[mu];
@@ -330,6 +333,10 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   // Make shallow copies of camera arrays
   camera_pos = p_geodesic_integrator->camera_pos;
   camera_dir = p_geodesic_integrator->camera_dir;
+
+  // Make shallow copies of image frequency arrays
+  image_frequencies = p_geodesic_integrator->image_frequencies;
+  momentum_factors = p_geodesic_integrator->momentum_factors;
 
   // Make shallow copy of geodesic data
   geodesic_num_steps = p_geodesic_integrator->geodesic_num_steps;
@@ -392,7 +399,8 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   // Calculate number of simultaneous images and their offsets
   if (image_light)
   {
-    image_num_quantities += model_type == ModelType::simulation and image_polarization ? 4 : 1;
+    image_num_quantities += image_num_frequencies
+        * (model_type == ModelType::simulation and image_polarization ? 4 : 1);
     image_offset_time = image_num_quantities;
     image_offset_length = image_num_quantities;
     image_offset_lambda = image_num_quantities;
@@ -425,7 +433,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   }
   if (image_lambda)
   {
-    image_num_quantities++;
+    image_num_quantities += image_num_frequencies;
     image_offset_emission = image_num_quantities;
     image_offset_tau = image_num_quantities;
     image_offset_lambda_ave = image_num_quantities;
@@ -434,7 +442,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   }
   if (image_emission)
   {
-    image_num_quantities++;
+    image_num_quantities += image_num_frequencies;
     image_offset_tau = image_num_quantities;
     image_offset_lambda_ave = image_num_quantities;
     image_offset_emission_ave = image_num_quantities;
@@ -442,24 +450,24 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   }
   if (image_tau)
   {
-    image_num_quantities++;
+    image_num_quantities += image_num_frequencies;
     image_offset_lambda_ave = image_num_quantities;
     image_offset_emission_ave = image_num_quantities;
     image_offset_tau_int = image_num_quantities;
   }
   if (image_lambda_ave)
   {
-    image_num_quantities += CellValues::num_cell_values;
+    image_num_quantities += image_num_frequencies * CellValues::num_cell_values;
     image_offset_emission_ave = image_num_quantities;
     image_offset_tau_int = image_num_quantities;
   }
   if (image_emission_ave)
   {
-    image_num_quantities += CellValues::num_cell_values;
+    image_num_quantities += image_num_frequencies * CellValues::num_cell_values;
     image_offset_tau_int = image_num_quantities;
   }
   if (image_tau_int)
-    image_num_quantities += CellValues::num_cell_values;
+    image_num_quantities += image_num_frequencies * CellValues::num_cell_values;
 
   // Allocate space for rendering data
   render = new Array<double>[adaptive_max_level+1];

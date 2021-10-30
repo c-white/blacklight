@@ -35,11 +35,29 @@ def main(**kwargs):
         i_nu = f['I_nu'][:]
       except KeyError:
         raise RuntimeError('No intensity data in file.')
+      multiple_frequencies = True if len(i_nu.shape) == 3 else False
+      if multiple_frequencies:
+        if kwargs['frequency_num'] is None:
+          raise RuntimeError('Must specify frequency_num.')
+      else:
+        if kwargs['frequency_num'] is not None and kwargs['frequency_num'] != 1:
+          raise RuntimeError('Only single frequency found in file.')
       try:
-        image = np.array((i_nu, f['Q_nu'], f['U_nu'], f['V_nu']))
+        if multiple_frequencies:
+          i_nu = i_nu[kwargs['frequency_num']-1,...]
+          q_nu = f['Q_nu'][kwargs['frequency_num']-1,...]
+          u_nu = f['U_nu'][kwargs['frequency_num']-1,...]
+          v_nu = f['V_nu'][kwargs['frequency_num']-1,...]
+        else:
+          q_nu = f['Q_nu'][:]
+          u_nu = f['U_nu'][:]
+          v_nu = f['V_nu'][:]
+        image = np.vstack((i_nu[None,:,:], q_nu[None,:,:], u_nu[None,:,:], v_nu[None,:,:]))
         polarization = True
       except KeyError:
-        image = i_nu[None,:,:]
+        if multiple_frequencies:
+          i_nu = i_nu[kwargs['frequency_num']-1,...]
+        image = np.copy(i_nu[None,:,:])
         polarization = False
 
       # Read adaptive image
@@ -60,10 +78,25 @@ def main(**kwargs):
             key_q = 'adaptive_Q_nu_{0}'.format(level)
             key_u = 'adaptive_U_nu_{0}'.format(level)
             key_v = 'adaptive_V_nu_{0}'.format(level)
-            image_adaptive[level] = np.array((f[key_i], f[key_q], f[key_u], f[key_v]))
+            if multiple_frequencies:
+              i_nu = f[key_i][kwargs['frequency_num']-1,...]
+              q_nu = f[key_q][kwargs['frequency_num']-1,...]
+              u_nu = f[key_u][kwargs['frequency_num']-1,...]
+              v_nu = f[key_v][kwargs['frequency_num']-1,...]
+            else:
+              i_nu = f[key_i][:]
+              q_nu = f[key_q][:]
+              u_nu = f[key_u][:]
+              v_nu = f[key_v][:]
+            image_adaptive[level] = \
+                np.vstack((i_nu[None,:,:,:], q_nu[None,:,:,:], u_nu[None,:,:,:], v_nu[None,:,:,:]))
           else:
             key_i = 'adaptive_I_nu_{0}'.format(level)
-            image_adaptive[level] = f[key_i][None,:,:,:]
+            if multiple_frequencies:
+              i_nu = f[key_i][kwargs['frequency_num']-1,...]
+            else:
+              i_nu = f[key_i][:]
+            image_adaptive[level] = np.copy(i_nu[None,:,:,:])
 
       # Read metadata
       if 'width' in f.keys():
@@ -81,12 +114,16 @@ def main(**kwargs):
 
   # Read image data from .npy file
   elif kwargs['filename_data'][-4:] == '.npy':
+    if kwargs['frequency_num'] is not None and kwargs['frequency_num'] != 1:
+      raise RuntimeError('File type only supports single frequency.')
     image = np.load(kwargs['filename_data'])
     polarization = image.shape[0] == 4
     max_level = 0
 
   # Read image data from raw file
   else:
+    if kwargs['frequency_num'] is not None and kwargs['frequency_num'] != 1:
+      raise RuntimeError('File type only supports single frequency.')
     image = np.fromfile(kwargs['filename_data'], dtype=data_format)
     pix_num = len(image)
     pix_res = int(pix_num ** 0.5)
@@ -96,7 +133,7 @@ def main(**kwargs):
       pix_res += 1
     else:
       raise RuntimeError('Image data not square.')
-    image = np.reshape(image, (pix_res, pix_res))
+    image = np.reshape(image, (1, pix_res, pix_res))
     polarization = False
     max_level = 0
 
@@ -183,6 +220,8 @@ if __name__ == '__main__':
       help='full width of image in gravitational radii')
   parser.add_argument('-m', '--mass', type=float, help='black hole mass in solar masses')
   parser.add_argument('-d', '--distance', type=float, help='distance to black hole in parsecs')
+  parser.add_argument('-f', '--frequency_num', type=int,
+      help='index (1-indexed) of frequency to use if multiple present')
   parser.add_argument('-l', '--max_level', type=int,
       help='maximum adaptive level to use in calculation')
   args = parser.parse_args()

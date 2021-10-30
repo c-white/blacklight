@@ -225,8 +225,16 @@ int InputReader::Read()
     // Store image parameters
     else if (key == "image_light")
       image_light = ReadBool(val);
+    else if (key == "image_num_frequencies")
+      image_num_frequencies = std::stoi(val);
     else if (key == "image_frequency")
       image_frequency = std::stod(val);
+    else if (key == "image_frequency_min")
+      image_frequency_min = std::stod(val);
+    else if (key == "image_frequency_max")
+      image_frequency_max = std::stod(val);
+    else if (key == "image_frequency_spacing")
+      image_frequency_spacing = ReadFrequencySpacing(val);
     else if (key == "image_normalization")
       image_normalization = ReadFrequencyNormalization(val);
     else if (key == "image_polarization")
@@ -273,6 +281,8 @@ int InputReader::Read()
       adaptive_max_level = std::stoi(val);
     else if (key == "adaptive_block_size")
       adaptive_block_size = std::stoi(val);
+    else if (key == "adaptive_frequency_num")
+      adaptive_frequency_num = std::stoi(val);
     else if (key == "adaptive_val_cut")
       adaptive_val_cut = std::stod(val);
     else if (key == "adaptive_val_frac")

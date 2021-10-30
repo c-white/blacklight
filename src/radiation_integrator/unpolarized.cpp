@@ -49,126 +49,148 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
     double gcov[4][4];
     double gcon[4][4];
 
-    // Go through pixels
+    // Go through frequencies and pixels
     #pragma omp for schedule(static)
-    for (int m = 0; m < num_pix; m++)
-    {
-      // Extract number of steps
-      int num_steps = sample_num[adaptive_level](m);
-
-      // Prepare integrated quantities
-      double integrated_lambda = 0.0;
-      double integrated_emission = 0.0;
-
-      // Go through samples
-      for (int n = 0; n < num_steps; n++)
+    for (int l = 0; l < image_num_frequencies; l++)
+      for (int m = 0; m < num_pix; m++)
       {
-        // Extract and calculate useful values
-        double delta_lambda = sample_len[adaptive_level](m,n);
-        double delta_lambda_cgs = delta_lambda * x_unit / momentum_factor;
-        double t_cgs = sample_pos[adaptive_level](m,n,0) * t_unit;
-        double x1 = sample_pos[adaptive_level](m,n,1);
-        double x2 = sample_pos[adaptive_level](m,n,2);
-        double x3 = sample_pos[adaptive_level](m,n,3);
-        double kcov[4];
-        kcov[0] = sample_dir[adaptive_level](m,n,0);
-        kcov[1] = sample_dir[adaptive_level](m,n,1);
-        kcov[2] = sample_dir[adaptive_level](m,n,2);
-        kcov[3] = sample_dir[adaptive_level](m,n,3);
-        double j = std::numeric_limits<double>::quiet_NaN();
-        if (image_light or image_emission or image_emission_ave)
-          j = j_i[adaptive_level](m,n);
-        double alpha = std::numeric_limits<double>::quiet_NaN();
-        if (image_light or image_tau or image_tau_int)
-          alpha = alpha_i[adaptive_level](m,n);
-        double ss = j / alpha;
-        double delta_tau = alpha * delta_lambda_cgs;
-        double exp_neg = std::exp(-delta_tau);
-        double expm1 = std::expm1(delta_tau);
-        bool optically_thin = delta_tau <= delta_tau_max;
+        // Extract number of steps
+        int num_steps = sample_num[adaptive_level](m);
 
-        // Integrate light
-        if (image_light)
+        // Prepare integrated quantities
+        double integrated_lambda = 0.0;
+        double integrated_emission = 0.0;
+
+        // Go through samples
+        for (int n = 0; n < num_steps; n++)
         {
-          if (alpha > 0.0)
+          // Extract and calculate useful values
+          double delta_lambda = sample_len[adaptive_level](m,n);
+          double delta_lambda_cgs = delta_lambda * x_unit / momentum_factors(l);
+          double t_cgs = sample_pos[adaptive_level](m,n,0) * t_unit;
+          double x1 = sample_pos[adaptive_level](m,n,1);
+          double x2 = sample_pos[adaptive_level](m,n,2);
+          double x3 = sample_pos[adaptive_level](m,n,3);
+          double kcov[4];
+          kcov[0] = sample_dir[adaptive_level](m,n,0);
+          kcov[1] = sample_dir[adaptive_level](m,n,1);
+          kcov[2] = sample_dir[adaptive_level](m,n,2);
+          kcov[3] = sample_dir[adaptive_level](m,n,3);
+          double j = std::numeric_limits<double>::quiet_NaN();
+          if (image_light or image_emission or image_emission_ave)
+            j = j_i[adaptive_level](l,m,n);
+          double alpha = std::numeric_limits<double>::quiet_NaN();
+          if (image_light or image_tau or image_tau_int)
+            alpha = alpha_i[adaptive_level](l,m,n);
+          double ss = j / alpha;
+          double delta_tau = alpha * delta_lambda_cgs;
+          double exp_neg = std::exp(-delta_tau);
+          double expm1 = std::expm1(delta_tau);
+          bool optically_thin = delta_tau <= delta_tau_max;
+
+          // Integrate light
+          if (image_light)
+          {
+            if (alpha > 0.0)
+            {
+              if (optically_thin)
+                image[adaptive_level](l,m) = exp_neg * (image[adaptive_level](l,m) + ss * expm1);
+              else
+                image[adaptive_level](l,m) = ss;
+            }
+            else
+              image[adaptive_level](l,m) += j * delta_lambda_cgs;
+          }
+
+          // Integrate alternative image quantities
+          if (image_time and l == 0)
+            image[adaptive_level](image_offset_time,m) =
+                std::min(image[adaptive_level](image_offset_time,m), t_cgs);
+          if (image_length and l == 0)
+          {
+            CovariantGeodesicMetric(x1, x2, x3, gcov);
+            ContravariantGeodesicMetric(x1, x2, x3, gcon);
+            double temp_a[4] = {};
+            for (int a = 1; a < 4; a++)
+              for (int mu = 0; mu < 4; mu++)
+                temp_a[a] += (gcon[a][mu] - gcon[0][a] * gcon[0][mu] / gcon[0][0]) * kcov[mu];
+            double dl_dlambda_sq = 0.0;
+            for (int a = 1; a < 4; a++)
+              for (int b = 1; b < 4; b++)
+                dl_dlambda_sq += gcov[a][b] * temp_a[a] * temp_a[b];
+            image[adaptive_level](image_offset_length,m) +=
+                std::sqrt(dl_dlambda_sq) * delta_lambda * x_unit;
+          }
+          if (image_lambda or image_lambda_ave)
+            integrated_lambda += delta_lambda_cgs;
+          if (image_emission or image_emission_ave)
+            integrated_emission += j * delta_lambda_cgs;
+          if (image_tau)
+            image[adaptive_level](image_offset_tau+l,m) += delta_tau;
+          if (image_lambda_ave and not std::isnan(cell_values[adaptive_level](0,m,n)))
+            for (int a = 0; a < CellValues::num_cell_values; a++)
+            {
+              int index = image_offset_lambda_ave + l * CellValues::num_cell_values + a;
+              image[adaptive_level](index,m) +=
+                  cell_values[adaptive_level](a,m,n) * delta_lambda_cgs;
+            }
+          if (image_emission_ave and not std::isnan(cell_values[adaptive_level](0,m,n)))
+            for (int a = 0; a < CellValues::num_cell_values; a++)
+            {
+              int index = image_offset_emission_ave + l * CellValues::num_cell_values + a;
+              image[adaptive_level](index,m) +=
+                  cell_values[adaptive_level](a,m,n) * j * delta_lambda_cgs;
+            }
+          if (image_tau_int and not std::isnan(cell_values[adaptive_level](0,m,n)))
           {
             if (optically_thin)
-              image[adaptive_level](0,m) = exp_neg * (image[adaptive_level](0,m) + ss * expm1);
+              for (int a = 0; a < CellValues::num_cell_values; a++)
+              {
+                int index = image_offset_tau_int + l * CellValues::num_cell_values + a;
+                image[adaptive_level](index,m) = exp_neg
+                    * (image[adaptive_level](index,m) + cell_values[adaptive_level](a,m,n) * expm1);
+              }
             else
-              image[adaptive_level](0,m) = ss;
+              for (int a = 0; a < CellValues::num_cell_values; a++)
+              {
+                int index = image_offset_tau_int + l * CellValues::num_cell_values + a;
+                image[adaptive_level](index,m) = cell_values[adaptive_level](a,m,n);
+              }
           }
-          else
-            image[adaptive_level](0,m) += j * delta_lambda_cgs;
         }
 
-        // Integrate alternative image quantities
-        if (image_time)
-          image[adaptive_level](image_offset_time,m) =
-              std::min(image[adaptive_level](image_offset_time,m), t_cgs);
-        if (image_length)
-        {
-          CovariantGeodesicMetric(x1, x2, x3, gcov);
-          ContravariantGeodesicMetric(x1, x2, x3, gcon);
-          double temp_a[4] = {};
-          for (int a = 1; a < 4; a++)
-            for (int mu = 0; mu < 4; mu++)
-              temp_a[a] += (gcon[a][mu] - gcon[0][a] * gcon[0][mu] / gcon[0][0]) * kcov[mu];
-          double dl_dlambda_sq = 0.0;
-          for (int a = 1; a < 4; a++)
-            for (int b = 1; b < 4; b++)
-              dl_dlambda_sq += gcov[a][b] * temp_a[a] * temp_a[b];
-          image[adaptive_level](image_offset_length,m) +=
-              std::sqrt(dl_dlambda_sq) * delta_lambda * x_unit;
-        }
-        if (image_lambda or image_lambda_ave)
-          integrated_lambda += delta_lambda_cgs;
-        if (image_emission or image_emission_ave)
-          integrated_emission += j * delta_lambda_cgs;
-        if (image_tau)
-          image[adaptive_level](image_offset_tau,m) += delta_tau;
-        if (image_lambda_ave and not std::isnan(cell_values[adaptive_level](0,m,n)))
+        // Store integrated quantities
+        if (image_lambda)
+          image[adaptive_level](image_offset_lambda+l,m) = integrated_lambda;
+        if (image_emission)
+          image[adaptive_level](image_offset_emission+l,m) = integrated_emission;
+
+        // Normalize integrated quantities
+        if (image_lambda_ave)
           for (int a = 0; a < CellValues::num_cell_values; a++)
-            image[adaptive_level](image_offset_lambda_ave+a,m) +=
-                cell_values[adaptive_level](a,m,n) * delta_lambda_cgs;
-        if (image_emission_ave and not std::isnan(cell_values[adaptive_level](0,m,n)))
+          {
+            int index = image_offset_lambda_ave + l * CellValues::num_cell_values + a;
+            image[adaptive_level](index,m) /= integrated_lambda;
+          }
+        if (image_emission_ave)
           for (int a = 0; a < CellValues::num_cell_values; a++)
-            image[adaptive_level](image_offset_emission_ave+a,m) +=
-                cell_values[adaptive_level](a,m,n) * j * delta_lambda_cgs;
-        if (image_tau_int and not std::isnan(cell_values[adaptive_level](0,m,n)))
-        {
-          if (optically_thin)
-            for (int a = 0; a < CellValues::num_cell_values; a++)
-              image[adaptive_level](image_offset_tau_int+a,m) = exp_neg
-                  * (image[adaptive_level](image_offset_tau_int+a,m)
-                  + cell_values[adaptive_level](a,m,n) * expm1);
-          else
-            for (int a = 0; a < CellValues::num_cell_values; a++)
-              image[adaptive_level](image_offset_tau_int+a,m) = cell_values[adaptive_level](a,m,n);
-        }
+          {
+            int index = image_offset_emission_ave + l * CellValues::num_cell_values + a;
+            image[adaptive_level](index,m) /= integrated_emission;
+          }
       }
-
-      // Store integrated quantities
-      if (image_lambda)
-        image[adaptive_level](image_offset_lambda,m) = integrated_lambda;
-      if (image_emission)
-        image[adaptive_level](image_offset_emission,m) = integrated_emission;
-
-      // Normalize integrated quantities
-      if (image_lambda_ave)
-        for (int a = 0; a < CellValues::num_cell_values; a++)
-          image[adaptive_level](image_offset_lambda_ave+a,m) /= integrated_lambda;
-      if (image_emission_ave)
-        for (int a = 0; a < CellValues::num_cell_values; a++)
-          image[adaptive_level](image_offset_emission_ave+a,m) /= integrated_emission;
-    }
 
     // Transform I_nu/nu^3 to I_nu
     if (image_light)
     {
-      double image_frequency_cu = image_frequency * image_frequency * image_frequency;
       #pragma omp for schedule(static)
-      for (int m = 0; m < num_pix; m++)
-        image[adaptive_level](0,m) *= image_frequency_cu;
+      for (int l = 0; l < image_num_frequencies; l++)
+        for (int m = 0; m < num_pix; m++)
+        {
+          double image_frequency_cu =
+              image_frequencies(l) * image_frequencies(l) * image_frequencies(l);
+          image[adaptive_level](l,m) *= image_frequency_cu;
+        }
     }
   }
 

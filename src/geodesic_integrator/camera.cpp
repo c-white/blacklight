@@ -1,7 +1,7 @@
 // Blacklight geodesic integrator - camera definition
 
 // C++ headers
-#include <cmath>  // cos, hypot, sin, sqrt
+#include <cmath>  // cos, exp, hypot, log, sin, sqrt
 
 // Library headers
 #include <omp.h>  // pragmas
@@ -170,12 +170,6 @@ void GeodesicIntegrator::InitializeCamera()
   double k_z = dr_dz * camera_k_r + dth_dz * camera_k_th + dph_dz * camera_k_ph;
   double k_tc = u_con[0] * k_t + u_con[1] * k_x + u_con[2] * k_y + u_con[3] * k_z;
 
-  // Calculate momentum normalization
-  if (image_normalization == FrequencyNormalization::camera)
-    momentum_factor = -image_frequency / k_tc;
-  else if (image_normalization == FrequencyNormalization::infinity)
-    momentum_factor = -image_frequency / k_t;
-
   // Calculate contravariant metric in camera frame
   double g_con[4][4];
   ContravariantGeodesicMetric(cam_x[1], cam_x[2], cam_x[3], g_con);
@@ -203,7 +197,6 @@ void GeodesicIntegrator::InitializeCamera()
   norm_con_c[1] /= norm_norm;
   norm_con_c[2] /= norm_norm;
   norm_con_c[3] /= norm_norm;
-  momentum_factor *= norm_norm;
   norm_con[0] = u_con[0] * norm_con_c[0]
       - (u_cov[1] * norm_con_c[1] + u_cov[2] * norm_con_c[2] + u_cov[3] * norm_con_c[3]) / u_cov[0];
   norm_con[1] = norm_con_c[1] + u_con[1] * norm_con_c[0];
@@ -297,10 +290,10 @@ void GeodesicIntegrator::InitializeCamera()
     #pragma omp parallel for schedule(static)
     for (int ind = 0; ind < camera_num_pix; ind++)
     {
-      int m = ind / camera_resolution;
-      int l = ind % camera_resolution;
-      double u_ind = (l - camera_resolution / 2.0 + 0.5) / camera_resolution;
-      double v_ind = (m - camera_resolution / 2.0 + 0.5) / camera_resolution;
+      int m2 = ind / camera_resolution;
+      int m1 = ind % camera_resolution;
+      double u_ind = (m1 - camera_resolution / 2.0 + 0.5) / camera_resolution;
+      double v_ind = (m2 - camera_resolution / 2.0 + 0.5) / camera_resolution;
       SetPixelPlane(u_ind, v_ind, ind, camera_pos[0], camera_dir[0]);
     }
   }
@@ -311,13 +304,46 @@ void GeodesicIntegrator::InitializeCamera()
     #pragma omp parallel for schedule(static)
     for (int ind = 0; ind < camera_num_pix; ind++)
     {
-      int m = ind / camera_resolution;
-      int l = ind % camera_resolution;
-      double u_ind = (l - camera_resolution / 2.0 + 0.5) / camera_resolution;
-      double v_ind = (m - camera_resolution / 2.0 + 0.5) / camera_resolution;
+      int m2 = ind / camera_resolution;
+      int m1 = ind % camera_resolution;
+      double u_ind = (m1 - camera_resolution / 2.0 + 0.5) / camera_resolution;
+      double v_ind = (m2 - camera_resolution / 2.0 + 0.5) / camera_resolution;
       SetPixelPinhole(u_ind, v_ind, ind, camera_pos[0], camera_dir[0]);
     }
   }
+
+  // Calculate image frequencies
+  image_frequencies.Allocate(image_num_frequencies);
+  if (image_num_frequencies == 1)
+    image_frequencies(0) = image_frequency;
+  else
+  {
+    image_frequencies(0) = image_frequency_min;
+    image_frequencies(image_num_frequencies-1) = image_frequency_max;
+    for (int l = 1; l < image_num_frequencies - 1; l++)
+    {
+      double frac = static_cast<double>(l) / static_cast<double>(image_num_frequencies - 1);
+      if (image_frequency_spacing == FrequencySpacing::lin_frequency)
+        image_frequencies(l) =
+            image_frequency_min + frac * (image_frequency_max - image_frequency_min);
+      else if (image_frequency_spacing == FrequencySpacing::lin_wavelength)
+        image_frequencies(l) = 1.0 / (1.0 / image_frequency_min
+            + frac * (1.0 / image_frequency_max - 1.0 / image_frequency_min));
+      else if (image_frequency_spacing == FrequencySpacing::log)
+        image_frequencies(l) = std::exp(std::log(image_frequency_min)
+            + frac * std::log(image_frequency_max / image_frequency_min));
+    }
+  }
+
+  // Calculate momentum normalizations
+  double momentum_normalization = -norm_norm;
+  if (image_normalization == FrequencyNormalization::camera)
+    momentum_normalization /= k_tc;
+  else if (image_normalization == FrequencyNormalization::infinity)
+    momentum_normalization /= k_t;
+  momentum_factors.Allocate(image_num_frequencies);
+  for (int l = 0; l < image_num_frequencies; l++)
+    momentum_factors(l) = image_frequencies(l) * momentum_normalization;
   return;
 }
 
@@ -363,8 +389,8 @@ void GeodesicIntegrator::AugmentCamera()
           camera_loc[adaptive_level](block,1) = block_u;
           camera_pos_block = camera_pos[adaptive_level];
           camera_dir_block = camera_dir[adaptive_level];
-          camera_pos_block.Slice(2, block * block_num_pix);
-          camera_dir_block.Slice(2, block * block_num_pix);
+          camera_pos_block.Slice(2, block * block_num_pix, block * block_num_pix);
+          camera_dir_block.Slice(2, block * block_num_pix, block * block_num_pix);
           int m_offset = block_v * adaptive_block_size;
           int l_offset = block_u * adaptive_block_size;
 
@@ -374,12 +400,12 @@ void GeodesicIntegrator::AugmentCamera()
             #pragma omp parallel for schedule(static)
             for (int ind = 0; ind < block_num_pix; ind++)
             {
-              int m = ind / adaptive_block_size;
-              int l = ind % adaptive_block_size;
+              int m2 = ind / adaptive_block_size;
+              int m1 = ind % adaptive_block_size;
               double u_ind =
-                  (l + l_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
+                  (m1 + l_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
               double v_ind =
-                  (m + m_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
+                  (m2 + m_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
               SetPixelPlane(u_ind, v_ind, ind, camera_pos_block, camera_dir_block);
             }
           }
@@ -390,12 +416,12 @@ void GeodesicIntegrator::AugmentCamera()
             #pragma omp parallel for schedule(static)
             for (int ind = 0; ind < block_num_pix; ind++)
             {
-              int m = ind / adaptive_block_size;
-              int l = ind % adaptive_block_size;
+              int m2 = ind / adaptive_block_size;
+              int m1 = ind % adaptive_block_size;
               double u_ind =
-                  (l + l_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
+                  (m1 + l_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
               double v_ind =
-                  (m + m_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
+                  (m2 + m_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
               SetPixelPinhole(u_ind, v_ind, ind, camera_pos_block, camera_dir_block);
             }
           }

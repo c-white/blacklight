@@ -50,6 +50,7 @@ struct OutputWriter
 
   // Input data - image parameters
   bool image_light;
+  int image_num_frequencies;
   bool image_polarization;
   bool image_time;
   bool image_length;
@@ -81,7 +82,7 @@ struct OutputWriter
   // Metadata
   Array<double> mass_msun_array;
   Array<double> camera_width_array;
-  Array<double> image_frequency_array;
+  Array<double> image_frequencies;
 
   // Camera data
   Array<int> *camera_loc = nullptr;

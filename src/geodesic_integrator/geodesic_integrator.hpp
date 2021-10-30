@@ -63,7 +63,11 @@ struct GeodesicIntegrator
   double ray_max_factor;
 
   // Input data - image parameters
+  int image_num_frequencies;
   double image_frequency;
+  double image_frequency_min;
+  double image_frequency_max;
+  FrequencySpacing image_frequency_spacing;
   FrequencyNormalization image_normalization;
 
   // Input data - adaptive parameters
@@ -77,7 +81,6 @@ struct GeodesicIntegrator
 
   // Camera data
   int camera_num_pix;
-  double momentum_factor;
   double cam_x[4];
   double u_con[4], u_cov[4];
   double norm_con[4], norm_con_c[4];
@@ -86,6 +89,10 @@ struct GeodesicIntegrator
   Array<int> *camera_loc = nullptr;
   Array<double> *camera_pos = nullptr;
   Array<double> *camera_dir = nullptr;
+
+  // Image data
+  Array<double> image_frequencies;
+  Array<double> momentum_factors;
 
   // Geodesic data
   int *geodesic_num_steps = nullptr;

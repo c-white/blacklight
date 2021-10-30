@@ -43,15 +43,18 @@ bool RadiationIntegrator::CheckAdaptiveRefinement()
       #pragma omp for schedule(static)
       for (int block = 0; block < block_counts[0]; block++)
       {
-        int s_end = model_type == ModelType::simulation and image_polarization ? 4 : 1;
+        int s_full_start = adaptive_frequency_num
+            * (model_type == ModelType::simulation and image_polarization ? 4 : 1);
+        int s_full_end =
+            s_full_start + (model_type == ModelType::simulation and image_polarization ? 4 : 1);
         int j_full_start = block / linear_root_blocks * adaptive_block_size;
         int i_full_start = block % linear_root_blocks * adaptive_block_size;
-        for (int s = 0; s < s_end; s++)
+        for (int s = 0, s_full = s_full_start; s_full < s_full_end; s++, s_full++)
           for (int j = 0, j_full = j_full_start; j < adaptive_block_size; j++, j_full++)
             for (int i = 0, i_full = i_full_start; i < adaptive_block_size; i++, i_full++)
             {
               int m = j_full * camera_resolution + i_full;
-              image_blocks[thread](s,j,i) = image[0](s,m);
+              image_blocks[thread](s,j,i) = image[0](s_full,m);
             }
         refinement_flags[0](block) = EvaluateBlock(thread);
       }
@@ -63,12 +66,15 @@ bool RadiationIntegrator::CheckAdaptiveRefinement()
       #pragma omp for schedule(static)
       for (int block = 0; block < block_counts[adaptive_level]; block++)
       {
-        int s_end = model_type == ModelType::simulation and image_polarization ? 4 : 1;
+        int s_full_start = adaptive_frequency_num
+            * (model_type == ModelType::simulation and image_polarization ? 4 : 1);
+        int s_full_end =
+            s_full_start + (model_type == ModelType::simulation and image_polarization ? 4 : 1);
         int m_start = block * block_num_pix;
-        for (int s = 0; s < s_end; s++)
+        for (int s = 0, s_full = s_full_start; s_full < s_full_end; s++, s_full++)
           for (int j = 0, m = m_start; j < adaptive_block_size; j++)
             for (int i = 0; i < adaptive_block_size; i++, m++)
-              image_blocks[thread](s,j,i) = image[adaptive_level](s,m);
+              image_blocks[thread](s,j,i) = image[adaptive_level](s_full,m);
         refinement_flags[adaptive_level](block) = EvaluateBlock(thread);
       }
     }
@@ -111,7 +117,7 @@ bool RadiationIntegrator::EvaluateBlock(int thread)
 {
   // Extract intensity
   Array<double> intensity = image_blocks[thread];
-  intensity.Slice(3, 0);
+  intensity.Slice(3, 0, 0);
 
   // Test value of intensity
   if (adaptive_val_frac >= 0.0)

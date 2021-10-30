@@ -29,8 +29,10 @@ void RadiationIntegrator::CalculateFormulaCoefficients()
     num_pix = block_counts[adaptive_level] * block_num_pix;
   if (first_time or adaptive_level > 0)
   {
-    j_i[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
-    alpha_i[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
+    j_i[adaptive_level].Allocate(image_num_frequencies, num_pix,
+        geodesic_num_steps[adaptive_level]);
+    alpha_i[adaptive_level].Allocate(image_num_frequencies, num_pix,
+        geodesic_num_steps[adaptive_level]);
   }
   j_i[adaptive_level].Zero();
   alpha_i[adaptive_level].Zero();
@@ -139,18 +141,22 @@ void RadiationIntegrator::CalculateFormulaCoefficients()
       double n_n0_fluid =
           std::exp(-0.5 * (r * r / (formula_r0 * formula_r0) + formula_h * formula_h * cth * cth));
 
-      // Calculate frequency in CGS units
-      double nu_fluid_cgs = -(u0 * k_0 + u1 * k_1 + u2 * k_2 + u3 * k_3) * momentum_factor;
+      // Go through frequencies
+      for (int l = 0; l < image_num_frequencies; l++)
+      {
+        // Calculate frequency in CGS units
+        double nu_fluid_cgs = -(u0 * k_0 + u1 * k_1 + u2 * k_2 + u3 * k_3) * momentum_factors(l);
 
-      // Calculate emission coefficient in CGS units (C 9-10)
-      double j_nu_fluid_cgs =
-          formula_cn0 * n_n0_fluid * std::pow(nu_fluid_cgs / formula_nup, -formula_alpha);
-      j_i[adaptive_level](m,n) = j_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs);
+        // Calculate emission coefficient in CGS units (C 9-10)
+        double j_nu_fluid_cgs =
+            formula_cn0 * n_n0_fluid * std::pow(nu_fluid_cgs / formula_nup, -formula_alpha);
+        j_i[adaptive_level](l,m,n) = j_nu_fluid_cgs / (nu_fluid_cgs * nu_fluid_cgs);
 
-      // Calculate absorption coefficient in CGS units (C 11-12)
-      double alpha_nu_fluid_cgs = formula_a * formula_cn0 * n_n0_fluid
-          * std::pow(nu_fluid_cgs / formula_nup, -formula_beta - formula_alpha);
-      alpha_i[adaptive_level](m,n) = alpha_nu_fluid_cgs * nu_fluid_cgs;
+        // Calculate absorption coefficient in CGS units (C 11-12)
+        double alpha_nu_fluid_cgs = formula_a * formula_cn0 * n_n0_fluid
+            * std::pow(nu_fluid_cgs / formula_nup, -formula_beta - formula_alpha);
+        alpha_i[adaptive_level](l,m,n) = alpha_nu_fluid_cgs * nu_fluid_cgs;
+      }
     }
   }
   return;

@@ -118,6 +118,23 @@ def main(**kwargs):
           else:
             image_adaptive[level] = f['adaptive_I_nu_{0}'.format(level)][:]
 
+      # Select frequency
+      if kwargs['frequency_num'] is not None:
+        if kwargs['rendering'] is not None:
+          raise RuntimeError('Cannot specify frequency for rendering.')
+        elif kwargs['name'] is not None and kwargs['name'] == 'time':
+          raise RuntimeError('Cannot specify frequency for plot of ray times.')
+        elif kwargs['name'] is not None and kwargs['name'] == 'length':
+          raise RuntimeError('Cannot specify frequency for plot of ray lengths.')
+        if len(image.shape) == 2 and kwargs['frequency_num'] != 1:
+          raise RuntimeError('Only single frequency found in file.')
+        if len(image.shape) == 3:
+          image = image[kwargs['frequency_num']-1,...]
+          for level in range(1, max_level + 1):
+            image_adaptive[level] = image_adaptive[level][kwargs['frequency_num']-1,...]
+      elif len(image.shape) != 2:
+        raise RuntimeError('Must specify frequency_num.')
+
       # Read metadata
       if 'width' in f.keys():
         if width_rg is None:
@@ -138,6 +155,8 @@ def main(**kwargs):
       raise RuntimeError('Adaptive refinement not supported by npy format.')
     if kwargs['rendering'] is not None:
       raise RuntimeError('Renderings not supported by npy format.')
+    if kwargs['frequency_num'] is not None and kwargs['frequency_num'] != 1:
+      raise RuntimeError('Multiple frequencies not supported by npy format.')
     if kwargs['name'] is not None:
       raise RuntimeError('Arbitrary named quantities not supported by npy format.')
     image = np.load(kwargs['filename_data'])
@@ -160,6 +179,8 @@ def main(**kwargs):
       raise RuntimeError('Adaptive refinement not supported by raw format.')
     if kwargs['rendering'] is not None:
       raise RuntimeError('Renderings not supported by raw format.')
+    if kwargs['frequency_num'] is not None and kwargs['frequency_num'] != 1:
+      raise RuntimeError('Multiple frequencies not supported by raw format.')
     if kwargs['name'] is not None:
       raise RuntimeError('Arbitrary named quantities not supported by raw format.')
     if kwargs['stokes_q'] or kwargs['stokes_u'] or kwargs['stokes_v']:
@@ -428,6 +449,8 @@ if __name__ == '__main__':
   parser.add_argument('-v', '--stokes_v', action='store_true',
       help='flag indicating Stokes V_nu should be plotted')
   parser.add_argument('-n', '--name', help='name of quantity to be plotted')
+  parser.add_argument('-f', '--frequency_num', type=int,
+      help='index (1-indexed) of frequency to use if multiple present')
   parser.add_argument('-r', '--rendering', type=int, help='number of rendering to be plotted')
   parser.add_argument('--refinement_level', action='store_true',
       help='flag indicating refinement level should be plotted')

@@ -62,7 +62,7 @@ struct RadiationIntegrator
 
   // Input data - image parameters
   bool image_light;
-  double image_frequency;
+  int image_num_frequencies;
   bool image_polarization;
   bool image_time;
   bool image_length;
@@ -97,6 +97,7 @@ struct RadiationIntegrator
   // Input data - adaptive parameters
   int adaptive_max_level;
   int adaptive_block_size;
+  int adaptive_frequency_num;
   double adaptive_val_cut;
   double adaptive_val_frac;
   double adaptive_abs_grad_cut;
@@ -172,7 +173,6 @@ struct RadiationIntegrator
   const double delta_tau_max = 100.0;
 
   // Camera data
-  double momentum_factor;
   double camera_x[4];
   double camera_u_con[4], camera_u_cov[4];
   double camera_vert_con_c[4];
@@ -233,6 +233,8 @@ struct RadiationIntegrator
 
   // Image data
   Array<double> *image = nullptr;
+  Array<double> image_frequencies;
+  Array<double> momentum_factors;
   int image_num_quantities = 0;
   int image_offset_time = 0;
   int image_offset_length = 0;
