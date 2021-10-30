@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 """
-Script for plotting outputs produced by blacklight.
+Script for plotting outputs produced by Blacklight.
 """
 
 # Python standard modules

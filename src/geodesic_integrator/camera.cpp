@@ -318,20 +318,20 @@ void GeodesicIntegrator::InitializeCamera()
     image_frequencies(0) = image_frequency;
   else
   {
-    image_frequencies(0) = image_frequency_min;
-    image_frequencies(image_num_frequencies-1) = image_frequency_max;
+    image_frequencies(0) = image_frequency_start;
+    image_frequencies(image_num_frequencies-1) = image_frequency_end;
     for (int l = 1; l < image_num_frequencies - 1; l++)
     {
       double frac = static_cast<double>(l) / static_cast<double>(image_num_frequencies - 1);
-      if (image_frequency_spacing == FrequencySpacing::lin_frequency)
+      if (image_frequency_spacing == FrequencySpacing::lin_freq)
         image_frequencies(l) =
-            image_frequency_min + frac * (image_frequency_max - image_frequency_min);
-      else if (image_frequency_spacing == FrequencySpacing::lin_wavelength)
-        image_frequencies(l) = 1.0 / (1.0 / image_frequency_min
-            + frac * (1.0 / image_frequency_max - 1.0 / image_frequency_min));
+            image_frequency_start + frac * (image_frequency_end - image_frequency_start);
+      else if (image_frequency_spacing == FrequencySpacing::lin_wave)
+        image_frequencies(l) = 1.0 / (1.0 / image_frequency_start
+            + frac * (1.0 / image_frequency_end - 1.0 / image_frequency_start));
       else if (image_frequency_spacing == FrequencySpacing::log)
-        image_frequencies(l) = std::exp(std::log(image_frequency_min)
-            + frac * std::log(image_frequency_max / image_frequency_min));
+        image_frequencies(l) = std::exp(std::log(image_frequency_start)
+            + frac * std::log(image_frequency_end / image_frequency_start));
     }
   }
 

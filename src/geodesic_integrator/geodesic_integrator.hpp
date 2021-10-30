@@ -65,8 +65,8 @@ struct GeodesicIntegrator
   // Input data - image parameters
   int image_num_frequencies;
   double image_frequency;
-  double image_frequency_min;
-  double image_frequency_max;
+  double image_frequency_start;
+  double image_frequency_end;
   FrequencySpacing image_frequency_spacing;
   FrequencyNormalization image_normalization;
 

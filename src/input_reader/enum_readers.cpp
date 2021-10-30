@@ -132,19 +132,18 @@ RayTerminate InputReader::ReadRayTerminate(const std::string &string)
 //   returned value: valid FrequencySpacing
 // Notes:
 //   Valid options:
-//     "lin_frequency": frequencies are linearly spaced from image_frequency_min to
-//         image_frequency_max
-//     "lin_wavelength": wavelengths are linearly spaced from c / image_frequency_min to
-//         c / image_frequency_max
-//     "log": frequencies are logarithmically spaced from image_frequency_min to image_frequency_max
-//         (and thus wavelengths are logarithmically spaced from c / image_frequency_min to
-//         c / image_frequency_max)
+//     "lin_freq": frequencies are linearly spaced from image_frequency_start to image_frequency_end
+//     "lin_wave": wavelengths are linearly spaced from c / image_frequency_start to
+//         c / image_frequency_end
+//     "log": frequencies are logarithmically spaced from image_frequency_start to
+//         image_frequency_end (and thus wavelengths are logarithmically spaced from
+//         c / image_frequency_end to c / image_frequency_end)
 FrequencySpacing InputReader::ReadFrequencySpacing(const std::string &string)
 {
-  if (string == "lin_frequency")
-    return FrequencySpacing::lin_frequency;
-  else if (string == "lin_wavelength")
-    return FrequencySpacing::lin_wavelength;
+  if (string == "lin_freq")
+    return FrequencySpacing::lin_freq;
+  else if (string == "lin_wave")
+    return FrequencySpacing::lin_wave;
   else if (string == "log")
     return FrequencySpacing::log;
   else

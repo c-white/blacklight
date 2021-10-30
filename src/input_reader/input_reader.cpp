@@ -229,10 +229,10 @@ int InputReader::Read()
       image_num_frequencies = std::stoi(val);
     else if (key == "image_frequency")
       image_frequency = std::stod(val);
-    else if (key == "image_frequency_min")
-      image_frequency_min = std::stod(val);
-    else if (key == "image_frequency_max")
-      image_frequency_max = std::stod(val);
+    else if (key == "image_frequency_start")
+      image_frequency_start = std::stod(val);
+    else if (key == "image_frequency_end")
+      image_frequency_end = std::stod(val);
     else if (key == "image_frequency_spacing")
       image_frequency_spacing = ReadFrequencySpacing(val);
     else if (key == "image_normalization")

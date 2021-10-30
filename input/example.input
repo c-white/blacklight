@@ -73,9 +73,9 @@ ray_max_factor  = 10.0            # maximum ratio of new to old step size
 image_light             = true      # flag indicating real image of radiation should be produced
 image_num_frequencies   = 1         # number of observation frequencies
 image_frequency         = 2.3e11    # frequency in Hz if image_frequency_num = 1
-image_frequency_min     = 2.3e11    # minimum frequency in Hz if image_frequency_num > 1
-image_frequency_max     = 2.3e11    # maximum frequency in Hz if image_frequency_num > 1
-image_frequency_spacing = log       # frequency spacing (lin_frequency, lin_wavelength, log)
+image_frequency_start   = 2.3e11    # first frequency in Hz if image_frequency_num > 1
+image_frequency_end     = 2.3e11    # last frequency in Hz if image_frequency_num > 1
+image_frequency_spacing = log       # frequency spacing (lin_freq, lin_wave, log)
 image_normalization     = infinity  # frequency location (camera [w/ velocity], infinity [rest])
 image_polarization      = false     # flag indicating transport should be polarized
 image_rotation_split    = false     # flag for Strang splitting rotation from emission/absorption

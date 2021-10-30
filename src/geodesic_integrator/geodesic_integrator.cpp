@@ -69,8 +69,8 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
     image_frequency = p_input_reader->image_frequency.value();
   else if (image_num_frequencies > 1)
   {
-    image_frequency_min = p_input_reader->image_frequency_min.value();
-    image_frequency_max = p_input_reader->image_frequency_max.value();
+    image_frequency_start = p_input_reader->image_frequency_start.value();
+    image_frequency_end = p_input_reader->image_frequency_end.value();
     image_frequency_spacing = p_input_reader->image_frequency_spacing.value();
   }
   else

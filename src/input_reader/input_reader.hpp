@@ -100,8 +100,8 @@ struct InputReader
   std::optional<bool> image_light;
   std::optional<int> image_num_frequencies;
   std::optional<double> image_frequency;
-  std::optional<double> image_frequency_min;
-  std::optional<double> image_frequency_max;
+  std::optional<double> image_frequency_start;
+  std::optional<double> image_frequency_end;
   std::optional<FrequencySpacing> image_frequency_spacing;
   std::optional<FrequencyNormalization> image_normalization;
   std::optional<bool> image_polarization;

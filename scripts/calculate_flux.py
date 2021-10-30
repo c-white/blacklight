@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 """
-Script for calculating total flux from outputs produced by blacklight.
+Script for calculating total flux from outputs produced by Blacklight.
 """
 
 # Python standard modules
