@@ -125,6 +125,30 @@ RayTerminate InputReader::ReadRayTerminate(const std::string &string)
 
 //--------------------------------------------------------------------------------------------------
 
+// Function for interpreting strings as RayIntegrator enums
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid RayIntegrator
+// Notes:
+//   Valid options:
+//     "dp": Dormand-Prince (5th-order adaptive Runge-Kutta)
+//     "rk4": 4th-order Runge-Kutta
+//     "rk2": 2nd-order Runge-Kutta
+RayIntegrator InputReader::ReadRayIntegrator(const std::string &string)
+{
+  if (string == "dp")
+    return RayIntegrator::dp;
+  else if (string == "rk4")
+    return RayIntegrator::rk4;
+  else if (string == "rk2")
+    return RayIntegrator::rk2;
+  else
+    throw BlacklightException("Unknown string used for RayIntegrator value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
 // Function for interpreting strings as FrequencySpacing enums
 // Inputs:
 //   string: string to be interpreted

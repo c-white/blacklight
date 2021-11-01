@@ -87,14 +87,12 @@ struct InputReader
   std::optional<bool> ray_flat;
   std::optional<RayTerminate> ray_terminate;
   std::optional<double> ray_factor;
+  std::optional<RayIntegrator> ray_integrator;
   std::optional<double> ray_step;
   std::optional<int> ray_max_steps;
   std::optional<int> ray_max_retries;
   std::optional<double> ray_tol_abs;
   std::optional<double> ray_tol_rel;
-  std::optional<double> ray_err_factor;
-  std::optional<double> ray_min_factor;
-  std::optional<double> ray_max_factor;
 
   // Data - image parameters
   std::optional<bool> image_light;
@@ -217,6 +215,7 @@ struct InputReader
   Coordinates ReadCoordinates(const std::string &string);
   Camera ReadCamera(const std::string &string);
   RayTerminate ReadRayTerminate(const std::string &string);
+  RayIntegrator ReadRayIntegrator(const std::string &string);
   FrequencySpacing ReadFrequencySpacing(const std::string &string);
   FrequencyNormalization ReadFrequencyNormalization(const std::string &string);
   PlasmaModel ReadPlasmaModel(const std::string &string);

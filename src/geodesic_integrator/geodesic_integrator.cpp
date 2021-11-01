@@ -54,14 +54,15 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   ray_terminate = p_input_reader->ray_terminate.value();
   if (ray_terminate != RayTerminate::photon)
     ray_factor = p_input_reader->ray_factor.value();
+  ray_integrator = p_input_reader->ray_integrator.value();
   ray_step = p_input_reader->ray_step.value();
   ray_max_steps = p_input_reader->ray_max_steps.value();
-  ray_max_retries = p_input_reader->ray_max_retries.value();
-  ray_tol_abs = p_input_reader->ray_tol_abs.value();
-  ray_tol_rel = p_input_reader->ray_tol_rel.value();
-  ray_err_factor = p_input_reader->ray_err_factor.value();
-  ray_min_factor = p_input_reader->ray_min_factor.value();
-  ray_max_factor = p_input_reader->ray_max_factor.value();
+  if (ray_integrator == RayIntegrator::dp)
+  {
+    ray_max_retries = p_input_reader->ray_max_retries.value();
+    ray_tol_abs = p_input_reader->ray_tol_abs.value();
+    ray_tol_rel = p_input_reader->ray_tol_rel.value();
+  }
 
   // Copy image parameters
   image_num_frequencies = p_input_reader->image_num_frequencies.value();
@@ -99,7 +100,7 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
     bh_m = 1.0;
     bh_a = p_input_reader->formula_spin.value();
   }
-  double r_horizon = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
+  r_horizon = bh_m + std::sqrt(bh_m * bh_m - bh_a * bh_a);
   if (ray_terminate == RayTerminate::photon)
     r_terminate = 2.0 * bh_m * (1.0 + std::cos(2.0 / 3.0 * std::acos(-std::abs(bh_a) / bh_m)));
   else if (ray_terminate == RayTerminate::multiplicative)
@@ -188,7 +189,12 @@ double GeodesicIntegrator::Integrate()
   {
     InitializeCamera();
     InitializeGeodesics();
-    IntegrateGeodesics();
+    if (ray_integrator == RayIntegrator::dp)
+      IntegrateGeodesicsDP();
+    else if (ray_integrator == RayIntegrator::rk4)
+      IntegrateGeodesicsRK4();
+    else if (ray_integrator == RayIntegrator::rk2)
+      IntegrateGeodesicsRK2();
     ReverseGeodesics();
   }
 
@@ -224,7 +230,12 @@ double GeodesicIntegrator::AddGeodesics(const RadiationIntegrator *p_radiation_i
   // Calculate geodesics
   AugmentCamera();
   InitializeGeodesics();
-  IntegrateGeodesics();
+  if (ray_integrator == RayIntegrator::dp)
+    IntegrateGeodesicsDP();
+  else if (ray_integrator == RayIntegrator::rk4)
+    IntegrateGeodesicsRK4();
+  else if (ray_integrator == RayIntegrator::rk2)
+    IntegrateGeodesicsRK2();
   ReverseGeodesics();
 
   // Calculate elapsed time

@@ -53,14 +53,12 @@ struct GeodesicIntegrator
   bool ray_flat;
   RayTerminate ray_terminate;
   double ray_factor;
+  RayIntegrator ray_integrator;
   double ray_step;
   int ray_max_steps;
   int ray_max_retries;
   double ray_tol_abs;
   double ray_tol_rel;
-  double ray_err_factor;
-  double ray_min_factor;
-  double ray_max_factor;
 
   // Input data - image parameters
   int image_num_frequencies;
@@ -77,6 +75,7 @@ struct GeodesicIntegrator
   // Geometry data
   double bh_m;
   double bh_a;
+  double r_horizon;
   double r_terminate;
 
   // Camera data
@@ -130,10 +129,12 @@ struct GeodesicIntegrator
 
   // Internal functions - geodesics.cpp
   void InitializeGeodesics();
-  void IntegrateGeodesics();
+  void IntegrateGeodesicsDP();
+  void IntegrateGeodesicsRK4();
+  void IntegrateGeodesicsRK2();
   void ReverseGeodesics();
-  void GeodesicSubstep(double y[9], double k[9], double gcov[4][4], double gcon[4][4],
-      double dgcon[3][4][4]);
+  void GeodesicSubstepWithDistance(double y[9], double k[9]);
+  void GeodesicSubstepWithoutDistance(double y[8], double k[8]);
 
   // Internal functions - geodesic_geometry.cpp
   double RadialGeodesicCoordinate(double x, double y, double z);

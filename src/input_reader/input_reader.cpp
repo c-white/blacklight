@@ -205,6 +205,8 @@ int InputReader::Read()
       ray_terminate = ReadRayTerminate(val);
     else if (key == "ray_factor")
       ray_factor = std::stod(val);
+    else if (key == "ray_integrator")
+      ray_integrator = ReadRayIntegrator(val);
     else if (key == "ray_step")
       ray_step = std::stod(val);
     else if (key == "ray_max_steps")
@@ -215,12 +217,6 @@ int InputReader::Read()
       ray_tol_abs = std::stod(val);
     else if (key == "ray_tol_rel")
       ray_tol_rel = std::stod(val);
-    else if (key == "ray_err_factor")
-      ray_err_factor = std::stod(val);
-    else if (key == "ray_min_factor")
-      ray_min_factor = std::stod(val);
-    else if (key == "ray_max_factor")
-      ray_max_factor = std::stod(val);
 
     // Store image parameters
     else if (key == "image_light")

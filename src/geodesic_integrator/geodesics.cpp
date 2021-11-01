@@ -86,7 +86,7 @@ void GeodesicIntegrator::InitializeGeodesics()
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for calculating ray positions and directions through space
+// Function for calculating ray positions and directions through space via Dormand-Prince
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
@@ -95,7 +95,7 @@ void GeodesicIntegrator::InitializeGeodesics()
 //   Allocates and initializes geodesic_pos, geodesic_dir, geodesic_len,
 //       sample_flags[adaptive_level], and sample_num[adaptive_level].
 //   Assumes x^0 is ignorable.
-//   Integrates via the Dormand-Prince method (5th-order Runge-Kutta).
+//   Integrates via the Dormand-Prince method (5th-order adaptive Runge-Kutta).
 //     Method is RK5(4)7M of 1980 JCoAM 6 19.
 //     4th-order interpolation follows 1986 MaCom 46 135, which gives a 4th-order estimate of the
 //         midpoint and suggests combining this with values and derivatives at both endpoints to fit
@@ -104,8 +104,10 @@ void GeodesicIntegrator::InitializeGeodesics()
 //         accomplish the quartic fit without explicitly evaluating the midpoint.
 //     All three references have different coefficients for the 4th-order step used in error
 //         estimation; the coefficients here follow the original paper.
-//     Interpolation is used to take steps small enough to satisfy user input ray_step.
-void GeodesicIntegrator::IntegrateGeodesics()
+//     Interpolation is used to take steps small enough to satisfy user input ray_step, in that the
+//         proper length of a step must be less than the product of ray_step with the radial
+//         coordinate.
+void GeodesicIntegrator::IntegrateGeodesicsDP()
 {
   // Define coefficients
   double a_vals[7][6] = {};
@@ -140,8 +142,11 @@ void GeodesicIntegrator::IntegrateGeodesics()
       -10690763975.0 / 1880347072.0, 701980252875.0 / 199316789632.0, -1453857185.0 / 822651844.0,
       69997945.0 / 29380423.0};
 
-  // Define numerical parameter
+  // Define numerical parameters
   double err_power = 0.2;
+  double ray_err_factor = 0.9;
+  double ray_min_factor = 0.2;
+  double ray_max_factor = 10.0;
 
   // Allocate arrays
   int num_pix = camera_num_pix;
@@ -162,9 +167,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
   #pragma omp parallel
   {
     // Allocate scratch arrays
-    double gcov[4][4];
     double gcon[4][4];
-    double dgcon[3][4][4];
     double y_vals[9];
     double y_vals_temp[9];
     double y_vals_5[9];
@@ -196,7 +199,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
       for (int p = 0; p < 9; p++)
         y_vals_5[p] = y_vals[p];
       double r_new = RadialGeodesicCoordinate(y_vals[1], y_vals[2], y_vals[3]);
-      double h_new = -r_new * ray_step;
+      double h_new = -ray_step * r_new;
       int num_retry = 0;
       bool previous_fail = false;
 
@@ -221,8 +224,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
             k_vals[0][p] = k_vals[6][p];
           }
         if (not previous_fail and n == 0)
-          for (int p = 0; p < 9; p++)
-            GeodesicSubstep(y_vals, k_vals[0], gcov, gcon, dgcon);
+          GeodesicSubstepWithDistance(y_vals, k_vals[0]);
         double r = r_new;
         if (previous_fail)
           r = RadialGeodesicCoordinate(y_vals[1], y_vals[2], y_vals[3]);
@@ -235,7 +237,7 @@ void GeodesicIntegrator::IntegrateGeodesics()
           for (int q = 0; q < substep; q++)
             for (int p = 0; p < 9; p++)
               y_vals_temp[p] += a_vals[substep][q] * h * k_vals[q][p];
-          GeodesicSubstep(y_vals_temp, k_vals[substep], gcov, gcon, dgcon);
+          GeodesicSubstepWithDistance(y_vals_temp, k_vals[substep]);
         }
 
         // Calculate values at end of full step
@@ -466,6 +468,405 @@ void GeodesicIntegrator::IntegrateGeodesics()
 
 //--------------------------------------------------------------------------------------------------
 
+// Function for calculating ray positions and directions through space via 4th-order Runge-Kutta
+// Inputs: (none)
+// Outputs: (none)
+// Notes:
+//   Assumes camera_pos[adaptive_level] and camera_dir[adaptive_level] have been set.
+//   Initializes geodesic_num_steps[adaptive_level].
+//   Allocates and initializes geodesic_pos, geodesic_dir, geodesic_len,
+//       sample_flags[adaptive_level], and sample_num[adaptive_level].
+//   Assumes x^0 is ignorable.
+//   Integrates via 4th-order Runge-Kutta with Butcher tableau
+//        0  |
+//       1/2 | 1/2
+//       1/2 |  0  1/2
+//        1  |  0   0   1
+//            ----------------
+//             1/6 1/3 1/3 1/6
+//   Step size in affine parameter is taken to be the product of user input ray_step with the radial
+//       coordinate.
+void GeodesicIntegrator::IntegrateGeodesicsRK4()
+{
+  // Allocate arrays
+  int num_pix = camera_num_pix;
+  if (adaptive_level > 0)
+    num_pix = block_counts[adaptive_level] * block_num_pix;
+  geodesic_pos.Allocate(num_pix, ray_max_steps, 4);
+  geodesic_dir.Allocate(num_pix, ray_max_steps, 4);
+  geodesic_len.Allocate(num_pix, ray_max_steps);
+  geodesic_len.Zero();
+  sample_flags[adaptive_level].Allocate(num_pix);
+  sample_flags[adaptive_level].Zero();
+  sample_num[adaptive_level].Allocate(num_pix);
+  sample_num[adaptive_level].Zero();
+
+  // Work in parallel
+  int geodesic_num_steps_local = 0;
+  int num_bad_geodesics = 0;
+  #pragma omp parallel
+  {
+    // Allocate scratch arrays
+    double gcon[4][4];
+    double y_vals[8];
+    double y_vals_substep[8];
+    double y_vals_accumulate[8];
+    double k_vals[8];
+
+    // Go through pixels
+    #pragma omp for schedule(static)
+    for (int m = 0; m < num_pix; m++)
+    {
+      // Extract initial position
+      y_vals[0] = camera_pos[adaptive_level](m,0);
+      y_vals[1] = camera_pos[adaptive_level](m,1);
+      y_vals[2] = camera_pos[adaptive_level](m,2);
+      y_vals[3] = camera_pos[adaptive_level](m,3);
+      double r_new = RadialGeodesicCoordinate(y_vals[1], y_vals[2], y_vals[3]);
+
+      // Extract initial momentum
+      y_vals[4] = camera_dir[adaptive_level](m,0);
+      y_vals[5] = camera_dir[adaptive_level](m,1);
+      y_vals[6] = camera_dir[adaptive_level](m,2);
+      y_vals[7] = camera_dir[adaptive_level](m,3);
+
+      // Take steps
+      for (int n = 0; n < ray_max_steps; n++)
+      {
+        // Calculate step size
+        double r = r_new;
+        double h = -ray_step * (r - r_horizon);
+
+        // Calculate and accumulate first substep
+        GeodesicSubstepWithoutDistance(y_vals, k_vals);
+        for (int p = 0; p < 8; p++)
+          y_vals_accumulate[p] = y_vals[p] + 1.0 / 6.0 * h * k_vals[p];
+
+        // Calculate and accumulate second substep
+        for (int p = 0; p < 8; p++)
+          y_vals_substep[p] = y_vals[p] + 0.5 * h * k_vals[p];
+        GeodesicSubstepWithoutDistance(y_vals_substep, k_vals);
+        for (int p = 0; p < 8; p++)
+          y_vals_accumulate[p] += 1.0 / 3.0 * h * k_vals[p];
+
+        // Calculate and accumulate third substep
+        for (int p = 0; p < 8; p++)
+          y_vals_substep[p] = y_vals[p] + 0.5 * h * k_vals[p];
+        GeodesicSubstepWithoutDistance(y_vals_substep, k_vals);
+        for (int p = 0; p < 8; p++)
+          y_vals_accumulate[p] += 1.0 / 3.0 * h * k_vals[p];
+
+        // Calculate and accumulate fourth substep
+        for (int p = 0; p < 8; p++)
+          y_vals_substep[p] = y_vals[p] + h * k_vals[p];
+        GeodesicSubstepWithoutDistance(y_vals_substep, k_vals);
+        for (int p = 0; p < 8; p++)
+          y_vals_accumulate[p] += 1.0 / 6.0 * h * k_vals[p];
+
+        // Store midpoint
+        for (int mu = 0; mu < 4; mu++)
+        {
+          geodesic_pos(m,n,mu) = 0.5 * (y_vals[mu] + y_vals_accumulate[mu]);
+          geodesic_dir(m,n,mu) = 0.5 * (y_vals[4+mu] + y_vals_accumulate[4+mu]);
+        }
+        geodesic_len(m,n) = h;
+
+        // Take step
+        for (int p = 0; p < 8; p++)
+          y_vals[p] = y_vals_accumulate[p];
+
+        // Renormalize momentum
+        ContravariantGeodesicMetric(y_vals[1], y_vals[2], y_vals[3], gcon);
+        double temp_a = 0.0;
+        for (int a = 1; a < 4; a++)
+          for (int b = 1; b < 4; b++)
+            temp_a += gcon[a][b] * y_vals[4+a] * y_vals[4+b];
+        double temp_b = 0.0;
+        for (int a = 1; a < 4; a++)
+          temp_b += 2.0 * gcon[0][a] * y_vals[4] * y_vals[4+a];
+        double temp_c = gcon[0][0] * y_vals[4] * y_vals[4];
+        double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
+        double factor =
+            temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
+        for (int a = 1; a < 4; a++)
+          y_vals[4+a] *= factor;
+
+        // Check termination
+        sample_num[adaptive_level](m)++;
+        r_new = RadialGeodesicCoordinate(y_vals[1], y_vals[2], y_vals[3]);
+        bool terminate_outer = r_new > camera_r and r_new > r;
+        bool terminate_inner = r_new < r_terminate;
+        if (terminate_outer or terminate_inner)
+          break;
+        bool last_step = n + 1 >= ray_max_steps;
+        if (last_step)
+          sample_flags[adaptive_level](m) = true;
+      }
+    }
+
+    // Truncate geodesics at boundaries
+    #pragma omp for schedule(static)
+    for (int m = 0; m < num_pix; m++)
+    {
+      int num_samples = sample_num[adaptive_level](m);
+      if (num_samples > 1)
+      {
+        double r_new =
+            RadialGeodesicCoordinate(geodesic_pos(m,0,1), geodesic_pos(m,0,2), geodesic_pos(m,0,3));
+        for (int n = 1; n < num_samples; n++)
+        {
+          double r_old = r_new;
+          r_new = RadialGeodesicCoordinate(geodesic_pos(m,n,1), geodesic_pos(m,n,2),
+              geodesic_pos(m,n,3));
+          bool terminate_outer = r_new > camera_r and r_new > r_old;
+          bool terminate_inner = r_new < r_terminate;
+          if (terminate_outer or terminate_inner)
+          {
+            sample_num[adaptive_level](m) = n;
+            break;
+          }
+        }
+      }
+    }
+
+    // Renormalize momenta
+    #pragma omp for schedule(static)
+    for (int m = 0; m < num_pix; m++)
+      for (int n = 0; n < sample_num[adaptive_level](m); n++)
+      {
+        ContravariantGeodesicMetric(geodesic_pos(m,n,1), geodesic_pos(m,n,2), geodesic_pos(m,n,3),
+            gcon);
+        double temp_a = 0.0;
+        for (int a = 1; a < 4; a++)
+          for (int b = 1; b < 4; b++)
+            temp_a += gcon[a][b] * geodesic_dir(m,n,a) * geodesic_dir(m,n,b);
+        double temp_b = 0.0;
+        for (int a = 1; a < 4; a++)
+          temp_b += 2.0 * gcon[0][a] * geodesic_dir(m,n,0) * geodesic_dir(m,n,a);
+        double temp_c = gcon[0][0] * geodesic_dir(m,n,0) * geodesic_dir(m,n,0);
+        double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
+        double factor =
+            temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
+        for (int a = 1; a < 4; a++)
+          geodesic_dir(m,n,a) *= factor;
+      }
+
+    // Calculate maximum number of steps actually taken
+    #pragma omp for schedule(static) reduction(max: geodesic_num_steps_local)
+    for (int m = 0; m < num_pix; m++)
+      geodesic_num_steps_local = std::max(geodesic_num_steps_local, sample_num[adaptive_level](m));
+
+    // Calculate number of geodesics that do not terminate properly
+    #pragma omp for schedule(static) reduction(+: num_bad_geodesics)
+    for (int m = 0; m < num_pix; m++)
+      if (sample_flags[adaptive_level](m))
+        num_bad_geodesics++;
+  }
+
+  // Record number of steps taken
+  geodesic_num_steps[adaptive_level] = geodesic_num_steps_local;
+
+  // Report improperly terminated geodesics
+  if (num_bad_geodesics > 0)
+  {
+    std::ostringstream message;
+    message << num_bad_geodesics << " out of " << num_pix << " geodesics terminate unexpectedly.";
+    BlacklightWarning(message.str().c_str());
+  }
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for calculating ray positions and directions through space via 2nd-order Runge-Kutta
+// Inputs: (none)
+// Outputs: (none)
+// Notes:
+//   Assumes camera_pos[adaptive_level] and camera_dir[adaptive_level] have been set.
+//   Initializes geodesic_num_steps[adaptive_level].
+//   Allocates and initializes geodesic_pos, geodesic_dir, geodesic_len,
+//       sample_flags[adaptive_level], and sample_num[adaptive_level].
+//   Assumes x^0 is ignorable.
+//   Integrates via 2nd-order Runge-Kutta (Heun's method) with Butcher tableau
+//       0 |
+//       1 |  1
+//          ----------------
+//           1/2 1/2
+//   Step size in affine parameter is taken to be the product of user input ray_step with the radial
+//       coordinate.
+void GeodesicIntegrator::IntegrateGeodesicsRK2()
+{
+  // Allocate arrays
+  int num_pix = camera_num_pix;
+  if (adaptive_level > 0)
+    num_pix = block_counts[adaptive_level] * block_num_pix;
+  geodesic_pos.Allocate(num_pix, ray_max_steps, 4);
+  geodesic_dir.Allocate(num_pix, ray_max_steps, 4);
+  geodesic_len.Allocate(num_pix, ray_max_steps);
+  geodesic_len.Zero();
+  sample_flags[adaptive_level].Allocate(num_pix);
+  sample_flags[adaptive_level].Zero();
+  sample_num[adaptive_level].Allocate(num_pix);
+  sample_num[adaptive_level].Zero();
+
+  // Work in parallel
+  int geodesic_num_steps_local = 0;
+  int num_bad_geodesics = 0;
+  #pragma omp parallel
+  {
+    // Allocate scratch arrays
+    double gcon[4][4];
+    double y_vals[8];
+    double y_vals_substep[8];
+    double k_vals[8];
+
+    // Go through pixels
+    #pragma omp for schedule(static)
+    for (int m = 0; m < num_pix; m++)
+    {
+      // Extract initial position
+      y_vals[0] = camera_pos[adaptive_level](m,0);
+      y_vals[1] = camera_pos[adaptive_level](m,1);
+      y_vals[2] = camera_pos[adaptive_level](m,2);
+      y_vals[3] = camera_pos[adaptive_level](m,3);
+      double r_new = RadialGeodesicCoordinate(y_vals[1], y_vals[2], y_vals[3]);
+
+      // Extract initial momentum
+      y_vals[4] = camera_dir[adaptive_level](m,0);
+      y_vals[5] = camera_dir[adaptive_level](m,1);
+      y_vals[6] = camera_dir[adaptive_level](m,2);
+      y_vals[7] = camera_dir[adaptive_level](m,3);
+
+      // Take steps
+      for (int n = 0; n < ray_max_steps; n++)
+      {
+        // Calculate step size
+        double r = r_new;
+        double h = -ray_step * (r - r_horizon);
+
+        // Calculate and accumulate first substep
+        GeodesicSubstepWithoutDistance(y_vals, k_vals);
+        for (int p = 0; p < 8; p++)
+          y_vals_substep[p] = y_vals[p] + h * k_vals[p];
+        for (int p = 0; p < 8; p++)
+          y_vals[p] += 1.0 / 2.0 * h * k_vals[p];
+
+        // Store midpoint
+        for (int mu = 0; mu < 4; mu++)
+        {
+          geodesic_pos(m,n,mu) = y_vals[mu];
+          geodesic_dir(m,n,mu) = y_vals[4+mu];
+        }
+        geodesic_len(m,n) = h;
+
+        // Calculate and accumulate second substep
+        GeodesicSubstepWithoutDistance(y_vals_substep, k_vals);
+        for (int p = 0; p < 8; p++)
+          y_vals[p] += 1.0 / 2.0 * h * k_vals[p];
+
+        // Renormalize momentum
+        ContravariantGeodesicMetric(y_vals[1], y_vals[2], y_vals[3], gcon);
+        double temp_a = 0.0;
+        for (int a = 1; a < 4; a++)
+          for (int b = 1; b < 4; b++)
+            temp_a += gcon[a][b] * y_vals[4+a] * y_vals[4+b];
+        double temp_b = 0.0;
+        for (int a = 1; a < 4; a++)
+          temp_b += 2.0 * gcon[0][a] * y_vals[4] * y_vals[4+a];
+        double temp_c = gcon[0][0] * y_vals[4] * y_vals[4];
+        double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
+        double factor =
+            temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
+        for (int a = 1; a < 4; a++)
+          y_vals[4+a] *= factor;
+
+        // Check termination
+        sample_num[adaptive_level](m)++;
+        r_new = RadialGeodesicCoordinate(y_vals[1], y_vals[2], y_vals[3]);
+        bool terminate_outer = r_new > camera_r and r_new > r;
+        bool terminate_inner = r_new < r_terminate;
+        if (terminate_outer or terminate_inner)
+          break;
+        bool last_step = n + 1 >= ray_max_steps;
+        if (last_step)
+          sample_flags[adaptive_level](m) = true;
+      }
+    }
+
+    // Truncate geodesics at boundaries
+    #pragma omp for schedule(static)
+    for (int m = 0; m < num_pix; m++)
+    {
+      int num_samples = sample_num[adaptive_level](m);
+      if (num_samples > 1)
+      {
+        double r_new =
+            RadialGeodesicCoordinate(geodesic_pos(m,0,1), geodesic_pos(m,0,2), geodesic_pos(m,0,3));
+        for (int n = 1; n < num_samples; n++)
+        {
+          double r_old = r_new;
+          r_new = RadialGeodesicCoordinate(geodesic_pos(m,n,1), geodesic_pos(m,n,2),
+              geodesic_pos(m,n,3));
+          bool terminate_outer = r_new > camera_r and r_new > r_old;
+          bool terminate_inner = r_new < r_terminate;
+          if (terminate_outer or terminate_inner)
+          {
+            sample_num[adaptive_level](m) = n;
+            break;
+          }
+        }
+      }
+    }
+
+    // Renormalize momenta
+    #pragma omp for schedule(static)
+    for (int m = 0; m < num_pix; m++)
+      for (int n = 0; n < sample_num[adaptive_level](m); n++)
+      {
+        ContravariantGeodesicMetric(geodesic_pos(m,n,1), geodesic_pos(m,n,2), geodesic_pos(m,n,3),
+            gcon);
+        double temp_a = 0.0;
+        for (int a = 1; a < 4; a++)
+          for (int b = 1; b < 4; b++)
+            temp_a += gcon[a][b] * geodesic_dir(m,n,a) * geodesic_dir(m,n,b);
+        double temp_b = 0.0;
+        for (int a = 1; a < 4; a++)
+          temp_b += 2.0 * gcon[0][a] * geodesic_dir(m,n,0) * geodesic_dir(m,n,a);
+        double temp_c = gcon[0][0] * geodesic_dir(m,n,0) * geodesic_dir(m,n,0);
+        double temp_d = std::sqrt(temp_b * temp_b - 4.0 * temp_a * temp_c);
+        double factor =
+            temp_b < 0.0 ? (temp_d - temp_b) / (2.0 * temp_a) : -2.0 * temp_c / (temp_b + temp_d);
+        for (int a = 1; a < 4; a++)
+          geodesic_dir(m,n,a) *= factor;
+      }
+
+    // Calculate maximum number of steps actually taken
+    #pragma omp for schedule(static) reduction(max: geodesic_num_steps_local)
+    for (int m = 0; m < num_pix; m++)
+      geodesic_num_steps_local = std::max(geodesic_num_steps_local, sample_num[adaptive_level](m));
+
+    // Calculate number of geodesics that do not terminate properly
+    #pragma omp for schedule(static) reduction(+: num_bad_geodesics)
+    for (int m = 0; m < num_pix; m++)
+      if (sample_flags[adaptive_level](m))
+        num_bad_geodesics++;
+  }
+
+  // Record number of steps taken
+  geodesic_num_steps[adaptive_level] = geodesic_num_steps_local;
+
+  // Report improperly terminated geodesics
+  if (num_bad_geodesics > 0)
+  {
+    std::ostringstream message;
+    message << num_bad_geodesics << " out of " << num_pix << " geodesics terminate unexpectedly.";
+    BlacklightWarning(message.str().c_str());
+  }
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
 // Function for reversing geodesics
 // Inputs: (none)
 // Outputs: (none)
@@ -520,17 +921,13 @@ void GeodesicIntegrator::ReverseGeodesics()
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for taking single forward-Euler substep in time
+// Function for taking single forward-Euler substep in time while computing proper distance
 // Inputs:
 //   y: dependent variables (positions, momenta, proper distance)
 // Outputs:
 //   k: derivatives with respect to independent variable (affine parameter)
-//   gcov: components set
-//   gcon: components set
-//   dgcon: components set
 // Notes:
-//   Assumes gcov and gcon are allocated to be 4*4.
-//   Assumes dgcon is allocated to be 3*4*4.
+//   Assumes k is allocated to be length 9.
 //   Integrates the following equations:
 //     d(x^mu) / d(lambda) = g^{mu nu} p_nu,
 //     d(p_0) / d(lambda) = 0,
@@ -538,9 +935,11 @@ void GeodesicIntegrator::ReverseGeodesics()
 //     d(s) / d(lambda) = -(g_{i j} (g^{i mu} - g^{0 i} g^{0 mu} / g^{0 0}) p_mu
 //         (g^{j nu} - g^{0 j} g^{0 nu} / g^{0 0}) p_nu)^(1/2).
 //   Assumes x^0 is ignorable.
-void GeodesicIntegrator::GeodesicSubstep(double y[9], double k[9], double gcov[4][4],
-    double gcon[4][4], double dgcon[3][4][4])
+void GeodesicIntegrator::GeodesicSubstepWithDistance(double y[9], double k[9])
 {
+  double gcov[4][4];
+  double gcon[4][4];
+  double dgcon[3][4][4];
   CovariantGeodesicMetric(y[1], y[2], y[3], gcov);
   ContravariantGeodesicMetric(y[1], y[2], y[3], gcon);
   ContravariantGeodesicMetricDerivative(y[1], y[2], y[3], dgcon);
@@ -561,5 +960,37 @@ void GeodesicIntegrator::GeodesicSubstep(double y[9], double k[9], double gcov[4
     for (int b = 1; b < 4; b++)
       k[8] += gcov[a][b] * temp_a[a] * temp_a[b];
   k[8] = -std::sqrt(k[8]);
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for taking single forward-Euler substep in time without computing proper distance
+// Inputs:
+//   y: dependent variables (positions, momenta)
+// Outputs:
+//   k: derivatives with respect to independent variable (affine parameter)
+// Notes:
+//   Assumes k is allocated to be length 8.
+//   Integrates the following equations:
+//     d(x^mu) / d(lambda) = g^{mu nu} p_nu,
+//     d(p_0) / d(lambda) = 0,
+//     d(p_i) / d(lambda) = -1/2 * d(g^{mu nu}) / d(x^i) p_mu p_nu,
+//   Assumes x^0 is ignorable.
+void GeodesicIntegrator::GeodesicSubstepWithoutDistance(double y[8], double k[8])
+{
+  double gcon[4][4];
+  double dgcon[3][4][4];
+  ContravariantGeodesicMetric(y[1], y[2], y[3], gcon);
+  ContravariantGeodesicMetricDerivative(y[1], y[2], y[3], dgcon);
+  for (int p = 0; p < 8; p++)
+    k[p] = 0.0;
+  for (int mu = 0; mu < 4; mu++)
+    for (int nu = 0; nu < 4; nu++)
+      k[mu] += gcon[mu][nu] * y[4+nu];
+  for (int a = 1; a < 4; a++)
+    for (int mu = 0; mu < 4; mu++)
+      for (int nu = 0; nu < 4; nu++)
+        k[4+a] -= 0.5 * dgcon[a-1][mu][nu] * y[4+mu] * y[4+nu];
   return;
 }

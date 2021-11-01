@@ -43,14 +43,12 @@ camera_resolution = 128                   # number of pixels per side
 ray_flat        = false     # flag indicating ray tracing should assume flat spacetime
 ray_terminate   = additive  # termination condition (photon, multiplicative, additive)
 ray_factor      = 5.0e-4    # constant for terminate (only used for ray_terminate != photon)
-ray_step        = 0.01      # ratio of maximum proper length of step to radial coordinate
+ray_integrator  = dp        # time integrator for geodesics (dp, rk4, rk2)
+ray_step        = 0.01      # step size control relative to radial coordinate
 ray_max_steps   = 6000      # maximum number of steps allowed for each geodesic
-ray_max_retries = 10        # maximum number of times a step can fail
-ray_tol_abs     = 1.0e-8    # absolute tolerance for taking full steps
-ray_tol_rel     = 1.0e-8    # relative tolerance for taking full steps
-ray_err_factor  = 0.75      # coefficient used to scale step size based on error
-ray_min_factor  = 0.2       # minimum ratio of new to old step size
-ray_max_factor  = 10.0      # maximum ratio of new to old step size
+ray_max_retries = 10        # maximum number of times a step can fail (dp)
+ray_tol_abs     = 1.0e-8    # absolute tolerance for taking full steps (dp)
+ray_tol_rel     = 1.0e-8    # relative tolerance for taking full steps (dp)
 
 # Image parameters
 image_light           = true    # flag indicating real image of radiation should be produced
