@@ -85,7 +85,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
     double jacobian[4][4];
 
     // Go through frequencies and pixels
-    #pragma omp for schedule(static)
+    #pragma omp for schedule(static) collapse(2)
     for (int l = 0; l < image_num_frequencies; l++)
       for (int m = 0; m < num_pix; m++)
       {
@@ -855,7 +855,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
       }
 
     // Go through pixels, transforming into camera frame
-    #pragma omp for schedule(static)
+    #pragma omp for schedule(static) collapse(2)
     for (int l = 0; l < image_num_frequencies; l++)
       for (int m = 0; m < num_pix; m++)
       {
@@ -923,7 +923,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
       }
 
     // Transform invariant Stokes quantities (e.g. I_nu/nu^3) to standard ones (e.g. I_nu)
-    #pragma omp for schedule(static)
+    #pragma omp for schedule(static) collapse(3)
     for (int l = 0; l < image_num_frequencies; l++)
       for (int a = 0; a < 4; a++)
         for (int m = 0; m < num_pix; m++)

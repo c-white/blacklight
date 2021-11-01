@@ -50,7 +50,7 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
     double gcon[4][4];
 
     // Go through frequencies and pixels
-    #pragma omp for schedule(static)
+    #pragma omp for schedule(static) collapse(2)
     for (int l = 0; l < image_num_frequencies; l++)
       for (int m = 0; m < num_pix; m++)
       {
@@ -183,7 +183,7 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
     // Transform I_nu/nu^3 to I_nu
     if (image_light)
     {
-      #pragma omp for schedule(static)
+      #pragma omp for schedule(static) collapse(2)
       for (int l = 0; l < image_num_frequencies; l++)
         for (int m = 0; m < num_pix; m++)
         {
