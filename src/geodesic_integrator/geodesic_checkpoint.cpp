@@ -20,7 +20,7 @@
 //   Saves camera data (cam_x, u_con, u_cov, norm_con, norm_con_c, hor_con_c, vert_con_c,
 //       camera_pos[0], and camera_dir[0]).
 //   Does not save camera_num_pix, which is calculated by constructor.
-//   Saves image data (image_frequencies, momentum_factors).
+//   Saves image data (image_frequencies_ideal, image_frequencies[0], momentum_factors[0]).
 //   Saves geodesic data (geodesic_num_steps[0], sample_flags[0], sample_num[0], sample_pos[0],
 //       sample_dir[0], and sample_len[0]).
 //   Does not save geodesic_pos, geodesic_dir, or geodesic_len, which are deallocated after internal
@@ -45,8 +45,9 @@ void GeodesicIntegrator::SaveGeodesics()
   WriteBinary(&checkpoint_stream, camera_dir[0]);
 
   // Write image data
-  WriteBinary(&checkpoint_stream, image_frequencies);
-  WriteBinary(&checkpoint_stream, momentum_factors);
+  WriteBinary(&checkpoint_stream, image_frequencies_ideal);
+  WriteBinary(&checkpoint_stream, image_frequencies[0]);
+  WriteBinary(&checkpoint_stream, momentum_factors[0]);
 
   // Write geodesic data
   WriteBinary(&checkpoint_stream, geodesic_num_steps[0]);
@@ -68,8 +69,8 @@ void GeodesicIntegrator::SaveGeodesics()
 //   Initializes camera data (cam_x, u_con, u_cov, norm_con, norm_con_c, hor_con_c, vert_con_c,
 //       camera_pos[0], and camera_dir[0]), allocating arrays where necessary.
 //   Does not initialize camera_num_pix, which is calculated by constructor.
-//   Initializes image data (image_frequencies, momentum_factors), allocating arrays where
-//       necessary.
+//   Initializes image data (image_frequencies_ideal, image_frequencies[0], momentum_factors[0]),
+//       allocating arrays where necessary.
 //   Initializes geodesic data (geodesic_num_steps[0], sample_flags[0], sample_num[0],
 //       sample_pos[0], sample_dir[0], and sample_len[0]), allocating arrays where necessary.
 //   Does not initialize geodesic_pos, geodesic_dir, or geodesic_len, which are deallocated after
@@ -94,8 +95,9 @@ void GeodesicIntegrator::LoadGeodesics()
   ReadBinary(&checkpoint_stream, &camera_dir[0]);
 
   // Read image data
-  ReadBinary(&checkpoint_stream, &image_frequencies);
-  ReadBinary(&checkpoint_stream, &momentum_factors);
+  ReadBinary(&checkpoint_stream, &image_frequencies_ideal);
+  ReadBinary(&checkpoint_stream, &image_frequencies[0]);
+  ReadBinary(&checkpoint_stream, &momentum_factors[0]);
 
   // Read geodesic data
   ReadBinary(&checkpoint_stream, &geodesic_num_steps[0]);

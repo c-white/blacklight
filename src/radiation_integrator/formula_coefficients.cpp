@@ -18,7 +18,7 @@
 // Outputs: (none)
 // Notes:
 //   Assumes sample_flags[adaptive_level], sample_num[adaptive_level], sample_pos[adaptive_level],
-//       and sample_dir[adaptive_level] have been set.
+//       sample_dir[adaptive_level], and momentum_factors[adaptive_level] have been set.
 //   Allocates and initializes j_i[adaptive_level] and alpha_i[adaptive_level].
 //   References code comparison paper 2020 ApJ 897 148 (C).
 void RadiationIntegrator::CalculateFormulaCoefficients()
@@ -145,7 +145,8 @@ void RadiationIntegrator::CalculateFormulaCoefficients()
       for (int l = 0; l < image_num_frequencies; l++)
       {
         // Calculate frequency in CGS units
-        double nu_fluid_cgs = -(u0 * k_0 + u1 * k_1 + u2 * k_2 + u3 * k_3) * momentum_factors(l);
+        double nu_fluid_cgs =
+            -(u0 * k_0 + u1 * k_1 + u2 * k_2 + u3 * k_3) * momentum_factors[adaptive_level](l,m);
 
         // Calculate emission coefficient in CGS units (C 9-10)
         double j_nu_fluid_cgs =

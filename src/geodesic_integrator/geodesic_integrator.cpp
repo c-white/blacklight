@@ -116,6 +116,10 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   camera_pos = new Array<double>[adaptive_max_level+1];
   camera_dir = new Array<double>[adaptive_max_level+1];
 
+  // Allocate space for image data
+  image_frequencies = new Array<double>[adaptive_max_level+1];
+  momentum_factors = new Array<double>[adaptive_max_level+1];
+
   // Allocate space for geodesic data
   geodesic_num_steps = new int[adaptive_max_level+1];
   sample_flags = new Array<bool>[adaptive_max_level+1];
@@ -149,6 +153,8 @@ GeodesicIntegrator::~GeodesicIntegrator()
     camera_loc[level].Deallocate();
     camera_pos[level].Deallocate();
     camera_dir[level].Deallocate();
+    image_frequencies[level].Deallocate();
+    momentum_factors[level].Deallocate();
     sample_flags[level].Deallocate();
     sample_num[level].Deallocate();
     sample_pos[level].Deallocate();
@@ -158,6 +164,8 @@ GeodesicIntegrator::~GeodesicIntegrator()
   delete[] camera_loc;
   delete[] camera_pos;
   delete[] camera_dir;
+  delete[] image_frequencies;
+  delete[] momentum_factors;
   delete[] geodesic_num_steps;
   delete[] sample_flags;
   delete[] sample_num;
@@ -188,7 +196,6 @@ double GeodesicIntegrator::Integrate()
   if (not checkpoint_geodesic_load)
   {
     InitializeCamera();
-    InitializeGeodesics();
     if (ray_integrator == RayIntegrator::dp)
       IntegrateGeodesicsDP();
     else if (ray_integrator == RayIntegrator::rk4)
@@ -229,7 +236,6 @@ double GeodesicIntegrator::AddGeodesics(const RadiationIntegrator *p_radiation_i
 
   // Calculate geodesics
   AugmentCamera();
-  InitializeGeodesics();
   if (ray_integrator == RayIntegrator::dp)
     IntegrateGeodesicsDP();
   else if (ray_integrator == RayIntegrator::rk4)

@@ -23,8 +23,8 @@
 //       sample_pos[adaptive_level], sample_dir[adaptive_level], sample_cut[adaptive_level],
 //       sample_rho[adaptive_level], sample_pgas[adaptive_level], sample_kappa[adaptive_level] (if
 //       needed), sample_uu1[adaptive_level], sample_uu2[adaptive_level],
-//       sample_uu3[adaptive_level], sample_bb1[adaptive_level], sample_bb2[adaptive_level], and
-//       sample_bb3[adaptive_level] have been set.
+//       sample_uu3[adaptive_level], sample_bb1[adaptive_level], sample_bb2[adaptive_level],
+//       sample_bb3[adaptive_level], and momentum_factors[adaptive_level] have been set.
 //   Allocates and initializes j_i[adaptive_level] if image_light == true or image_emission == true
 //       or image_emission_ave == true.
 //   Allocates and initializes alpha_i[adaptive_level] if image_light == true or image_tau == true
@@ -455,7 +455,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
           double nu_cgs = 0.0;
           for (int mu = 0; mu < 4; mu++)
             nu_cgs -= kcov[mu] * ucon[mu];
-          nu_cgs *= momentum_factors(l);
+          nu_cgs *= momentum_factors[adaptive_level](l,m);
           double nu_2_cgs = nu_cgs * nu_cgs;
           double nu_c_cgs = Physics::e * bb_cgs / (2.0 * Math::pi * Physics::m_e * Physics::c);
           double nu_s_cgs = 2.0 / 9.0 * nu_c_cgs * theta_e * theta_e * sin_theta_b;
