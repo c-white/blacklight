@@ -145,8 +145,8 @@ void RadiationIntegrator::CalculateFormulaCoefficients()
       for (int l = 0; l < image_num_frequencies; l++)
       {
         // Calculate frequency in CGS units
-        double nu_fluid_cgs =
-            -(u0 * k_0 + u1 * k_1 + u2 * k_2 + u3 * k_3) * momentum_factors[adaptive_level](l,m);
+        double nu_fluid_cgs = -(u0 * k_0 + u1 * k_1 + u2 * k_2 + u3 * k_3) * image_frequencies(l)
+            * momentum_factors[adaptive_level](m);
 
         // Calculate emission coefficient in CGS units (C 9-10)
         double j_nu_fluid_cgs =

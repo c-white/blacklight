@@ -82,7 +82,7 @@ struct OutputWriter
   // Metadata
   Array<double> mass_msun_array;
   Array<double> camera_width_array;
-  Array<double> image_frequencies_ideal;
+  Array<double> image_frequencies;
 
   // Camera data
   Array<int> *camera_loc = nullptr;

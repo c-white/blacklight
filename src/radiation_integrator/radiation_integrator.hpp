@@ -234,7 +234,7 @@ struct RadiationIntegrator
 
   // Image data
   Array<double> *image = nullptr;
-  Array<double> *image_frequencies = nullptr;
+  Array<double> image_frequencies;
   Array<double> *momentum_factors = nullptr;
   int image_num_quantities = 0;
   int image_offset_time = 0;

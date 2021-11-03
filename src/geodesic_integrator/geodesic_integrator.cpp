@@ -117,7 +117,6 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   camera_dir = new Array<double>[adaptive_max_level+1];
 
   // Allocate space for image data
-  image_frequencies = new Array<double>[adaptive_max_level+1];
   momentum_factors = new Array<double>[adaptive_max_level+1];
 
   // Allocate space for geodesic data
@@ -153,7 +152,6 @@ GeodesicIntegrator::~GeodesicIntegrator()
     camera_loc[level].Deallocate();
     camera_pos[level].Deallocate();
     camera_dir[level].Deallocate();
-    image_frequencies[level].Deallocate();
     momentum_factors[level].Deallocate();
     sample_flags[level].Deallocate();
     sample_num[level].Deallocate();
@@ -164,7 +162,6 @@ GeodesicIntegrator::~GeodesicIntegrator()
   delete[] camera_loc;
   delete[] camera_pos;
   delete[] camera_dir;
-  delete[] image_frequencies;
   delete[] momentum_factors;
   delete[] geodesic_num_steps;
   delete[] sample_flags;

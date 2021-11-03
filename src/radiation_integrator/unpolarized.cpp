@@ -20,8 +20,7 @@
 // Outputs: (none)
 // Notes:
 //   Assumes sample_num[adaptive_level], sample_len[adaptive_level], j_i[adaptive_level],
-//       alpha_i[adaptive_level], image_frequencies[adaptive_level], and
-//       momentum_factors[adaptive_level] have been set.
+//       alpha_i[adaptive_level], and momentum_factors[adaptive_level] have been set.
 //   Assumes sample_pos[adaptive_level] has been set if image_time == true or image_length == true.
 //   Assumes sample_dir[adaptive_level] has been set if image_length == true.
 //   Assumes cell_values[adaptive_level] has been set if image_lambda_ave == true or
@@ -67,7 +66,8 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
         {
           // Extract and calculate useful values
           double delta_lambda = sample_len[adaptive_level](m,n);
-          double delta_lambda_cgs = delta_lambda * x_unit / momentum_factors[adaptive_level](l,m);
+          double delta_lambda_cgs =
+              delta_lambda * x_unit / (image_frequencies(l) * momentum_factors[adaptive_level](m));
           double t_cgs = sample_pos[adaptive_level](m,n,0) * t_unit;
           double x1 = sample_pos[adaptive_level](m,n,1);
           double x2 = sample_pos[adaptive_level](m,n,2);
@@ -188,9 +188,8 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
       for (int l = 0; l < image_num_frequencies; l++)
         for (int m = 0; m < num_pix; m++)
         {
-          double image_frequency_cu = image_frequencies[adaptive_level](l,m)
-              * image_frequencies[adaptive_level](l,m) * image_frequencies[adaptive_level](l,m);
-          image[adaptive_level](l,m) *= image_frequency_cu;
+          double nu_cu = image_frequencies(l) * image_frequencies(l) * image_frequencies(l);
+          image[adaptive_level](l,m) *= nu_cu;
         }
     }
   }

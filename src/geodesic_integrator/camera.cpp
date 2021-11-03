@@ -17,8 +17,8 @@
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Allocates and initializes camera_pos[0], camera_dir[0], image_frequencies_ideal,
-//       image_frequencies[0], and momentum_factors[0].
+//   Allocates and initializes camera_pos[0], camera_dir[0], image_frequencies, and
+//       momentum_factors[0].
 //   Neglects spacetime curvature at camera location.
 //   Symbols:
 //     n: unit outward normal
@@ -27,24 +27,24 @@
 void GeodesicIntegrator::InitializeCamera()
 {
   // Calculate ideal image frequencies
-  image_frequencies_ideal.Allocate(image_num_frequencies);
+  image_frequencies.Allocate(image_num_frequencies);
   if (image_num_frequencies == 1)
-    image_frequencies_ideal(0) = image_frequency;
+    image_frequencies(0) = image_frequency;
   else
   {
-    image_frequencies_ideal(0) = image_frequency_start;
-    image_frequencies_ideal(image_num_frequencies-1) = image_frequency_end;
+    image_frequencies(0) = image_frequency_start;
+    image_frequencies(image_num_frequencies-1) = image_frequency_end;
     for (int l = 1; l < image_num_frequencies - 1; l++)
     {
       double frac = static_cast<double>(l) / static_cast<double>(image_num_frequencies - 1);
       if (image_frequency_spacing == FrequencySpacing::lin_freq)
-        image_frequencies_ideal(l) =
+        image_frequencies(l) =
             image_frequency_start + frac * (image_frequency_end - image_frequency_start);
       else if (image_frequency_spacing == FrequencySpacing::lin_wave)
-        image_frequencies_ideal(l) = 1.0 / (1.0 / image_frequency_start
+        image_frequencies(l) = 1.0 / (1.0 / image_frequency_start
             + frac * (1.0 / image_frequency_end - 1.0 / image_frequency_start));
       else if (image_frequency_spacing == FrequencySpacing::log)
-        image_frequencies_ideal(l) = std::exp(std::log(image_frequency_start)
+        image_frequencies(l) = std::exp(std::log(image_frequency_start)
             + frac * std::log(image_frequency_end / image_frequency_start));
     }
   }
@@ -307,10 +307,7 @@ void GeodesicIntegrator::InitializeCamera()
   // Allocate arrays
   camera_pos[0].Allocate(camera_num_pix, 4);
   camera_dir[0].Allocate(camera_num_pix, 4);
-  image_frequencies[0].Allocate(image_num_frequencies, camera_num_pix);
-  momentum_factors[0].Allocate(image_num_frequencies, camera_num_pix);
-  Array<double> image_frequencies_temp(camera_num_pix, image_num_frequencies);
-  Array<double> momentum_factors_temp(camera_num_pix, image_num_frequencies);
+  momentum_factors[0].Allocate(camera_num_pix);
 
   // Initialize plane-parallel camera
   if (camera_type == Camera::plane)
@@ -322,8 +319,7 @@ void GeodesicIntegrator::InitializeCamera()
       int m1 = m % camera_resolution;
       double u_ind = (m1 - camera_resolution / 2.0 + 0.5) / camera_resolution;
       double v_ind = (m2 - camera_resolution / 2.0 + 0.5) / camera_resolution;
-      SetPixelPlane(u_ind, v_ind, m, camera_pos[0], camera_dir[0], image_frequencies_temp,
-          momentum_factors_temp);
+      SetPixelPlane(u_ind, v_ind, m, camera_pos[0], camera_dir[0], momentum_factors[0]);
     }
   }
 
@@ -337,18 +333,9 @@ void GeodesicIntegrator::InitializeCamera()
       int m1 = m % camera_resolution;
       double u_ind = (m1 - camera_resolution / 2.0 + 0.5) / camera_resolution;
       double v_ind = (m2 - camera_resolution / 2.0 + 0.5) / camera_resolution;
-      SetPixelPinhole(u_ind, v_ind, m, camera_pos[0], camera_dir[0], image_frequencies_temp,
-          momentum_factors_temp);
+      SetPixelPinhole(u_ind, v_ind, m, camera_pos[0], camera_dir[0], momentum_factors[0]);
     }
   }
-
-  // Transpose frequency and momentum arrays
-  for (int l = 0; l < image_num_frequencies; l++)
-    for (int m = 0; m < camera_num_pix; m++)
-    {
-      image_frequencies[0](l,m) = image_frequencies_temp(m,l);
-      momentum_factors[0](l,m) = momentum_factors_temp(m,l);
-    }
   return;
 }
 
@@ -360,8 +347,7 @@ void GeodesicIntegrator::InitializeCamera()
 // Notes:
 //   Assumes block_count[adaptive_level] and block_count[adaptive_level-1] have been set.
 //   Allocates and initializes camera_loc[adaptive_level], camera_pos[adaptive_level],
-//       camera_dir[adaptive_level], image_frequencies[adaptive_level], and
-//       momentum_factors[adaptive_level].
+//       camera_dir[adaptive_level], and momentum_factors[adaptive_level].
 void GeodesicIntegrator::AugmentCamera()
 {
   // Allocate storage for new blocks
@@ -369,10 +355,7 @@ void GeodesicIntegrator::AugmentCamera()
   camera_loc[adaptive_level].Allocate(block_count, 2);
   camera_pos[adaptive_level].Allocate(block_count * block_num_pix, 4);
   camera_dir[adaptive_level].Allocate(block_count * block_num_pix, 4);
-  image_frequencies[adaptive_level].Allocate(image_num_frequencies, block_count * block_num_pix);
-  momentum_factors[adaptive_level].Allocate(image_num_frequencies, block_count * block_num_pix);
-  Array<double> image_frequencies_temp(block_count * block_num_pix, image_num_frequencies);
-  Array<double> momentum_factors_temp(block_count * block_num_pix, image_num_frequencies);
+  momentum_factors[adaptive_level].Allocate(block_count * block_num_pix);
 
   // Prepare to go through blocks
   int block_count_old = block_counts[adaptive_level-1];
@@ -381,7 +364,6 @@ void GeodesicIntegrator::AugmentCamera()
     effective_resolution *= 2;
   Array<double> camera_pos_block;
   Array<double> camera_dir_block;
-  Array<double> image_frequencies_block;
   Array<double> momentum_factors_block;
 
   // Go through blocks at previous level
@@ -401,12 +383,10 @@ void GeodesicIntegrator::AugmentCamera()
           camera_loc[adaptive_level](block,1) = block_u;
           camera_pos_block = camera_pos[adaptive_level];
           camera_dir_block = camera_dir[adaptive_level];
-          image_frequencies_block = image_frequencies_temp;
-          momentum_factors_block = momentum_factors_temp;
+          momentum_factors_block = momentum_factors[adaptive_level];
           camera_pos_block.Slice(2, block * block_num_pix, block * block_num_pix);
           camera_dir_block.Slice(2, block * block_num_pix, block * block_num_pix);
-          image_frequencies_block.Slice(2, block * block_num_pix, block * block_num_pix);
-          momentum_factors_block.Slice(2, block * block_num_pix, block * block_num_pix);
+          momentum_factors_block.Slice(1, block * block_num_pix, block * block_num_pix);
           int m_offset = block_v * adaptive_block_size;
           int l_offset = block_u * adaptive_block_size;
 
@@ -423,7 +403,7 @@ void GeodesicIntegrator::AugmentCamera()
               double v_ind =
                   (m2 + m_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
               SetPixelPlane(u_ind, v_ind, m, camera_pos_block, camera_dir_block,
-                  image_frequencies_block, momentum_factors_block);
+                  momentum_factors_block);
             }
           }
 
@@ -440,18 +420,10 @@ void GeodesicIntegrator::AugmentCamera()
               double v_ind =
                   (m2 + m_offset - effective_resolution / 2.0 + 0.5) / effective_resolution;
               SetPixelPinhole(u_ind, v_ind, m, camera_pos_block, camera_dir_block,
-                  image_frequencies_block, momentum_factors_block);
+                  momentum_factors_block);
             }
           }
         }
-    }
-
-  // Transpose frequency and momentum arrays
-  for (int l = 0; l < image_num_frequencies; l++)
-    for (int m = 0; m < block_count * block_num_pix; m++)
-    {
-      image_frequencies[adaptive_level](l,m) = image_frequencies_temp(m,l);
-      momentum_factors[adaptive_level](l,m) = momentum_factors_temp(m,l);
     }
   return;
 }
@@ -467,21 +439,19 @@ void GeodesicIntegrator::AugmentCamera()
 //   position: appropriate values of array updated with spacetime location of pixel
 //   direction: appropriate values of array updated with contravariant spatial momentum of light
 //       seen by pixel
-//   frequency: appropriate values of array updated with frequency (Hz) as function of pixel and
-//       ideal frequency (at preferred normalization location)
 //   factor: appropriate values of array updated, as function of pixel and ideal frequency (at
 //       preferred normalization location), with factor that, when multiplied by momentum,
 //       appropriately normalizes the ray
 // Notes:
-//   Assumes cam_x, u_con, u_cov, norm_con, hor_con_c, vert_con_c, and image_frequencies_ideal have
-//       been set.
+//   Assumes cam_x, u_con, u_cov, norm_con, hor_con_c, vert_con_c, and image_frequencies have been
+//       set.
 //   Quadratic solved as follows:
 //     Outside ergosphere: unique positive root.
 //     On ergosphere, assuming g_{0i} p^i < 0: unique root, which will be positive
 //     Inside ergosphere, assuming g_{0i} p^i < 0: lesser positive root, which remains finite as
 //         ergosphere is approached.
 void GeodesicIntegrator::SetPixelPlane(double u_ind, double v_ind, int m, Array<double> &position,
-    Array<double> &direction, Array<double> &frequency, Array<double> &factor)
+    Array<double> &direction, Array<double> &factor)
 {
   // Set pixel position
   double u = u_ind * bh_m * camera_width;
@@ -528,25 +498,14 @@ void GeodesicIntegrator::SetPixelPlane(double u_ind, double v_ind, int m, Array<
       direction(m,mu) += gcov[mu][nu] * p[nu];
   }
 
-  // Set frequency and normalization
+  // Set momentum factor
   double nu_local = 0.0;
-  for (int mu = 0; mu < 4; mu++)
-    nu_local -= direction(m,mu) * u_con[mu];
   if (image_normalization == FrequencyNormalization::camera)
-    for (int l = 0; l < image_num_frequencies; l++)
-    {
-      frequency(m,l) = image_frequencies_ideal(l);
-      factor(m,l) = image_frequencies_ideal(l) / nu_local;
-    }
+    for (int mu = 0; mu < 4; mu++)
+      nu_local -= direction(m,mu) * u_con[mu];
   else if (image_normalization == FrequencyNormalization::infinity)
-  {
-    double k_t_local = direction(m,0);
-    for (int l = 0; l < image_num_frequencies; l++)
-    {
-      frequency(m,l) = -nu_local / k_t_local * image_frequencies_ideal(l);
-      factor(m,l) = -image_frequencies_ideal(l) / k_t_local;
-    }
-  }
+    nu_local = -direction(m,0);
+  factor(m) = 1.0 / nu_local;
   return;
 }
 
@@ -561,21 +520,18 @@ void GeodesicIntegrator::SetPixelPlane(double u_ind, double v_ind, int m, Array<
 //   position: appropriate values of array updated with spacetime location of pixel
 //   direction: appropriate values of array updated with contravariant spatial momentum of light
 //       seen by pixel
-//   frequency: appropriate values of array updated with frequency (Hz) as function of pixel and
-//       ideal frequency (at preferred normalization location)
 //   factor: appropriate values of array updated, as function of pixel and ideal frequency (at
 //       preferred normalization location), with factor that, when multiplied by momentum,
 //       appropriately normalizes the ray
 // Notes:
-//   Assumes cam_x, u_con, norm_con_c, hor_con_c, vert_con_c, and image_frequencies_ideal have been
-//       set.
+//   Assumes cam_x, u_con, norm_con_c, hor_con_c, vert_con_c, and image_frequencies have been set.
 //   Quadratic solved as follows:
 //     Outside ergosphere: unique positive root.
 //     On ergosphere, assuming g_{0i} p^i < 0: unique root, which will be positive
 //     Inside ergosphere, assuming g_{0i} p^i < 0: lesser positive root, which remains finite as
 //         ergosphere is approached.
 void GeodesicIntegrator::SetPixelPinhole(double u_ind, double v_ind, int m, Array<double> &position,
-    Array<double> &direction, Array<double> &frequency, Array<double> &factor)
+    Array<double> &direction, Array<double> &factor)
 {
   // Set pixel position
   position(m,0) = cam_x[0];
@@ -628,24 +584,13 @@ void GeodesicIntegrator::SetPixelPinhole(double u_ind, double v_ind, int m, Arra
       direction(m,mu) += gcov[mu][nu] * p[nu];
   }
 
-  // Set frequency and normalization
+  // Set momentum factor
   double nu_local = 0.0;
-  for (int mu = 0; mu < 4; mu++)
-    nu_local -= direction(m,mu) * u_con[mu];
   if (image_normalization == FrequencyNormalization::camera)
-    for (int l = 0; l < image_num_frequencies; l++)
-    {
-      frequency(m,l) = image_frequencies_ideal(l);
-      factor(m,l) = image_frequencies_ideal(l) / nu_local;
-    }
+    for (int mu = 0; mu < 4; mu++)
+      nu_local -= direction(m,mu) * u_con[mu];
   else if (image_normalization == FrequencyNormalization::infinity)
-  {
-    double k_t_local = direction(m,0);
-    for (int l = 0; l < image_num_frequencies; l++)
-    {
-      frequency(m,l) = -nu_local / k_t_local * image_frequencies_ideal(l);
-      factor(m,l) = -image_frequencies_ideal(l) / k_t_local;
-    }
-  }
+    nu_local = -direction(m,0);
+  factor(m) = 1.0 / nu_local;
   return;
 }

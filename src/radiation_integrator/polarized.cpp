@@ -25,8 +25,7 @@
 //       sample_bb1[adaptive_level], sample_bb2[adaptive_level], sample_bb3[adaptive_level],
 //       j_i[adaptive_level], j_q[adaptive_level], j_v[adaptive_level], alpha_i[adaptive_level],
 //       alpha_q[adaptive_level], alpha_v[adaptive_level], rho_q[adaptive_level],
-//       rho_v[adaptive_level], image_frequencies[adaptive_level], and
-//       momentum_factors[adaptive_level] have been set.
+//       rho_v[adaptive_level], and momentum_factors[adaptive_level] have been set.
 //   Assumes cell_values[adaptive_level] has been set if image_lambda_ave == true or
 //       image_emission_ave == true or image_tau_int == true.
 //   Allocates and initializes image[adaptive_level].
@@ -116,7 +115,8 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
           double delta_lambda_new = delta_lambda;
           if (n < num_steps - 1)
             delta_lambda_new = sample_len[adaptive_level](m,n+1);
-          double delta_lambda_cgs = delta_lambda * x_unit / momentum_factors[adaptive_level](l,m);
+          double delta_lambda_cgs =
+              delta_lambda * x_unit / (image_frequencies(l) * momentum_factors[adaptive_level](m));
 
           // Extract geodesic position and covariant momentum
           double t_cgs = sample_pos[adaptive_level](m,n,0) * t_unit;
@@ -929,8 +929,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
       for (int a = 0; a < 4; a++)
         for (int m = 0; m < num_pix; m++)
         {
-          double nu_cu = image_frequencies[adaptive_level](l,m)
-              * image_frequencies[adaptive_level](l,m) * image_frequencies[adaptive_level](l,m);
+          double nu_cu = image_frequencies(l) * image_frequencies(l) * image_frequencies(l);
           image[adaptive_level](l*4+a,m) *= nu_cu;
         }
   }

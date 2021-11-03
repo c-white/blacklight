@@ -90,8 +90,7 @@ struct GeodesicIntegrator
   Array<double> *camera_dir = nullptr;
 
   // Image data
-  Array<double> image_frequencies_ideal;
-  Array<double> *image_frequencies = nullptr;
+  Array<double> image_frequencies;
   Array<double> *momentum_factors = nullptr;
 
   // Geodesic data
@@ -124,9 +123,9 @@ struct GeodesicIntegrator
   void InitializeCamera();
   void AugmentCamera();
   void SetPixelPlane(double u_ind, double v_ind, int m, Array<double> &position,
-      Array<double> &direction, Array<double> &frequency, Array<double> &factor);
+      Array<double> &direction, Array<double> &factor);
   void SetPixelPinhole(double u_ind, double v_ind, int m, Array<double> &position,
-      Array<double> &direction, Array<double> &frequency, Array<double> &factor);
+      Array<double> &direction, Array<double> &factor);
 
   // Internal functions - geodesics.cpp
   void IntegrateGeodesicsDP();

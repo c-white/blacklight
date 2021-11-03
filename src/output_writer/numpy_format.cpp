@@ -79,7 +79,7 @@ void OutputWriter::WriteNpz()
       data_lengths[array_offset], "width", &local_header_buffers[array_offset]);
   array_offset++;
   data_lengths[array_offset] =
-      GenerateNpyFromArray(image_frequencies_ideal, 1, &data_buffers[array_offset]);
+      GenerateNpyFromArray(image_frequencies, 1, &data_buffers[array_offset]);
   local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
       data_lengths[array_offset], "frequency", &local_header_buffers[array_offset]);
   array_offset++;

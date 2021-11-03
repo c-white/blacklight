@@ -455,7 +455,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
           double nu_cgs = 0.0;
           for (int mu = 0; mu < 4; mu++)
             nu_cgs -= kcov[mu] * ucon[mu];
-          nu_cgs *= momentum_factors[adaptive_level](l,m);
+          nu_cgs *= image_frequencies(l) * momentum_factors[adaptive_level](m);
           double nu_2_cgs = nu_cgs * nu_cgs;
           double nu_c_cgs = Physics::e * bb_cgs / (2.0 * Math::pi * Physics::m_e * Physics::c);
           double nu_s_cgs = 2.0 / 9.0 * nu_c_cgs * theta_e * theta_e * sin_theta_b;
