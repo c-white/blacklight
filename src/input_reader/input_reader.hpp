@@ -198,7 +198,7 @@ struct InputReader
   std::optional<float> fallback_pgas;
   std::optional<float> fallback_kappa;
 
-  // External functions
+  // External function
   int Read();
 
   // Internal functions - input_reader.cpp

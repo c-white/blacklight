@@ -89,6 +89,14 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   if (render_num_images > 0 and output_format != OutputFormat::npz)
     throw BlacklightException("Only npz outputs support rendering.");
 
+  // Copy slow-light parameters
+  if (model_type == ModelType::simulation)
+  {
+    slow_light_on = p_input_reader->slow_light_on.value();
+    if (slow_light_on)
+      slow_offset = p_input_reader->slow_offset.value();
+  }
+
   // Copy adaptive parameters
   adaptive_max_level = p_input_reader->adaptive_max_level.value();
   if (adaptive_max_level > 0)
@@ -233,19 +241,22 @@ void OutputWriter::Write(int snapshot)
   // Open output file
   std::string output_file_formatted = output_file;
   if (model_type == ModelType::simulation and simulation_multiple)
-    output_file_formatted = FormatFilename(snapshot);
+  {
+    int file_number = snapshot + (slow_light_on ? slow_offset : 0);
+    output_file_formatted = FormatFilename(file_number);
+  }
   p_output_stream =
       new std::ofstream(output_file_formatted, std::ios_base::out | std::ios_base::binary);
   if (not p_output_stream->is_open())
     throw BlacklightException("Could not open output file.");
 
   // Write image data based on desired file format
-  if (output_format == OutputFormat::raw)
-    WriteRaw();
+  if (output_format == OutputFormat::npz)
+    WriteNpz();
   else if (output_format == OutputFormat::npy)
     WriteNpy();
-  else if (output_format == OutputFormat::npz)
-    WriteNpz();
+  else if (output_format == OutputFormat::raw)
+    WriteRaw();
 
   // Close output file
   delete p_output_stream;

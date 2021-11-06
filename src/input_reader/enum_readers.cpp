@@ -38,17 +38,17 @@ ModelType InputReader::ReadModelType(const std::string &string)
 //   returned value: valid OutputFormat
 // Notes:
 //   Valid options:
-//     "raw": raw binary values of image array with no extra data
-//     "npy": NumPy .npy file with image array and minimal metadata
 //     "npz": NumPy .npz file with image and metadata arrays
+//     "npy": NumPy .npy file with image array and minimal metadata
+//     "raw": raw binary values of image array with no extra data
 OutputFormat InputReader::ReadOutputFormat(const std::string &string)
 {
-  if (string == "raw")
-    return OutputFormat::raw;
+  if (string == "npz")
+    return OutputFormat::npz;
   else if (string == "npy")
     return OutputFormat::npy;
-  else if (string == "npz")
-    return OutputFormat::npz;
+  else if (string == "raw")
+    return OutputFormat::raw;
   else
     throw BlacklightException("Unknown string used for OutputFormat value.");
 }

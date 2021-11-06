@@ -34,7 +34,7 @@ namespace CellValues
 
 // Scoped enumerations
 enum struct ModelType {simulation, formula};
-enum struct OutputFormat {raw, npy, npz};
+enum struct OutputFormat {npz, npy, raw};
 enum struct Coordinates {sph_ks, cart_ks};
 enum struct Camera {plane, pinhole};
 enum struct RayTerminate {photon, multiplicative, additive};

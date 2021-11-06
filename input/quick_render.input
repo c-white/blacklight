@@ -3,7 +3,7 @@ model_type  = simulation  # type of model (simulation, formula)
 num_threads = 4           # number of threads to use in parallel
 
 # Output parameters
-output_format = npz                      # format of output file (raw, npy, npz)
+output_format = npz                      # format of output file (npz, npy, raw)
 output_file   = output/quick_render.npz  # file to be (over)written with output data
 output_camera = false                    # flag for saving camera details
 
@@ -13,7 +13,7 @@ checkpoint_geodesic_load = false  # flag indicating geodesics should be loaded
 checkpoint_sample_save   = false  # flag indicating simulation sampling should be saved
 checkpoint_sample_load   = false  # flag indicating simulation sampling should be loaded
 
-# Simulation parameters (only used if model_type == simulation)
+# Simulation parameters
 simulation_file         = data/mock.athdf  # file containing Athena++ data dump if needed
 simulation_multiple     = false            # flag for processing multiple files
 simulation_coord        = sph_ks           # simulation coordinates (sph_ks, cart_ks)
@@ -86,13 +86,13 @@ render_1_3_max        = inf           # image 1, feature 3: upper cutoff
 render_1_3_tau_scale  = 1.5e13        # image 1, feature 3: optical depth length scale
 render_1_3_rgb        = 106,121,247   # image 1, feature 3: RGB colors in [0,255]
 
-# Slow-light parameters (only used if model_type == simulation)
+# Slow-light parameters
 slow_light_on = false  # flag indicating slow light should be used
 
 # Adaptive parameters
 adaptive_max_level = 0  # maximum number of adaptive levels beyond root
 
-# Plasma parameters (only used if model_type == simulation)
+# Plasma parameters
 plasma_mu         = 0.5         # molecular weight of fluid in proton masses
 plasma_ne_ni      = 1.0         # electrons per ion
 plasma_model      = ti_te_beta  # electron temperature model (ti_te_beta, code_kappa)

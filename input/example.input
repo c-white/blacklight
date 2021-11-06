@@ -3,7 +3,7 @@ model_type  = formula  # type of model (simulation, formula)
 num_threads = 4        # number of threads to use in parallel
 
 # Output parameters
-output_format = npz                 # format of output file (raw, npy, npz)
+output_format = npz                 # format of output file (npz, npy, raw)
 output_file   = output/example.npz  # file to be (over)written with output data
 output_camera = false               # flag for saving camera details (output_format == npz)
 
@@ -15,7 +15,7 @@ checkpoint_sample_save   = false                 # flag indicating sampling shou
 checkpoint_sample_load   = false                 # flag indicating sampling should be loaded
 checkpoint_sample_file   = output/sample.dat     # name of sampling checkpoint file
 
-# Simulation parameters (only used if model_type == simulation)
+# Simulation parameters
 simulation_file         = data/mock.athdf  # file containing Athena++ data dump if needed
 simulation_multiple     = false            # flag for processing multiple files
 simulation_start        = 0                # first file number (simulation_multiple == true)
@@ -28,7 +28,7 @@ simulation_kappa_name   = r0               # name of variable containing electro
 simulation_interp       = false            # flag indicating interpolation should be used
 simulation_block_interp = false            # flag indicating interpolation should cross blocks
 
-# Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
+# Formula parameters
 formula_mass  = 6.0e11   # black hole mass in cm
 formula_spin  = 0.9      # dimensionless black hole spin
 formula_r0    = 10.0     # radial scale parameter in gravitational units
@@ -107,7 +107,7 @@ render_1_3_max        = inf               # image 1, feature 3: upper cutoff
 render_1_3_tau_scale  = 1.5e13            # image 1, feature 3: optical depth length scale
 render_1_3_xyz        = 0.296,0.235,0.91  # image 1, feature 3: XYZ colors in [0,1]
 
-# Slow-light parameters (only used if model_type == simulation)
+# Slow-light parameters
 slow_light_on   = false  # flag indicating slow light should be used
 slow_interp     = true   # flag indicating slow light should interpolate between input files
 slow_chunk_size = 10     # number of simultaneous files to use for slow light
@@ -131,7 +131,7 @@ adaptive_abs_lapl_frac = -1.0    # minimum fraction of cells exceeding cut for t
 adaptive_rel_lapl_cut  = 0.0     # relative Laplacian minimum for signaling refinement
 adaptive_rel_lapl_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
 
-# Plasma parameters (only used if model_type == simulation)
+# Plasma parameters
 plasma_mu         = 0.5         # molecular weight of fluid in proton masses
 plasma_ne_ni      = 1.0         # electrons per ion
 plasma_model      = ti_te_beta  # thermal electron temperature model (ti_te_beta, code_kappa)

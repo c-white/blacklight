@@ -72,6 +72,10 @@ struct OutputWriter
   // Input data - rendering parameters
   int render_num_images;
 
+  // Input data - slow-light parameters
+  bool slow_light_on;
+  int slow_offset;
+
   // Input data - adaptive parameters
   int adaptive_max_level;
   int adaptive_block_size;

@@ -80,6 +80,8 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   // Copy camera parameters
   camera_r = p_input_reader->camera_r.value();
   camera_resolution = p_input_reader->camera_resolution.value();
+  if (camera_resolution <= 0)
+    throw BlacklightException("Must have positive camera_resolution.");
 
   // Copy ray-tracing parameters
   ray_flat = p_input_reader->ray_flat.value();
@@ -212,13 +214,18 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   {
     if (not image_light)
       throw BlacklightException("Adaptive ray tracing requires image_light.");
-    adaptive_block_size = p_input_reader->adaptive_block_size.value();
+    adaptive_block_size = p_geodesic_integrator->adaptive_block_size;
     if (adaptive_block_size <= 0)
       throw BlacklightException("Must have positive adaptive_block_size.");
     if (camera_resolution % adaptive_block_size != 0)
       throw BlacklightException("Must have adaptive_block_size divide camera_resolution.");
     if (image_num_frequencies > 1)
+    {
       adaptive_frequency_num = p_input_reader->adaptive_frequency_num.value() - 1;
+      if (adaptive_frequency_num < 0 or adaptive_frequency_num >= image_num_frequencies)
+        throw BlacklightException(
+            "Must choose adaptive_frequency_num from 1 to image_num_frequencies.");
+    }
     else
       adaptive_frequency_num = 0;
     adaptive_val_frac = p_input_reader->adaptive_val_frac.value();
@@ -264,7 +271,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     if (plasma_kappa_frac != 0.0)
     {
       plasma_kappa = p_input_reader->plasma_kappa.value();
-      if (model_type == ModelType::simulation and image_light and image_polarization)
+      if (image_light and image_polarization)
       {
         if (plasma_kappa < 3.5 or plasma_kappa > 5.0)
           throw BlacklightException("Polarized transport only supports kappa in [3.5, 5].");

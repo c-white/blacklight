@@ -47,6 +47,8 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   camera_rotation = p_input_reader->camera_rotation.value();
   camera_width = p_input_reader->camera_width.value();
   camera_resolution = p_input_reader->camera_resolution.value();
+  if (camera_resolution <= 0)
+    throw BlacklightException("Must have positive camera_resolution.");
   camera_pole = p_input_reader->camera_pole.value();
 
   // Copy ray-tracing parameters
@@ -57,9 +59,13 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   ray_integrator = p_input_reader->ray_integrator.value();
   ray_step = p_input_reader->ray_step.value();
   ray_max_steps = p_input_reader->ray_max_steps.value();
+  if (ray_max_steps <= 0)
+    throw BlacklightException("Must have positive ray_max_steps.");
   if (ray_integrator == RayIntegrator::dp)
   {
     ray_max_retries = p_input_reader->ray_max_retries.value();
+    if (ray_max_retries <= 0)
+      throw BlacklightException("Must have nonnegative ray_max_retries.");
     ray_tol_abs = p_input_reader->ray_tol_abs.value();
     ray_tol_rel = p_input_reader->ray_tol_rel.value();
   }
@@ -67,11 +73,19 @@ GeodesicIntegrator::GeodesicIntegrator(const InputReader *p_input_reader)
   // Copy image parameters
   image_num_frequencies = p_input_reader->image_num_frequencies.value();
   if (image_num_frequencies == 1)
+  {
     image_frequency = p_input_reader->image_frequency.value();
+    if (image_frequency <= 0.0)
+      throw BlacklightException("Must choose positive image_frequency.");
+  }
   else if (image_num_frequencies > 1)
   {
     image_frequency_start = p_input_reader->image_frequency_start.value();
+    if (image_frequency_start <= 0.0)
+      throw BlacklightException("Must choose positive image_frequency_start.");
     image_frequency_end = p_input_reader->image_frequency_end.value();
+    if (image_frequency_end <= 0.0)
+      throw BlacklightException("Must choose positive image_frequency_end.");
     image_frequency_spacing = p_input_reader->image_frequency_spacing.value();
   }
   else

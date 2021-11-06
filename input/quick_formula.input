@@ -3,7 +3,7 @@ model_type  = formula  # type of model (simulation, formula)
 num_threads = 4        # number of threads to use in parallel
 
 # Output parameters
-output_format = npz                       # format of output file (raw, npy, npz)
+output_format = npz                       # format of output file (npz, npy, raw)
 output_file   = output/quick_formula.npz  # file to be (over)written with output data
 output_camera = false                     # flag for saving camera details
 
@@ -11,7 +11,7 @@ output_camera = false                     # flag for saving camera details
 checkpoint_geodesic_save = false  # flag indicating geodesics should be saved
 checkpoint_geodesic_load = false  # flag indicating geodesics should be loaded
 
-# Formula parameters (see 2020 ApJ 897 148, only used if model_type == formula)
+# Formula parameters
 formula_mass  = 6.0e11   # black hole mass in cm
 formula_spin  = 0.9      # dimensionless black hole spin
 formula_r0    = 10.0     # radial scale parameter in gravitational units
