@@ -133,7 +133,7 @@ if __name__ == '__main__':
 
   # Prepare for gas pressure inputs
   parser.add_argument('--pgas_amp', type=float, default=0.1, help='gas pressure coefficient')
-  parser.add_argument('--pgas_r_power', type=float, default=1.5,
+  parser.add_argument('--pgas_r_power', type=float, default=1.25,
       help='gas pressure power-law index in radius')
   parser.add_argument('--pgas_th_scale', type=float, default=np.pi/8.0,
       help='gas pressure scale height in polar angle')
@@ -165,7 +165,7 @@ if __name__ == '__main__':
   # Prepare for vertical magnetic field inputs
   parser.add_argument('--Bz_amp', type=float, default=0.02,
       help='vertical magnetic field coefficient')
-  parser.add_argument('--Bz_R_power', type=float, default=0.75,
+  parser.add_argument('--Bz_R_power', type=float, default=0.625,
       help='vertical magnetic field power-law index in cylindrical radius')
 
   # Prepare for cutoff inputs

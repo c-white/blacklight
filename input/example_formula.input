@@ -3,9 +3,9 @@ model_type  = formula  # type of model (simulation, formula)
 num_threads = 4        # number of threads to use in parallel
 
 # Output parameters
-output_format = npz                       # format of output file (npz, npy, raw)
-output_file   = output/quick_formula.npz  # file to be (over)written with output data
-output_camera = false                     # flag for saving camera details
+output_format = npz                         # format of output file (npz, npy, raw)
+output_file   = output/example_formula.npz  # file to be (over)written with output data
+output_camera = false                       # flag for saving camera details
 
 # Checkpoint parameters
 checkpoint_geodesic_save = false  # flag indicating geodesics should be saved
