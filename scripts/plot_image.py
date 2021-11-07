@@ -281,10 +281,11 @@ def main(**kwargs):
   # Calculate refinement parameters
   if kwargs['refinement_level']:
     label = 'level'
-    vmin = -0.5
-    vmax = max_level + 0.5
+    vmin = -0.5 if kwargs['vmin'] is None else kwargs['vmin']
+    vmax = max_level + 0.5 if kwargs['vmax'] is None else kwargs['vmax']
     tick_locs = np.arange(0, max_level + 1)
-    cmap_continuous = plt.get_cmap(cmap_level)
+    cmap_chosen = cmap_level if kwargs['cmap'] is None else kwargs['cmap']
+    cmap_continuous = plt.get_cmap(cmap_chosen)
     cmap_vals = [cmap_continuous(float(x) / max_level) for x in tick_locs]
     cmap = LinearSegmentedColormap.from_list('levels', cmap_vals, max_level + 1)
     bounds = np.linspace(vmin, vmax, max_level + 2)
@@ -355,8 +356,11 @@ def main(**kwargs):
       vmax_adaptive = np.nanmax(image_adaptive[level])
       vmin = np.nanmin((vmin, vmin_adaptive))
       vmax = np.nanmax((vmax, vmax_adaptive))
+    vmin = vmin if kwargs['vmin'] is None else kwargs['vmin']
+    vmax = vmax if kwargs['vmax'] is None else kwargs['vmax']
     tick_locs = None
-    cmap = plt.get_cmap(cmap_name)
+    cmap_chosen = cmap_name if kwargs['cmap'] is None else kwargs['cmap']
+    cmap = plt.get_cmap(cmap_chosen)
     cmap.set_bad(nan_color)
     bounds = None
 
@@ -370,6 +374,8 @@ def main(**kwargs):
       vmin = -vmax
     else:
       vmin = 0.0
+    vmin = vmin if kwargs['vmin'] is None else kwargs['vmin']
+    vmax = vmax if kwargs['vmax'] is None else kwargs['vmax']
     scale_exponent = int('{0:24.16e}'.format(vmax).split('e')[1])
     scale = 10.0 ** scale_exponent
     vmin /= scale
@@ -379,16 +385,20 @@ def main(**kwargs):
       image_adaptive[level] /= scale
     if kwargs['stokes_q']:
       stokes_str = 'Q'
-      cmap = plt.get_cmap(cmap_q)
+      cmap_chosen = cmap_q if kwargs['cmap'] is None else kwargs['cmap']
+      cmap = plt.get_cmap(cmap_chosen)
     elif kwargs['stokes_u']:
       stokes_str = 'U'
-      cmap = plt.get_cmap(cmap_u)
+      cmap_chosen = cmap_u if kwargs['cmap'] is None else kwargs['cmap']
+      cmap = plt.get_cmap(cmap_chosen)
     elif kwargs['stokes_v']:
       stokes_str = 'V'
-      cmap = plt.get_cmap(cmap_v)
+      cmap_chosen = cmap_v if kwargs['cmap'] is None else kwargs['cmap']
+      cmap = plt.get_cmap(cmap_chosen)
     else:
       stokes_str = 'I'
-      cmap = plt.get_cmap(cmap_i)
+      cmap_chosen = cmap_i if kwargs['cmap'] is None else kwargs['cmap']
+      cmap = plt.get_cmap(cmap_chosen)
     if scale_exponent == 0:
       label = r'$' + stokes_str + r'_\nu$ ($\mathrm{erg\ s^{-1}\ cm^{-2}\ sr^{-1}\ Hz^{-1}}$)'
     elif scale_exponent == 1:
@@ -460,6 +470,9 @@ if __name__ == '__main__':
   parser.add_argument('-d', '--distance', type=float, help='distance to black hole in parsecs')
   parser.add_argument('-a', '--axes', choices=('pixel','rg','cm','muas'), help='axes labels')
   parser.add_argument('-l', '--max_level', type=int, help='maximum adaptive level to plot')
+  parser.add_argument('--vmin', type=float, help='color scale minimum')
+  parser.add_argument('--vmax', type=float, help='color scale minimum')
+  parser.add_argument('-c', '--cmap', help='name of colormap')
   parser.add_argument('--notex', action='store_true',
       help='flag indicating external tex distribution should not be used')
   args = parser.parse_args()
