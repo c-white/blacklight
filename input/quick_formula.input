@@ -25,19 +25,19 @@ formula_a     = 0.0      # source amplitude parameter A in cm^2.s.sr.Hz/erg
 formula_beta  = 2.5      # source index
 
 # Camera parameters
-camera_type       = plane                 # type of camera (plane, pinhole)
-camera_r          = 1000.0                # KS radial coordinate r in gravitational units
-camera_th         = 60.0                  # KS polar coordinate theta in degrees (0/180 for N/S)
-camera_ph         = 0.0                   # KS azimuthal coordinate phi in degrees
-camera_urn        = 0.001998006586832549  # contravariant KS normal r-velocity
-camera_uthn       = 0.0                   # contravariant KS normal theta-velocity (using radians)
-camera_uphn       = 0.0                   # contravariant KS normal ph-velocity (using radians)
-camera_k_r        = 1.0                   # covariant KS r-momentum of photons
-camera_k_th       = 0.0                   # covariant KS theta-momentum of photons (using radians)
-camera_k_ph       = 0.0                   # covariant KS phi-momentum of photons (using radians)
-camera_rotation   = 0.0                   # rotation of camera in degrees (0/90 for north up/left)
-camera_width      = 30.0                  # full width of image in gravitational units
-camera_resolution = 128                   # number of pixels per side
+camera_type       = plane                  # type of camera (plane, pinhole)
+camera_r          = 1000.0                 # KS radial coordinate r in gravitational units
+camera_th         = 60.0                   # KS polar coordinate theta in degrees (0/180 for N/S)
+camera_ph         = 0.0                    # KS azimuthal coordinate phi in degrees
+camera_urn        = 0.0019980065868325484  # contravariant KS normal r-velocity
+camera_uthn       = 0.0                    # contravariant KS normal theta-velocity (using radians)
+camera_uphn       = 0.0                    # contravariant KS normal ph-velocity (using radians)
+camera_k_r        = 1.0                    # covariant KS r-momentum of photons
+camera_k_th       = 0.0                    # covariant KS theta-momentum of photons (using radians)
+camera_k_ph       = 0.0                    # covariant KS phi-momentum of photons (using radians)
+camera_rotation   = 0.0                    # rotation of camera in degrees (0/90 for north up/left)
+camera_width      = 30.0                   # full width of image in gravitational units
+camera_resolution = 128                    # number of pixels per side
 
 # Ray-tracing parameters
 ray_flat        = false     # flag indicating ray tracing should assume flat spacetime
@@ -45,8 +45,8 @@ ray_terminate   = additive  # termination condition (photon, multiplicative, add
 ray_factor      = 5.0e-4    # constant for terminate (only used for ray_terminate != photon)
 ray_integrator  = dp        # time integrator for geodesics (dp, rk4, rk2)
 ray_step        = 0.01      # step size control relative to radial coordinate
-ray_max_steps   = 6000      # maximum number of steps allowed for each geodesic
-ray_max_retries = 10        # maximum number of times a step can fail (dp)
+ray_max_steps   = 7000      # maximum number of steps allowed for each geodesic
+ray_max_retries = 20        # maximum number of times a step can fail (dp)
 ray_tol_abs     = 1.0e-8    # absolute tolerance for taking full steps (dp)
 ray_tol_rel     = 1.0e-8    # relative tolerance for taking full steps (dp)
 
