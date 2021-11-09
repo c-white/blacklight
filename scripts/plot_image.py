@@ -56,6 +56,18 @@ def main(**kwargs):
   if kwargs['filename_data'][-4:] == '.npz':
     with np.load(kwargs['filename_data']) as f:
 
+      # Read metadata
+      if width_rg is None:
+        width_rg = f['width'][0]
+      elif not np.isclose(f['width'][0], width_rg):
+        raise RuntimeError('Input width {0} does not match file value {1}.'.format(width_rg,
+            f['width'][0]))
+      if mass_msun is None:
+        mass_msun = f['mass_msun'][0]
+      elif not np.isclose(f['mass_msun'][0], mass_msun):
+        raise RuntimeError('Input mass {0} does not match file value {1}.'.format(mass_msun,
+            f['mass_msun'][0]))
+
       # Read root image
       if kwargs['refinement_level']:
         try:
@@ -124,20 +136,6 @@ def main(**kwargs):
             image_adaptive[level] = image_adaptive[level][kwargs['frequency_num']-1,...]
       elif len(image.shape) != 2:
         raise RuntimeError('Must specify frequency_num.')
-
-      # Read metadata
-      if 'width' in f.keys():
-        if width_rg is None:
-          width_rg = f['width'][0]
-        elif not np.isclose(f['width'][0], width_rg):
-          raise RuntimeError('Input width {0} does not match file value {1}.'.format(width_rg,
-              f['width'][0]))
-      if 'mass_msun' in f.keys():
-        if mass_msun is None:
-          mass_msun = f['mass_msun'][0]
-        elif not np.isclose(f['mass_msun'][0], mass_msun):
-          raise RuntimeError('Input mass {0} does not match file value {1}.'.format(mass_msun,
-              f['mass_msun'][0]))
 
   # Read image data from .npy file
   elif kwargs['filename_data'][-4:] == '.npy':

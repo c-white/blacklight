@@ -37,15 +37,15 @@ def main(**kwargs):
     raise RuntimeError('Must specify central_frequency.')
 
   # Prepare metadata
-  width_rg = kwargs['width']
-  mass_msun = kwargs['mass']
   distance_pc = kwargs['distance']
   max_level = kwargs['max_level']
 
   # Read data from .npz file
   with np.load(kwargs['filename_data']) as f:
 
-    # Read frequencies
+    # Read metadata
+    width_rg = f['width'][0]
+    mass_msun = f['mass_msun'][0]
     frequencies = f['frequency'][:]
 
     # Read root intensity
@@ -68,20 +68,6 @@ def main(**kwargs):
         num_blocks[level] = f['adaptive_num_blocks'][level]
         block_locs[level] = f['adaptive_block_locs_{0}'.format(level)][:]
         intensity_adaptive[level] = f['adaptive_I_nu_{0}'.format(level)][:]
-
-    # Read metadata
-    if 'width' in f.keys():
-      if width_rg is None:
-        width_rg = f['width'][0]
-      elif not np.isclose(f['width'][0], width_rg):
-        raise RuntimeError('Input width {0} does not match file value {1}.'.format(width_rg,
-            f['width'][0]))
-    if 'mass_msun' in f.keys():
-      if mass_msun is None:
-        mass_msun = f['mass_msun'][0]
-      elif not np.isclose(f['mass_msun'][0], mass_msun):
-        raise RuntimeError('Input mass {0} does not match file value {1}.'.format(mass_msun,
-            f['mass_msun'][0]))
 
   # Calculate shifted wavelengths
   wavelengths_nm = kwargs['central_frequency'] * kwargs['central_wavelength'] / frequencies
@@ -115,13 +101,13 @@ def main(**kwargs):
           np.concatenate((rgb[0,:,:,:,None], rgb[1,:,:,:,None], rgb[2,:,:,:,None]), axis=3)
 
   # Calculate root grid in pixels
-  if kwargs['axes'] == 'pixel' or (kwargs['axes'] is None and width_rg is None):
+  if kwargs['axes'] == 'pixel':
     extent = np.array((-0.5, image.shape[0] - 0.5, -0.5, image.shape[1] - 0.5))
     x_label = r'$x$-pixel'
     y_label = r'$y$-pixel'
 
   # Calculate root grid in gravitational radii
-  elif kwargs['axes'] == 'rg' or (kwargs['axes'] is None and mass_msun is None):
+  elif kwargs['axes'] == 'rg':
     if width_rg is None:
       raise RuntimeError('Must supply width.')
     half_width = 0.5 * width_rg
@@ -490,9 +476,6 @@ if __name__ == '__main__':
       help='frequency in Hz to be shifted to center of visual range')
   parser.add_argument('--central_wavelength', type=float, default=550.0,
       help='wavelength in nm to which central_frequency should be shifted')
-  parser.add_argument('-w', '--width', type=float,
-      help='full width of figure in gravitational radii')
-  parser.add_argument('-m', '--mass', type=float, help='black hole mass in solar masses')
   parser.add_argument('-d', '--distance', type=float, help='distance to black hole in parsecs')
   parser.add_argument('-a', '--axes', choices=('pixel','rg','cm','muas'), help='axes labels')
   parser.add_argument('-l', '--max_level', type=int, help='maximum adaptive level to plot')
