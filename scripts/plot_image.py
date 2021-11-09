@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 """
-Script for plotting outputs produced by Blacklight.
+Script for plotting most outputs produced by Blacklight.
 """
 
 # Python standard modules
@@ -42,9 +42,9 @@ def main(**kwargs):
 
   # Verify input
   if sum((kwargs['stokes_q'], kwargs['stokes_u'], kwargs['stokes_v'], kwargs['name'] is not None,
-      kwargs['rendering'] is not None, kwargs['refinement_level'])) > 1:
-    raise RuntimeError('Can have at most one of Stokes Q/U/V, named quantity, rendering, or' \
-        + ' refinement level selected.')
+      kwargs['refinement_level'])) > 1:
+    raise RuntimeError('Can have at most one of Stokes Q/U/V, named quantity, or refinement level' \
+        + ' selected.')
 
   # Prepare metadata
   width_rg = kwargs['width']
@@ -62,11 +62,6 @@ def main(**kwargs):
           image = np.zeros_like(f['I_nu'][:])
         except KeyError:
           raise RuntimeError('No intensity data in file, so image cannot be refined.')
-      elif kwargs['rendering'] is not None:
-        try:
-          image = f['rendering'][kwargs['rendering']-1,...]
-        except:
-          raise RuntimeError('Rendering {0} not found in file.'.format(kwargs['rendering']))
       elif kwargs['name'] is not None:
         try:
           image = f[kwargs['name']][:]
@@ -104,9 +99,6 @@ def main(**kwargs):
           if kwargs['refinement_level']:
             image_adaptive[level] = \
                 level * np.ones_like(f['adaptive_I_nu_{0}'.format(level)])
-          elif kwargs['rendering'] is not None:
-            image_adaptive[level] = \
-                f['adaptive_rendering_{0}'.format(level)][kwargs['rendering']-1,...]
           elif kwargs['name'] is not None:
             image_adaptive[level] = f['adaptive_{0}_{1}'.format(kwargs['name'], level)][:]
           elif kwargs['stokes_q']:
@@ -120,9 +112,7 @@ def main(**kwargs):
 
       # Select frequency
       if kwargs['frequency_num'] is not None:
-        if kwargs['rendering'] is not None:
-          raise RuntimeError('Cannot specify frequency for rendering.')
-        elif kwargs['name'] is not None and kwargs['name'] == 'time':
+        if kwargs['name'] is not None and kwargs['name'] == 'time':
           raise RuntimeError('Cannot specify frequency for plot of ray times.')
         elif kwargs['name'] is not None and kwargs['name'] == 'length':
           raise RuntimeError('Cannot specify frequency for plot of ray lengths.')
@@ -153,8 +143,6 @@ def main(**kwargs):
   elif kwargs['filename_data'][-4:] == '.npy':
     if kwargs['refinement_level']:
       raise RuntimeError('Adaptive refinement not supported by npy format.')
-    if kwargs['rendering'] is not None:
-      raise RuntimeError('Renderings not supported by npy format.')
     if kwargs['frequency_num'] is not None and kwargs['frequency_num'] != 1:
       raise RuntimeError('Multiple frequencies not supported by npy format.')
     if kwargs['name'] is not None:
@@ -177,8 +165,6 @@ def main(**kwargs):
   else:
     if kwargs['refinement_level']:
       raise RuntimeError('Adaptive refinement not supported by raw format.')
-    if kwargs['rendering'] is not None:
-      raise RuntimeError('Renderings not supported by raw format.')
     if kwargs['frequency_num'] is not None and kwargs['frequency_num'] != 1:
       raise RuntimeError('Multiple frequencies not supported by raw format.')
     if kwargs['name'] is not None:
@@ -290,34 +276,6 @@ def main(**kwargs):
     cmap = LinearSegmentedColormap.from_list('levels', cmap_vals, max_level + 1)
     bounds = np.linspace(vmin, vmax, max_level + 2)
 
-  # Calculate rendering parameters
-  elif kwargs['rendering'] is not None:
-    r_vals = 3.2406 * image[0,...] - 1.5372 * image[1,...] - 0.4986 * image[2,...]
-    g_vals = -0.9689 * image[0,...] + 1.8758 * image[1,...] + 0.0415 * image[2,...]
-    b_vals = 0.0557 * image[0,...] - 0.204 * image[1,...] + 1.057 * image[2,...]
-    r_vals = np.clip(r_vals, 0.0, 1.0)
-    g_vals = np.clip(g_vals, 0.0, 1.0)
-    b_vals = np.clip(b_vals, 0.0, 1.0)
-    r_vals = np.where(r_vals <= 0.0031308, 12.92 * r_vals, 1.055 * r_vals ** (1.0 / 2.4) - 0.055)
-    g_vals = np.where(g_vals <= 0.0031308, 12.92 * g_vals, 1.055 * g_vals ** (1.0 / 2.4) - 0.055)
-    b_vals = np.where(b_vals <= 0.0031308, 12.92 * b_vals, 1.055 * b_vals ** (1.0 / 2.4) - 0.055)
-    image = np.concatenate((r_vals[:,:,None], g_vals[:,:,None], b_vals[:,:,None]), axis=2)
-    for level in range(1, max_level + 1):
-      r_vals = 3.2406 * image_adpative[level][0,...] - 1.5372 * image_adaptive[level][1,...] \
-          - 0.4986 * image_adaptive[level][2,...]
-      g_vals = -0.9689 * image_adaptive[level][0,...] + 1.8758 * image_adaptive[level][1,...] \
-          + 0.0415 * image_adaptive[level][2,...]
-      b_vals = 0.0557 * image_adaptive[level][0,...] - 0.204 * image_adaptive[level][1,...] \
-          + 1.057 * image_adaptive[level][2,...]
-      r_vals = np.clip(r_vals, 0.0, 1.0)
-      g_vals = np.clip(g_vals, 0.0, 1.0)
-      b_vals = np.clip(b_vals, 0.0, 1.0)
-      r_vals = np.where(r_vals <= 0.0031308, 12.92 * r_vals, 1.055 * r_vals ** (1.0 / 2.4) - 0.055)
-      g_vals = np.where(g_vals <= 0.0031308, 12.92 * g_vals, 1.055 * g_vals ** (1.0 / 2.4) - 0.055)
-      b_vals = np.where(b_vals <= 0.0031308, 12.92 * b_vals, 1.055 * b_vals ** (1.0 / 2.4) - 0.055)
-      image_adaptive[level] = \
-          np.concatenate((r_vals[:,:,:,None], g_vals[:,:,:,None], b_vals[:,:,:,None]), axis=3)
-
   # Calculate named quantity parameters
   elif kwargs['name'] is not None:
     label_mid = {'time': r'\mathrm{min}(t)', 'length': r'l', 'lambda': r'\lambda',
@@ -411,29 +369,20 @@ def main(**kwargs):
     bounds = None
 
   # Plot root image
-  if kwargs['rendering'] is not None:
-    plt.imshow(image, aspect='equal', origin='lower', extent=extent, interpolation=interpolation)
-  else:
-    plt.imshow(image, cmap=cmap, vmin=vmin, vmax=vmax, aspect='equal', origin='lower',
-        extent=extent, interpolation=interpolation)
+  plt.imshow(image, cmap=cmap, vmin=vmin, vmax=vmax, aspect='equal', origin='lower', extent=extent,
+      interpolation=interpolation)
 
   # Plot adaptive image
   for level in range(1, max_level + 1):
     for block in range(num_blocks[level]):
-      if kwargs['rendering'] is not None:
-        plt.imshow(image_adaptive[level][block,...], aspect='equal', origin='lower',
-            extent=extent_adaptive[level][block,:], interpolation=interpolation)
-      else:
-        plt.imshow(image_adaptive[level][block,...], cmap=cmap, vmin=vmin, vmax=vmax,
-            aspect='equal', origin='lower', extent=extent_adaptive[level][block,:],
-            interpolation=interpolation)
+      plt.imshow(image_adaptive[level][block,...], cmap=cmap, vmin=vmin, vmax=vmax, aspect='equal',
+          origin='lower', extent=extent_adaptive[level][block,:], interpolation=interpolation)
 
   # Make colorbar
-  if kwargs['rendering'] is None:
-    cb = plt.colorbar(ticks=tick_locs, boundaries=bounds)
-    cb.set_label(label, labelpad=labelpad)
-    if kwargs['refinement_level']:
-      cb.ax.tick_params(length=0)
+  cb = plt.colorbar(ticks=tick_locs, boundaries=bounds)
+  cb.set_label(label, labelpad=labelpad)
+  if kwargs['refinement_level']:
+    cb.ax.tick_params(length=0)
 
   # Adjust axes
   plt.xlim(extent[0], extent[1])
@@ -461,8 +410,7 @@ if __name__ == '__main__':
   parser.add_argument('-n', '--name', help='name of quantity to be plotted')
   parser.add_argument('-f', '--frequency_num', type=int,
       help='index (1-indexed) of frequency to use if multiple present')
-  parser.add_argument('-r', '--rendering', type=int, help='number of rendering to be plotted')
-  parser.add_argument('--refinement_level', action='store_true',
+  parser.add_argument('-r', '--refinement_level', action='store_true',
       help='flag indicating refinement level should be plotted')
   parser.add_argument('-w', '--width', type=float,
       help='full width of figure in gravitational radii')
