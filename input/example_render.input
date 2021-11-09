@@ -20,14 +20,13 @@ simulation_coord        = sph_ks           # simulation coordinates (sph_ks, car
 simulation_m_msun       = 4.152e6          # black hole mass in solar masses
 simulation_a            = 0.0              # dimensionless black hole spin
 simulation_rho_cgs      = 1.0e-16          # unit code density in g/cm^3
-simulation_kappa_name   = kappa            # name of variable containing electron entropy
-simulation_interp       = false            # flag indicating interpolation should be used
+simulation_interp       = true             # flag indicating interpolation should be used
 simulation_block_interp = false            # flag indicating interpolation should cross blocks
 
 # Camera parameters
 camera_type       = plane  # type of camera (plane, pinhole)
 camera_r          = 50.0   # KS radial coordinate r of camera in gravitational units
-camera_th         = 60.0   # KS polar coordinate theta of camera in degrees (0/180 for N/S)
+camera_th         = 70.0   # KS polar coordinate theta of camera in degrees (0/180 for N/S)
 camera_ph         = 0.0    # KS azimuthal coordinate phi of camera in degrees
 camera_urn        = 0.0    # contravariant KS normal r-velocity of camera
 camera_uthn       = 0.0    # contravariant KS normal theta-velocity of camera (using radians)
@@ -44,9 +43,9 @@ ray_flat        = true            # flag indicating ray tracing should assume fl
 ray_terminate   = multiplicative  # termination condition (photon, multiplicative, additive)
 ray_factor      = 1.005           # constant for terminate (only used for ray_terminate != photon)
 ray_integrator  = dp              # time integrator for geodesics (dp, rk4, rk2)
-ray_step        = 0.01            # step size control relative to radial coordinate
-ray_max_steps   = 3300            # maximum number of steps allowed for each geodesic
-ray_max_retries = 25              # maximum number of times a step can fail (dp)
+ray_step        = 0.005           # step size control relative to radial coordinate
+ray_max_steps   = 4000            # maximum number of steps allowed for each geodesic
+ray_max_retries = 20              # maximum number of times a step can fail (dp)
 ray_tol_abs     = 1.0e-8          # absolute tolerance for taking full steps (dp)
 ray_tol_rel     = 1.0e-8          # relative tolerance for taking full steps (dp)
 
@@ -66,25 +65,25 @@ image_emission_ave    = false     # flag for producing emission-averaged images
 image_tau_int         = false     # flag for producing tau-integrated images
 
 # Rendering parameters
-render_num_images     = 1             # number of false-color renderings
-render_1_num_features = 3             # image 1: number of features
-render_1_1_quantity   = sigma         # image 1, feature 1: quantity to use
-render_1_1_type       = fill          # image 1, feature 1: type (fill, thresh, rise, fall)
-render_1_1_min        = 1.0           # image 1, feature 1: lower cutoff
-render_1_1_max        = inf           # image 1, feature 1: upper cutoff
-render_1_1_tau_scale  = 1.5e13        # image 1, feature 1: opacity in [0,1]
-render_1_1_rgb        = 222,12,98     # image 1, feature 1: RGB colors in [0,255]
-render_1_2_quantity   = beta_inverse  # image 1, feature 2: quantity to use
-render_1_2_type       = thresh        # image 1, feature 2: type (fill, thresh, rise, fall)
-render_1_2_thresh     = 1.0           # image 1, feature 2: threshold
-render_1_2_opacity    = 0.2           # image 1, feature 2: opacity in [0,1]
-render_1_2_rgb        = 133,197,38    # image 1, feature 2: RGB colors in [0,255]
-render_1_3_quantity   = rho           # image 1, feature 3: quantity to use
-render_1_3_type       = fill          # image 1, feature 3: type (fill, thresh, rise, fall)
-render_1_3_min        = 2.0e-17       # image 1, feature 3: lower cutoff
-render_1_3_max        = inf           # image 1, feature 3: upper cutoff
-render_1_3_tau_scale  = 1.5e13        # image 1, feature 3: optical depth length scale
-render_1_3_rgb        = 106,121,247   # image 1, feature 3: RGB colors in [0,255]
+render_num_images     = 1                 # number of false-color renderings
+render_1_num_features = 3                 # image 1: number of features
+render_1_1_quantity   = rho               # image 1, feature 1: quantity to use
+render_1_1_type       = fill              # image 1, feature 1: type (fill, thresh, rise, fall)
+render_1_1_min        = 1.5e-17           # image 1, feature 1: lower cutoff
+render_1_1_max        = inf               # image 1, feature 1: upper cutoff
+render_1_1_tau_scale  = 1.5e13            # image 1, feature 1: optical depth length scale
+render_1_1_rgb        = 106,121,247       # image 1, feature 1: RGB colors in [0,255]
+render_1_2_quantity   = sigma             # image 1, feature 2: quantity to use
+render_1_2_type       = fill              # image 1, feature 2: type (fill, thresh, rise, fall)
+render_1_2_min        = 1.0               # image 1, feature 2: lower cutoff
+render_1_2_max        = inf               # image 1, feature 2: upper cutoff
+render_1_2_tau_scale  = 1.0e13            # image 1, feature 2: opacity in [0,1]
+render_1_2_rgb        = 214,76.5,66.7     # image 1, feature 2: RGB colors in [0,255]
+render_1_3_quantity   = beta_inverse      # image 1, feature 3: quantity to use
+render_1_3_type       = thresh            # image 1, feature 3: type (fill, thresh, rise, fall)
+render_1_3_thresh     = 0.15              # image 1, feature 3: threshold
+render_1_3_opacity    = 0.2               # image 1, feature 3: opacity in [0,1]
+render_1_3_xyz        = 0.12,0.246,0.089  # image 1, feature 3: XYZ colors in [0,1]
 
 # Slow-light parameters
 slow_light_on = false  # flag indicating slow light should be used
@@ -102,25 +101,27 @@ plasma_power_frac = 0.0         # fraction of electrons with power-law distribut
 plasma_kappa_frac = 0.0         # fraction of electrons with kappa distribution
 
 # Cut parameters
-cut_rho_min          = -1.0   # if nonneg., cutoff in rho below which plasma is ignored
-cut_rho_max          = -1.0   # if nonneg., cutoff in rho above which plasma is ignored
-cut_n_e_min          = -1.0   # if nonneg., cutoff in n_e below which plasma is ignored
-cut_n_e_max          = -1.0   # if nonneg., cutoff in n_e above which plasma is ignored
-cut_p_gas_min        = -1.0   # if nonneg., cutoff in p_gas below which plasma is ignored
-cut_p_gas_max        = -1.0   # if nonneg., cutoff in p_gas above which plasma is ignored
-cut_theta_e_min      = -1.0   # if nonneg., cutoff in Theta_e below which plasma is ignored
-cut_theta_e_max      = -1.0   # if nonneg., cutoff in Theta_e above which plasma is ignored
-cut_b_min            = -1.0   # if nonneg., cutoff in B below which plasma is ignored
-cut_b_max            = -1.0   # if nonneg., cutoff in B above which plasma is ignored
-cut_sigma_min        = -1.0   # if nonneg., cutoff in sigma below which plasma is ignored
-cut_sigma_max        = -1.0   # if nonneg., cutoff in sigma above which plasma is ignored
-cut_beta_inverse_min = -1.0   # if nonneg., cutoff in 1/beta below which plasma is ignored
-cut_beta_inverse_max = -1.0   # if nonneg., cutoff in 1/beta above which plasma is ignored
-cut_omit_near        = false  # flag indicating near half of simulation should be omitted
-cut_omit_far         = false  # flag indicating far half of simulation should be omitted
-cut_omit_in          = -1.0   # if nonneg., radius inside of which simulation is omitted
-cut_omit_out         = -1.0   # if nonneg., radius outside of which simulation is omitted
-cut_plane            = false  # flag for domain being excluded beyond a certain plane
+cut_rho_min          = -1.0         # if nonneg., cutoff in rho below which plasma is ignored
+cut_rho_max          = -1.0         # if nonneg., cutoff in rho above which plasma is ignored
+cut_n_e_min          = -1.0         # if nonneg., cutoff in n_e below which plasma is ignored
+cut_n_e_max          = -1.0         # if nonneg., cutoff in n_e above which plasma is ignored
+cut_p_gas_min        = -1.0         # if nonneg., cutoff in p_gas below which plasma is ignored
+cut_p_gas_max        = -1.0         # if nonneg., cutoff in p_gas above which plasma is ignored
+cut_theta_e_min      = -1.0         # if nonneg., cutoff in Theta_e below which plasma is ignored
+cut_theta_e_max      = -1.0         # if nonneg., cutoff in Theta_e above which plasma is ignored
+cut_b_min            = -1.0         # if nonneg., cutoff in B below which plasma is ignored
+cut_b_max            = -1.0         # if nonneg., cutoff in B above which plasma is ignored
+cut_sigma_min        = -1.0         # if nonneg., cutoff in sigma below which plasma is ignored
+cut_sigma_max        = -1.0         # if nonneg., cutoff in sigma above which plasma is ignored
+cut_beta_inverse_min = -1.0         # if nonneg., cutoff in 1/beta below which plasma is ignored
+cut_beta_inverse_max = -1.0         # if nonneg., cutoff in 1/beta above which plasma is ignored
+cut_omit_near        = false        # flag indicating near half of simulation should be omitted
+cut_omit_far         = false        # flag indicating far half of simulation should be omitted
+cut_omit_in          = -1.0         # if nonneg., radius inside of which simulation is omitted
+cut_omit_out         = 45.0         # if nonneg., radius outside of which simulation is omitted
+cut_plane            = false        # flag for domain being excluded beyond a certain plane
+cut_plane_origin     = 0.0,0.0,0.0  # origin (x,y,z) of plane
+cut_plane_normal     = 0.0,0.0,1.0  # normal vector (x,y,z) on side of plane to keep
 
 # Fallback parameters
 fallback_nan = true  # flag indicating any fallback should result in NaN for that ray
