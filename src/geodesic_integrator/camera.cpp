@@ -345,7 +345,7 @@ void GeodesicIntegrator::InitializeCamera()
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Assumes block_count[adaptive_level] and block_count[adaptive_level-1] have been set.
+//   Assumes block_counts[adaptive_level] and block_counts[adaptive_level-1] have been set.
 //   Allocates and initializes camera_loc[adaptive_level], camera_pos[adaptive_level],
 //       camera_dir[adaptive_level], and momentum_factors[adaptive_level].
 void GeodesicIntegrator::AugmentCamera()
@@ -384,9 +384,9 @@ void GeodesicIntegrator::AugmentCamera()
           camera_pos_block = camera_pos[adaptive_level];
           camera_dir_block = camera_dir[adaptive_level];
           momentum_factors_block = momentum_factors[adaptive_level];
-          camera_pos_block.Slice(2, block * block_num_pix, block * block_num_pix);
-          camera_dir_block.Slice(2, block * block_num_pix, block * block_num_pix);
-          momentum_factors_block.Slice(1, block * block_num_pix, block * block_num_pix);
+          camera_pos_block.Slice(2, block * block_num_pix, (block + 1) * block_num_pix - 1);
+          camera_dir_block.Slice(2, block * block_num_pix, (block + 1) * block_num_pix - 1);
+          momentum_factors_block.Slice(1, block * block_num_pix, (block + 1) * block_num_pix - 1);
           int m_offset = block_v * adaptive_block_size;
           int l_offset = block_u * adaptive_block_size;
 
