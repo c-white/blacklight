@@ -45,6 +45,8 @@ def main(**kwargs):
       kwargs['refinement_level'])) > 1:
     raise RuntimeError('Can have at most one of Stokes Q/U/V, named quantity, or refinement level' \
         + ' selected.')
+  if kwargs['refinement_level'] and (kwargs['vmin'] is not None or kwargs['vmax'] is not None):
+    raise RuntimeError('Cannot override vmin or vmax when plotting refinement level.')
 
   # Prepare metadata
   width_rg = kwargs['width']
