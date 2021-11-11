@@ -550,6 +550,15 @@ void RadiationIntegrator::SampleSimulation()
     sample_bb2[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
     sample_bb3[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level]);
   }
+  sample_rho[adaptive_level].Zero();
+  sample_pgas[adaptive_level].Zero();
+  sample_kappa[adaptive_level].Zero();
+  sample_uu1[adaptive_level].Zero();
+  sample_uu2[adaptive_level].Zero();
+  sample_uu3[adaptive_level].Zero();
+  sample_bb1[adaptive_level].Zero();
+  sample_bb2[adaptive_level].Zero();
+  sample_bb3[adaptive_level].Zero();
 
   // Resample cell data onto geodesics in parallel
   #pragma omp parallel for schedule(static)
