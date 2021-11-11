@@ -1,0 +1,120 @@
+# General parameters
+model_type  = simulation  # type of model (simulation, formula)
+num_threads = 4           # number of threads to use in parallel
+
+# Output parameters
+output_format = npz                          # format of output file (npz, npy, raw)
+output_file   = output/example_adaptive.npz  # file to be (over)written with output data
+output_camera = false                        # flag for saving camera details
+
+# Checkpoint parameters
+checkpoint_geodesic_save = false  # flag indicating geodesics should be saved
+checkpoint_geodesic_load = false  # flag indicating geodesics should be loaded
+checkpoint_sample_save   = false  # flag indicating simulation sampling should be saved
+checkpoint_sample_load   = false  # flag indicating simulation sampling should be loaded
+
+# Simulation parameters
+simulation_file         = data/mock.athdf  # file containing Athena++ data dump if needed
+simulation_multiple     = false            # flag for processing multiple files
+simulation_coord        = sph_ks           # simulation coordinates (sph_ks, cart_ks)
+simulation_m_msun       = 4.152e6          # black hole mass in solar masses
+simulation_a            = 0.0              # dimensionless black hole spin
+simulation_rho_cgs      = 1.0e-16          # unit code density in g/cm^3
+simulation_interp       = true             # flag indicating interpolation should be used
+simulation_block_interp = false            # flag indicating interpolation should cross blocks
+
+# Camera parameters
+camera_type       = plane  # type of camera (plane, pinhole)
+camera_r          = 50.0   # KS radial coordinate r of camera in gravitational units
+camera_th         = 45.0   # KS polar coordinate theta of camera in degrees (0/180 for N/S)
+camera_ph         = 0.0    # KS azimuthal coordinate phi of camera in degrees
+camera_urn        = 0.0    # contravariant KS normal r-velocity of camera
+camera_uthn       = 0.0    # contravariant KS normal theta-velocity of camera (using radians)
+camera_uphn       = 0.0    # contravariant KS normal ph-velocity of camera (using radians)
+camera_k_r        = 1.0    # covariant KS r-momentum of received photons
+camera_k_th       = 0.0    # covariant KS theta-momentum of received photons (using radians)
+camera_k_ph       = 0.0    # covariant KS phi-momentum of received photons (using radians)
+camera_rotation   = 0.0    # rotation of camera in degrees (0/90 for north up/left)
+camera_width      = 24.0   # full width of image in gravitational units
+camera_resolution = 32     # number of pixels per side
+
+# Ray-tracing parameters
+ray_flat        = false           # flag indicating ray tracing should assume flat spacetime
+ray_terminate   = multiplicative  # termination condition (photon, multiplicative, additive)
+ray_factor      = 1.005           # constant for terminate (only used for ray_terminate != photon)
+ray_integrator  = dp              # time integrator for geodesics (dp, rk4, rk2)
+ray_step        = 0.01            # step size control relative to radial coordinate
+ray_max_steps   = 3000            # maximum number of steps allowed for each geodesic
+ray_max_retries = 20              # maximum number of times a step can fail (dp)
+ray_tol_abs     = 1.0e-8          # absolute tolerance for taking full steps (dp)
+ray_tol_rel     = 1.0e-8          # relative tolerance for taking full steps (dp)
+
+# Image parameters
+image_light           = true      # flag indicating real image of radiation should be produced
+image_num_frequencies = 1         # number of observation frequencies
+image_frequency       = 2.3e11    # frequency in Hz if image_frequency_num = 1
+image_normalization   = infinity  # frequency location (camera [w/ velocity], infinity [rest])
+image_polarization    = true      # flag indicating transport should be polarized
+image_rotation_split  = false     # flag for Strang splitting rotation from emission/absorption
+image_time            = false     # flag for producing image of geodesic times
+image_length          = false     # flag for producing image of geodesic lengths
+image_lambda          = false     # flag for producing image of affine path lengths
+image_emission        = false     # flag for producing image of emission coefficients
+image_tau             = true      # flag for producing image of optical depths
+image_lambda_ave      = false     # flag for producing lambda-averaged images
+image_emission_ave    = false     # flag for producing emission-averaged images
+image_tau_int         = false     # flag for producing tau-integrated images
+
+# Rendering parameters
+render_num_images = 0  # number of false-color renderings
+
+# Slow-light parameters
+slow_light_on = false  # flag indicating slow light should be used
+
+# Adaptive parameters
+adaptive_max_level     = 1       # maximum number of adaptive levels beyond root
+adaptive_block_size    = 8       # linear size of adaptively refined blocks of pixels
+adaptive_frequency_num = 1       # index (1-indexed) of frequency to use for evaluating refinement
+adaptive_val_cut       = 0.0     # absolute value minimum for signaling refinement
+adaptive_val_frac      = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
+adaptive_abs_grad_cut  = 0.0     # absolute gradient minimum for signaling refinement
+adaptive_abs_grad_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
+adaptive_rel_grad_cut  = 0.0     # relative gradient minimum for signaling refinement
+adaptive_rel_grad_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
+adaptive_abs_lapl_cut  = 0.0     # absolute Laplacian minimum for signaling refinement
+adaptive_abs_lapl_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
+adaptive_rel_lapl_cut  = 1.0     # relative Laplacian minimum for signaling refinement
+adaptive_rel_lapl_frac = 0.25    # minimum fraction of cells exceeding cut for triggering refinement
+
+# Plasma parameters
+plasma_mu         = 0.5         # molecular weight of fluid in proton masses
+plasma_ne_ni      = 1.0         # electrons per ion
+plasma_model      = ti_te_beta  # electron temperature model (ti_te_beta, code_kappa)
+plasma_rat_low    = 1.0         # ion-electron temperature ratio at zero plasma beta
+plasma_rat_high   = 10.0        # ion-electron temperature ratio at infinite plasma beta
+plasma_power_frac = 0.0         # fraction of electrons with power-law distribution
+plasma_kappa_frac = 0.0         # fraction of electrons with kappa distribution
+
+# Cut parameters
+cut_rho_min          = -1.0   # if nonneg., cutoff in rho below which plasma is ignored
+cut_rho_max          = -1.0   # if nonneg., cutoff in rho above which plasma is ignored
+cut_n_e_min          = -1.0   # if nonneg., cutoff in n_e below which plasma is ignored
+cut_n_e_max          = -1.0   # if nonneg., cutoff in n_e above which plasma is ignored
+cut_p_gas_min        = -1.0   # if nonneg., cutoff in p_gas below which plasma is ignored
+cut_p_gas_max        = -1.0   # if nonneg., cutoff in p_gas above which plasma is ignored
+cut_theta_e_min      = -1.0   # if nonneg., cutoff in Theta_e below which plasma is ignored
+cut_theta_e_max      = -1.0   # if nonneg., cutoff in Theta_e above which plasma is ignored
+cut_b_min            = -1.0   # if nonneg., cutoff in B below which plasma is ignored
+cut_b_max            = -1.0   # if nonneg., cutoff in B above which plasma is ignored
+cut_sigma_min        = -1.0   # if nonneg., cutoff in sigma below which plasma is ignored
+cut_sigma_max        = 1.0    # if nonneg., cutoff in sigma above which plasma is ignored
+cut_beta_inverse_min = -1.0   # if nonneg., cutoff in 1/beta below which plasma is ignored
+cut_beta_inverse_max = -1.0   # if nonneg., cutoff in 1/beta above which plasma is ignored
+cut_omit_near        = false  # flag indicating near half of simulation should be omitted
+cut_omit_far         = false  # flag indicating far half of simulation should be omitted
+cut_omit_in          = -1.0   # if nonneg., radius inside of which simulation is omitted
+cut_omit_out         = -1.0   # if nonneg., radius outside of which simulation is omitted
+cut_plane            = false  # flag for domain being excluded beyond a certain plane
+
+# Fallback parameters
+fallback_nan = true  # flag indicating any fallback should result in NaN for that ray
