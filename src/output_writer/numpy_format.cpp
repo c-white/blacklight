@@ -148,14 +148,14 @@ void OutputWriter::WriteNpz()
           data_lengths[array_offset], "Q_nu", &local_header_buffers[array_offset]);
       array_offset++;
       for (int l = 0; l < image_num_frequencies; l++)
-        image_deep_copy.CopyFrom(image[0], (l * image_stride + 1) * num_pix, l * num_pix, num_pix);
+        image_deep_copy.CopyFrom(image[0], (l * image_stride + 2) * num_pix, l * num_pix, num_pix);
       data_lengths[array_offset] =
           GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
           data_lengths[array_offset], "U_nu", &local_header_buffers[array_offset]);
       array_offset++;
       for (int l = 0; l < image_num_frequencies; l++)
-        image_deep_copy.CopyFrom(image[0], (l * image_stride + 1) * num_pix, l * num_pix, num_pix);
+        image_deep_copy.CopyFrom(image[0], (l * image_stride + 3) * num_pix, l * num_pix, num_pix);
       data_lengths[array_offset] =
           GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
@@ -329,7 +329,7 @@ void OutputWriter::WriteNpz()
       if (num_written < 0 or num_written >= max_name_length)
         throw BlacklightException("Error naming output array.");
       for (int l = 0; l < image_num_frequencies; l++)
-        image_deep_copy.CopyFrom(image[0], l * image_stride * num_pix, l * num_pix, num_pix);
+        image_deep_copy.CopyFrom(image[level], l * image_stride * num_pix, l * num_pix, num_pix);
       data_lengths[array_offset] =
           GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
       local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
@@ -341,7 +341,7 @@ void OutputWriter::WriteNpz()
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
         for (int l = 0; l < image_num_frequencies; l++)
-          image_deep_copy.CopyFrom(image[0], (l * image_stride + 1) * num_pix, l * num_pix,
+          image_deep_copy.CopyFrom(image[level], (l * image_stride + 1) * num_pix, l * num_pix,
               num_pix);
         data_lengths[array_offset] =
             GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
@@ -352,7 +352,7 @@ void OutputWriter::WriteNpz()
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
         for (int l = 0; l < image_num_frequencies; l++)
-          image_deep_copy.CopyFrom(image[0], (l * image_stride + 2) * num_pix, l * num_pix,
+          image_deep_copy.CopyFrom(image[level], (l * image_stride + 2) * num_pix, l * num_pix,
               num_pix);
         data_lengths[array_offset] =
             GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
@@ -363,7 +363,7 @@ void OutputWriter::WriteNpz()
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
         for (int l = 0; l < image_num_frequencies; l++)
-          image_deep_copy.CopyFrom(image[0], (l * image_stride + 3) * num_pix, l * num_pix,
+          image_deep_copy.CopyFrom(image[level], (l * image_stride + 3) * num_pix, l * num_pix,
               num_pix);
         data_lengths[array_offset] =
             GenerateNpyFromArray(image_deep_copy, num_dims, &data_buffers[array_offset]);
@@ -449,7 +449,7 @@ void OutputWriter::WriteNpz()
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
         for (int l = 0; l < image_num_frequencies; l++)
-          image_deep_copy.CopyFrom(image[0],
+          image_deep_copy.CopyFrom(image[level],
               (image_offset_lambda_ave + l * CellValues::num_cell_values + n) * num_pix,
               l * num_pix, num_pix);
         data_lengths[array_offset] =
@@ -466,7 +466,7 @@ void OutputWriter::WriteNpz()
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
         for (int l = 0; l < image_num_frequencies; l++)
-          image_deep_copy.CopyFrom(image[0],
+          image_deep_copy.CopyFrom(image[level],
               (image_offset_emission_ave + l * CellValues::num_cell_values + n) * num_pix,
               l * num_pix, num_pix);
         data_lengths[array_offset] =
@@ -483,7 +483,7 @@ void OutputWriter::WriteNpz()
         if (num_written < 0 or num_written >= max_name_length)
           throw BlacklightException("Error naming output array.");
         for (int l = 0; l < image_num_frequencies; l++)
-          image_deep_copy.CopyFrom(image[0],
+          image_deep_copy.CopyFrom(image[level],
               (image_offset_tau_int + l * CellValues::num_cell_values + n) * num_pix, l * num_pix,
               num_pix);
         data_lengths[array_offset] =
