@@ -25,15 +25,15 @@ simulation_block_interp = false            # flag indicating interpolation shoul
 
 # Camera parameters
 camera_type       = plane  # type of camera (plane, pinhole)
-camera_r          = 50.0   # KS radial coordinate r of camera in gravitational units
-camera_th         = 45.0   # KS polar coordinate theta of camera in degrees (0/180 for N/S)
-camera_ph         = 0.0    # KS azimuthal coordinate phi of camera in degrees
-camera_urn        = 0.0    # contravariant KS normal r-velocity of camera
-camera_uthn       = 0.0    # contravariant KS normal theta-velocity of camera (using radians)
-camera_uphn       = 0.0    # contravariant KS normal ph-velocity of camera (using radians)
-camera_k_r        = 1.0    # covariant KS r-momentum of received photons
-camera_k_th       = 0.0    # covariant KS theta-momentum of received photons (using radians)
-camera_k_ph       = 0.0    # covariant KS phi-momentum of received photons (using radians)
+camera_r          = 50.0   # KS radial coordinate r in gravitational units
+camera_th         = 45.0   # KS polar coordinate theta in degrees (0/180 for N/S)
+camera_ph         = 0.0    # KS azimuthal coordinate phi in degrees
+camera_urn        = 0.0    # contravariant KS normal r-velocity
+camera_uthn       = 0.0    # contravariant KS normal theta-velocity (using radians)
+camera_uphn       = 0.0    # contravariant KS normal ph-velocity (using radians)
+camera_k_r        = 1.0    # covariant KS r-momentum of photons
+camera_k_th       = 0.0    # covariant KS theta-momentum of photons (using radians)
+camera_k_ph       = 0.0    # covariant KS phi-momentum of photons (using radians)
 camera_rotation   = 0.0    # rotation of camera in degrees (0/90 for north up/left)
 camera_width      = 24.0   # full width of image in gravitational units
 camera_resolution = 128    # number of pixels per side
@@ -78,7 +78,7 @@ adaptive_max_level = 0  # maximum number of adaptive levels beyond root
 # Plasma parameters
 plasma_mu         = 0.5         # molecular weight of fluid in proton masses
 plasma_ne_ni      = 1.0         # electrons per ion
-plasma_model      = ti_te_beta  # electron temperature model (ti_te_beta, code_kappa)
+plasma_model      = ti_te_beta  # thermal electron temperature model (ti_te_beta, code_kappa)
 plasma_rat_low    = 1.0         # ion-electron temperature ratio at zero plasma beta
 plasma_rat_high   = 10.0        # ion-electron temperature ratio at infinite plasma beta
 plasma_power_frac = 0.0         # fraction of electrons with power-law distribution
