@@ -207,7 +207,6 @@ struct InputReader
   template<typename type> void ReadTriple(const std::string &string, type *p_x, type *p_y,
       type *p_z);
   double ReadPole(const std::string &string, std::optional<bool> *p_pole_flag);
-  void ReadRender(const std::string &key, const std::string &val);
 
   // Internal functions - enum_readers.cpp
   ModelType ReadModelType(const std::string &string);
@@ -219,6 +218,9 @@ struct InputReader
   FrequencySpacing ReadFrequencySpacing(const std::string &string);
   FrequencyNormalization ReadFrequencyNormalization(const std::string &string);
   PlasmaModel ReadPlasmaModel(const std::string &string);
+
+  // Internal functions - render_reader.cpp
+  void ReadRender(const std::string &key, const std::string &val);
 };
 
 #endif
