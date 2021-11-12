@@ -509,11 +509,7 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
   {
     int image_num = std::stoi(key.substr(0, key.size() - 13)) - 1;
     if (image_num >= render_num_images.value())
-    {
-      std::ostringstream message;
-      message << "No space allocated for input parameter (render_" << key << ").";
-      throw BlacklightException(message.str().c_str());
-    }
+      return;
     int num_features = std::stoi(val);
     render_num_features[image_num] = num_features;
     render_quantities[image_num] = new std::optional<int>[num_features];
@@ -536,11 +532,7 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     int feature_num = std::stoi(key.substr(pos + 1)) - 1;
     if (image_num >= render_num_images.value()
         or feature_num >= render_num_features[image_num].value())
-    {
-      std::ostringstream message;
-      message << "No space allocated for input parameter (render_" << key << ").";
-      throw BlacklightException(message.str().c_str());
-    }
+      return;
     if (val == "rho")
       render_quantities[image_num][feature_num] = CellValues::rho;
     else if (val == "n_e")
@@ -571,11 +563,7 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     int feature_num = std::stoi(key.substr(pos + 1)) - 1;
     if (image_num >= render_num_images.value()
         or feature_num >= render_num_features[image_num].value())
-    {
-      std::ostringstream message;
-      message << "No space allocated for input parameter (render_" << key << ").";
-      throw BlacklightException(message.str().c_str());
-    }
+      return;
     if (val == "fill")
       render_types[image_num][feature_num] = RenderType::fill;
     else if (val == "thresh")
@@ -600,11 +588,7 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     int feature_num = std::stoi(key.substr(pos + 1)) - 1;
     if (image_num >= render_num_images.value()
         or feature_num >= render_num_features[image_num].value())
-    {
-      std::ostringstream message;
-      message << "No space allocated for input parameter (render_" << key << ").";
-      throw BlacklightException(message.str().c_str());
-    }
+      return;
     render_min_vals[image_num][feature_num] = std::stod(val);
   }
 
@@ -616,11 +600,7 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     int feature_num = std::stoi(key.substr(pos + 1)) - 1;
     if (image_num >= render_num_images.value()
         or feature_num >= render_num_features[image_num].value())
-    {
-      std::ostringstream message;
-      message << "No space allocated for input parameter (render_" << key << ").";
-      throw BlacklightException(message.str().c_str());
-    }
+      return;
     render_max_vals[image_num][feature_num] = std::stod(val);
   }
 
@@ -632,11 +612,7 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     int feature_num = std::stoi(key.substr(pos + 1)) - 1;
     if (image_num >= render_num_images.value()
         or feature_num >= render_num_features[image_num].value())
-    {
-      std::ostringstream message;
-      message << "No space allocated for input parameter (render_" << key << ").";
-      throw BlacklightException(message.str().c_str());
-    }
+      return;
     render_thresh_vals[image_num][feature_num] = std::stod(val);
   }
 
@@ -648,11 +624,7 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     int feature_num = std::stoi(key.substr(pos + 1)) - 1;
     if (image_num >= render_num_images.value()
         or feature_num >= render_num_features[image_num].value())
-    {
-      std::ostringstream message;
-      message << "No space allocated for input parameter (render_" << key << ").";
-      throw BlacklightException(message.str().c_str());
-    }
+      return;
     render_tau_scales[image_num][feature_num] = std::stod(val);
   }
 
@@ -664,11 +636,7 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     int feature_num = std::stoi(key.substr(pos + 1)) - 1;
     if (image_num >= render_num_images.value()
         or feature_num >= render_num_features[image_num].value())
-    {
-      std::ostringstream message;
-      message << "No space allocated for input parameter (render_" << key << ").";
-      throw BlacklightException(message.str().c_str());
-    }
+      return;
     render_opacities[image_num][feature_num] = std::stod(val);
   }
 
@@ -680,11 +648,7 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     int feature_num = std::stoi(key.substr(pos + 1)) - 1;
     if (image_num >= render_num_images.value()
         or feature_num >= render_num_features[image_num].value())
-    {
-      std::ostringstream message;
-      message << "No space allocated for input parameter (render_" << key << ").";
-      throw BlacklightException(message.str().c_str());
-    }
+      return;
     double r, g, b;
     ReadTriple(val, &r, &g, &b);
     double x, y, z;
@@ -702,11 +666,7 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     int feature_num = std::stoi(key.substr(pos + 1)) - 1;
     if (image_num >= render_num_images.value()
         or feature_num >= render_num_features[image_num].value())
-    {
-      std::ostringstream message;
-      message << "No space allocated for input parameter (render_" << key << ").";
-      throw BlacklightException(message.str().c_str());
-    }
+      return;
     ReadTriple(val, &render_x_vals[image_num][feature_num], &render_y_vals[image_num][feature_num],
         &render_z_vals[image_num][feature_num]);
   }
