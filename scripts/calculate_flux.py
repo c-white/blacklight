@@ -41,20 +41,25 @@ def main(**kwargs):
       elif not np.isclose(f['width'][0], width_rg):
         raise RuntimeError('Input width {0} does not match file value {1}.'.format(width_rg,
             f['width'][0]))
-
-      # Read root image
       try:
-        i_nu = f['I_nu'][:]
+        f['Q_nu']
+        polarization = True
       except KeyError:
-        raise RuntimeError('No intensity data in file.')
-      multiple_frequencies = True if len(i_nu.shape) == 3 else False
+        polarization = False
+      multiple_frequencies = True if len(f['frequency']) > 1 else False
       if multiple_frequencies:
         if kwargs['frequency_num'] is None:
           raise RuntimeError('Must specify frequency_num.')
       else:
         if kwargs['frequency_num'] is not None and kwargs['frequency_num'] != 1:
           raise RuntimeError('Only single frequency found in file.')
+
+      # Read root image
       try:
+        i_nu = f['I_nu'][:]
+      except KeyError:
+        raise RuntimeError('No intensity data in file.')
+      if polarization:
         if multiple_frequencies:
           i_nu = i_nu[kwargs['frequency_num']-1,...]
           q_nu = f['Q_nu'][kwargs['frequency_num']-1,...]
@@ -65,12 +70,10 @@ def main(**kwargs):
           u_nu = f['U_nu'][:]
           v_nu = f['V_nu'][:]
         image = np.vstack((i_nu[None,:,:], q_nu[None,:,:], u_nu[None,:,:], v_nu[None,:,:]))
-        polarization = True
-      except KeyError:
+      else:
         if multiple_frequencies:
           i_nu = i_nu[kwargs['frequency_num']-1,...]
         image = np.copy(i_nu[None,:,:])
-        polarization = False
 
       # Read adaptive image
       if max_level is None:
@@ -145,9 +148,13 @@ def main(**kwargs):
   rg = gg_msun * mass_msun / c ** 2
   width = 2.0 * np.arctan(0.5 * width_rg * rg / (distance_pc * pc))
 
+  # Prepare flag for NaN values
+  nan_found = False
+
   # Calculate flux without adaptive refinement
   if max_level == 0:
-    flux = np.mean(image, axis=(1,2)) * width ** 2 / jy
+    nan_found = np.any(np.isnan(image))
+    flux = np.nanmean(image, axis=(1,2)) * width ** 2 / jy
 
   # Calculate flux with adaptive refinement
   else:
@@ -196,11 +203,16 @@ def main(**kwargs):
       block_width = block_width_root / 2 ** level
       for block in range(num_blocks[level]):
         if flags[level][block]:
-          flux += np.mean(image_adaptive[level][:,block,:,:], axis=(1,2)) * block_width ** 2
+          if np.any(np.isnan(image_adaptive[level][:,block,:,:])):
+            nan_found = True
+          flux += np.nanmean(image_adaptive[level][:,block,:,:], axis=(1,2)) * block_width ** 2
     flux /= jy
 
   # Report results
   print('')
+  if nan_found:
+    print('Warning: ignoring NaN')
+    print('')
   if polarization:
     print('I: F_nu = {0} Jy'.format(repr(flux[0])))
     print('Q: F_nu = {0} Jy'.format(repr(flux[1])))
