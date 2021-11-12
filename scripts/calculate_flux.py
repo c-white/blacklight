@@ -21,9 +21,9 @@ def main(**kwargs):
   data_format = np.float64
 
   # Prepare metadata
-  width_rg = kwargs['width']
-  mass_msun = kwargs['mass']
   distance_pc = kwargs['distance']
+  mass_msun = kwargs['mass']
+  width_rg = kwargs['width']
   max_level = kwargs['max_level']
 
   # Read data from .npz file
@@ -31,16 +31,16 @@ def main(**kwargs):
     with np.load(kwargs['filename_data']) as f:
 
       # Read metadata
-      if width_rg is None:
-        width_rg = f['width'][0]
-      elif not np.isclose(f['width'][0], width_rg):
-        raise RuntimeError('Input width {0} does not match file value {1}.'.format(width_rg,
-            f['width'][0]))
       if mass_msun is None:
         mass_msun = f['mass_msun'][0]
       elif not np.isclose(f['mass_msun'][0], mass_msun):
         raise RuntimeError('Input mass {0} does not match file value {1}.'.format(mass_msun,
             f['mass_msun'][0]))
+      if width_rg is None:
+        width_rg = f['width'][0]
+      elif not np.isclose(f['width'][0], width_rg):
+        raise RuntimeError('Input width {0} does not match file value {1}.'.format(width_rg,
+            f['width'][0]))
 
       # Read root image
       try:
@@ -136,12 +136,12 @@ def main(**kwargs):
     max_level = 0
 
   # Calculate image size
-  if width_rg is None:
-    raise RuntimeError('Must supply width.')
-  if mass_msun is None:
-    raise RuntimeError('Must supply mass.')
   if distance_pc is None:
     raise RuntimeError('Must supply distance.')
+  if mass_msun is None:
+    raise RuntimeError('Must supply mass.')
+  if width_rg is None:
+    raise RuntimeError('Must supply width.')
   rg = gg_msun * mass_msun / c ** 2
   width = 2.0 * np.arctan(0.5 * width_rg * rg / (distance_pc * pc))
 
@@ -214,10 +214,10 @@ def main(**kwargs):
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('filename_data', help='name of file containing raw image data')
+  parser.add_argument('-d', '--distance', type=float, help='distance to black hole in parsecs')
+  parser.add_argument('-m', '--mass', type=float, help='black hole mass in solar masses')
   parser.add_argument('-w', '--width', type=float,
       help='full width of image in gravitational radii')
-  parser.add_argument('-m', '--mass', type=float, help='black hole mass in solar masses')
-  parser.add_argument('-d', '--distance', type=float, help='distance to black hole in parsecs')
   parser.add_argument('-f', '--frequency_num', type=int,
       help='index (1-indexed) of frequency to use if multiple present')
   parser.add_argument('-l', '--max_level', type=int,

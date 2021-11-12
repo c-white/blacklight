@@ -33,8 +33,6 @@ def main(**kwargs):
   # Verify input
   if kwargs['filename_data'][-4:] != '.npz':
     raise RuntimeError('Only npz format supports multiple frequencies.')
-  if kwargs['central_frequency'] is None:
-    raise RuntimeError('Must specify central_frequency.')
 
   # Prepare metadata
   distance_pc = kwargs['distance']
@@ -472,7 +470,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('filename_data', help='name of file containing raw image data')
   parser.add_argument('filename_plot', help='name of image file to write')
-  parser.add_argument('-f', '--central_frequency', type=float,
+  parser.add_argument('central_frequency', type=float,
       help='frequency in Hz to be shifted to center of visual range')
   parser.add_argument('--central_wavelength', type=float, default=550.0,
       help='wavelength in nm to which central_frequency should be shifted')
