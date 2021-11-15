@@ -150,6 +150,12 @@ struct InputReader
   std::optional<double> adaptive_abs_lapl_frac;
   std::optional<double> adaptive_rel_lapl_cut;
   std::optional<double> adaptive_rel_lapl_frac;
+  std::optional<int> adaptive_num_regions;
+  std::optional<int> *adaptive_region_levels = nullptr;
+  std::optional<double> *adaptive_region_x_min_vals = nullptr;
+  std::optional<double> *adaptive_region_x_max_vals = nullptr;
+  std::optional<double> *adaptive_region_y_min_vals = nullptr;
+  std::optional<double> *adaptive_region_y_max_vals = nullptr;
 
   // Data - plasma parameters
   std::optional<double> plasma_mu;
@@ -221,6 +227,9 @@ struct InputReader
 
   // Internal functions - render_reader.cpp
   void ReadRender(const std::string &key, const std::string &val);
+
+  // Internal functions - adaptive_reader.cpp
+  void ReadAdaptive(const std::string &key, const std::string &val);
 };
 
 #endif

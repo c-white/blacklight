@@ -30,6 +30,11 @@ bool RadiationIntegrator::CheckAdaptiveRefinement()
     refinement_flags[adaptive_level].Allocate(block_counts[adaptive_level]);
   }
 
+  // Calculate size of image in blocks at current level
+  int linear_num_blocks = linear_root_blocks;
+  for (int n = 1; n <= adaptive_level; n++)
+    linear_num_blocks *= 2;
+
   // Work in parallel
   int num_refined_blocks = 0;
   #pragma omp parallel
@@ -43,6 +48,27 @@ bool RadiationIntegrator::CheckAdaptiveRefinement()
       #pragma omp for schedule(static)
       for (int block = 0; block < block_counts[0]; block++)
       {
+        // Check forced refinement
+        if (adaptive_num_regions > 0)
+        {
+          double y = ((camera_loc[0](block,0) + 0.5) / linear_num_blocks - 0.5)
+              * camera_width;
+          double x = ((camera_loc[0](block,1) + 0.5) / linear_num_blocks - 0.5)
+              * camera_width;
+          refinement_flags[0](block) = false;
+          for (int n_r = 0; n_r < adaptive_num_regions; n_r++)
+            if (0 < adaptive_region_levels[n_r] and x > adaptive_region_x_min_vals[n_r]
+                and x < adaptive_region_x_max_vals[n_r] and y > adaptive_region_y_min_vals[n_r]
+                and y < adaptive_region_y_max_vals[n_r])
+            {
+              refinement_flags[0](block) = true;
+              break;
+            }
+          if (refinement_flags[0](block))
+            continue;
+        }
+
+        // Check remaining refinement conditions
         int s_full_start = adaptive_frequency_num
             * (model_type == ModelType::simulation and image_polarization ? 4 : 1);
         int s_full_end =
@@ -66,6 +92,27 @@ bool RadiationIntegrator::CheckAdaptiveRefinement()
       #pragma omp for schedule(static)
       for (int block = 0; block < block_counts[adaptive_level]; block++)
       {
+        // Check forced refinement
+        if (adaptive_num_regions > 0)
+        {
+          double y = ((camera_loc[adaptive_level](block,0) + 0.5) / linear_num_blocks - 0.5)
+              * camera_width;
+          double x = ((camera_loc[adaptive_level](block,1) + 0.5) / linear_num_blocks - 0.5)
+              * camera_width;
+          refinement_flags[adaptive_level](block) = false;
+          for (int n_r = 0; n_r < adaptive_num_regions; n_r++)
+            if (adaptive_level < adaptive_region_levels[n_r] and x > adaptive_region_x_min_vals[n_r]
+                and x < adaptive_region_x_max_vals[n_r] and y > adaptive_region_y_min_vals[n_r]
+                and y < adaptive_region_y_max_vals[n_r])
+            {
+              refinement_flags[adaptive_level](block) = true;
+              break;
+            }
+          if (refinement_flags[adaptive_level](block))
+            continue;
+        }
+
+        // Check remaining refinement conditions
         int s_full_start = adaptive_frequency_num
             * (model_type == ModelType::simulation and image_polarization ? 4 : 1);
         int s_full_end =

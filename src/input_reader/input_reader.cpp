@@ -56,6 +56,11 @@ InputReader::~InputReader()
   delete[] render_x_vals;
   delete[] render_y_vals;
   delete[] render_z_vals;
+  delete[] adaptive_region_levels;
+  delete[] adaptive_region_x_min_vals;
+  delete[] adaptive_region_x_max_vals;
+  delete[] adaptive_region_y_min_vals;
+  delete[] adaptive_region_y_max_vals;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -300,6 +305,10 @@ int InputReader::Read()
       adaptive_rel_lapl_cut = std::stod(val);
     else if (key == "adaptive_rel_lapl_frac")
       adaptive_rel_lapl_frac = std::stod(val);
+    else if (key == "adaptive_num_regions")
+      ReadAdaptive(key.substr(9), val);
+    else if (key.compare(0, 16, "adaptive_region_") == 0)
+      ReadAdaptive(key.substr(16), val);
 
     // Store plasma parameters
     else if (key == "plasma_mu")

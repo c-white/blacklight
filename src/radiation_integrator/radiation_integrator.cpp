@@ -79,6 +79,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
 
   // Copy camera parameters
   camera_r = p_input_reader->camera_r.value();
+  camera_width = p_input_reader->camera_width.value();
   camera_resolution = p_input_reader->camera_resolution.value();
   if (camera_resolution <= 0)
     throw BlacklightException("Must have positive camera_resolution.");
@@ -243,6 +244,23 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     adaptive_rel_lapl_frac = p_input_reader->adaptive_rel_lapl_frac.value();
     if (adaptive_rel_lapl_frac >= 0.0)
       adaptive_rel_lapl_cut = p_input_reader->adaptive_rel_lapl_cut.value();
+    adaptive_num_regions = p_input_reader->adaptive_num_regions.value();
+    if (adaptive_num_regions > 0)
+    {
+      adaptive_region_levels = new int[adaptive_num_regions];
+      adaptive_region_x_min_vals = new double[adaptive_num_regions];
+      adaptive_region_x_max_vals = new double[adaptive_num_regions];
+      adaptive_region_y_min_vals = new double[adaptive_num_regions];
+      adaptive_region_y_max_vals = new double[adaptive_num_regions];
+      for (int n_r = 0; n_r < adaptive_num_regions; n_r++)
+      {
+        adaptive_region_levels[n_r] = p_input_reader->adaptive_region_levels[n_r].value();
+        adaptive_region_x_min_vals[n_r] = p_input_reader->adaptive_region_x_min_vals[n_r].value();
+        adaptive_region_x_max_vals[n_r] = p_input_reader->adaptive_region_x_max_vals[n_r].value();
+        adaptive_region_y_min_vals[n_r] = p_input_reader->adaptive_region_y_min_vals[n_r].value();
+        adaptive_region_y_max_vals[n_r] = p_input_reader->adaptive_region_y_max_vals[n_r].value();
+      }
+    }
   }
 
   // Copy plasma parameters
@@ -340,6 +358,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   camera_num_pix = p_geodesic_integrator->camera_num_pix;
 
   // Make shallow copies of camera arrays
+  camera_loc = p_geodesic_integrator->camera_loc;
   camera_pos = p_geodesic_integrator->camera_pos;
   camera_dir = p_geodesic_integrator->camera_dir;
 
@@ -529,6 +548,13 @@ RadiationIntegrator::~RadiationIntegrator()
   delete[] render_x_vals;
   delete[] render_y_vals;
   delete[] render_z_vals;
+
+  // Free memory - adaptive input
+  delete[] adaptive_region_levels;
+  delete[] adaptive_region_x_min_vals;
+  delete[] adaptive_region_x_max_vals;
+  delete[] adaptive_region_y_min_vals;
+  delete[] adaptive_region_y_max_vals;
 
   // Free memory - sample data
   for (int level = 0; level <= adaptive_max_level; level++)

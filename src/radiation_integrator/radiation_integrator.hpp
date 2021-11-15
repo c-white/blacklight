@@ -55,6 +55,7 @@ struct RadiationIntegrator
 
   // Input data - camera parameters
   double camera_r;
+  double camera_width;
   int camera_resolution;
 
   // Input data - ray-tracing parameters
@@ -109,6 +110,12 @@ struct RadiationIntegrator
   double adaptive_abs_lapl_frac;
   double adaptive_rel_lapl_cut;
   double adaptive_rel_lapl_frac;
+  int adaptive_num_regions;
+  int *adaptive_region_levels = nullptr;
+  double *adaptive_region_x_min_vals = nullptr;
+  double *adaptive_region_x_max_vals = nullptr;
+  double *adaptive_region_y_min_vals = nullptr;
+  double *adaptive_region_y_max_vals = nullptr;
 
   // Input data - plasma parameters
   double plasma_mu;
@@ -178,6 +185,7 @@ struct RadiationIntegrator
   double camera_u_con[4], camera_u_cov[4];
   double camera_vert_con_c[4];
   int camera_num_pix;
+  Array<int> *camera_loc = nullptr;
   Array<double> *camera_pos = nullptr;
   Array<double> *camera_dir = nullptr;
 

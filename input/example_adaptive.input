@@ -1,6 +1,6 @@
 # General parameters
 model_type  = simulation  # type of model (simulation, formula)
-num_threads = 4           # number of threads to use in parallel
+num_threads = 1           # number of threads to use in parallel
 
 # Output parameters
 output_format = npz                          # format of output file (npz, npy, raw)
@@ -72,19 +72,25 @@ render_num_images = 0  # number of false-color renderings
 slow_light_on = false  # flag indicating slow light should be used
 
 # Adaptive parameters
-adaptive_max_level     = 1       # maximum number of adaptive levels beyond root
-adaptive_block_size    = 8       # linear size of adaptively refined blocks of pixels
-adaptive_frequency_num = 1       # index (1-indexed) of frequency to use for evaluating refinement
-adaptive_val_cut       = 0.0     # absolute value minimum for signaling refinement
-adaptive_val_frac      = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
-adaptive_abs_grad_cut  = 0.0     # absolute gradient minimum for signaling refinement
-adaptive_abs_grad_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
-adaptive_rel_grad_cut  = 0.0     # relative gradient minimum for signaling refinement
-adaptive_rel_grad_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
-adaptive_abs_lapl_cut  = 0.0     # absolute Laplacian minimum for signaling refinement
-adaptive_abs_lapl_frac = -1.0    # minimum fraction of cells exceeding cut for triggering refinement
-adaptive_rel_lapl_cut  = 1.0     # relative Laplacian minimum for signaling refinement
-adaptive_rel_lapl_frac = 0.25    # minimum fraction of cells exceeding cut for triggering refinement
+adaptive_max_level      = 1     # maximum number of adaptive levels beyond root
+adaptive_block_size     = 8     # linear size of adaptively refined blocks of pixels
+adaptive_frequency_num  = 1     # index (1-indexed) of frequency to use for evaluating refinement
+adaptive_val_cut        = 0.0   # absolute value minimum for signaling refinement
+adaptive_val_frac       = -1.0  # minimum fraction of cells exceeding cut for triggering refinement
+adaptive_abs_grad_cut   = 0.0   # absolute gradient minimum for signaling refinement
+adaptive_abs_grad_frac  = -1.0  # minimum fraction of cells exceeding cut for triggering refinement
+adaptive_rel_grad_cut   = 0.0   # relative gradient minimum for signaling refinement
+adaptive_rel_grad_frac  = -1.0  # minimum fraction of cells exceeding cut for triggering refinement
+adaptive_abs_lapl_cut   = 0.0   # absolute Laplacian minimum for signaling refinement
+adaptive_abs_lapl_frac  = -1.0  # minimum fraction of cells exceeding cut for triggering refinement
+adaptive_rel_lapl_cut   = 1.0   # relative Laplacian minimum for signaling refinement
+adaptive_rel_lapl_frac  = 0.25  # minimum fraction of cells exceeding cut for triggering refinement
+adaptive_num_regions    = 0     # number of forced refinement regions
+adaptive_region_1_level = 1     # region 1: minimum refinement level
+adaptive_region_1_x_min = -6.0  # region 1: left boundary in gravitational units
+adaptive_region_1_x_max = 6.0   # region 1: right boundary in gravitational units
+adaptive_region_1_y_min = -6.0  # region 1: bottom boundary in gravitational units
+adaptive_region_1_y_max = 6.0   # region 1: top boundary in gravitational units
 
 # Plasma parameters
 plasma_mu         = 0.5         # molecular weight of fluid in proton masses
