@@ -14,7 +14,7 @@
 // Functions for writing binary data
 void WriteBinary(std::ofstream *p_stream, int val);
 void WriteBinary(std::ofstream *p_stream, double val);
-void WriteBinary(std::ofstream *p_stream, double vals[], int num);
+void WriteBinary(std::ofstream *p_stream, double vals[], long int num);
 template<typename type> void WriteBinary(std::ofstream *p_stream, const Array<type> &array);
 
 // Functions for reading binary data

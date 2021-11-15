@@ -55,7 +55,7 @@ void WriteBinary(std::ofstream *p_stream, double val)
 //   vals: array of doubles to write
 //   num: number of elements
 // Outputs: (none)
-void WriteBinary(std::ofstream *p_stream, double vals[], int num)
+void WriteBinary(std::ofstream *p_stream, double vals[], long int num)
 {
   const char *data_pointer = reinterpret_cast<const char *>(vals);
   std::streamsize data_size =

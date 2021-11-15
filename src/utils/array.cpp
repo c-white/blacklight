@@ -156,8 +156,9 @@ template<typename type> void Array<type>::Allocate()
   if (allocated)
     throw BlacklightException("Attempting to reallocate array.");
   allocated = true;
-  n_tot = n1 * n2 * n3 * n4 * n5;
-  if (n_tot <= 0)
+  n_tot = static_cast<long int>(n1) * static_cast<long int>(n2) * static_cast<long int>(n3)
+      * static_cast<long int>(n4) * static_cast<long int>(n5);
+  if (n_tot <= 0l)
     throw BlacklightException("Attempting to allocate empty array.");
   data = new type[n_tot];
 }
@@ -288,11 +289,19 @@ template<typename type> type Array<type>::operator()(unsigned int i1) const
 //   returned value: element
 template<typename type> type Array<type>::operator()(int i2, int i1) const
 {
-  return data[i1 + n1 * i2];
+  long int i1_l = i1;
+  long int i2_l = i2;
+  long int n1_l = n1;
+  long int index = i1_l + n1_l * i2_l;
+  return data[index];
 }
 template<typename type> type Array<type>::operator()(unsigned int i2, unsigned int i1) const
 {
-  return data[i1 + static_cast<unsigned int>(n1) * i2];
+  unsigned long int i1_l = i1;
+  unsigned long int i2_l = i2;
+  unsigned long int n1_l = static_cast<unsigned long int>(n1);
+  unsigned long int index = i1_l + n1_l * i2_l;
+  return data[index];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -306,12 +315,24 @@ template<typename type> type Array<type>::operator()(unsigned int i2, unsigned i
 //   returned value: element
 template<typename type> type Array<type>::operator()(int i3, int i2, int i1) const
 {
-  return data[i1 + n1 * (i2 + n2 * i3)];
+  long int i1_l = i1;
+  long int i2_l = i2;
+  long int i3_l = i3;
+  long int n1_l = n1;
+  long int n2_l = n2;
+  long int index = i1_l + n1_l * (i2_l + n2_l * i3_l);
+  return data[index];
 }
 template<typename type> type Array<type>::operator()(unsigned int i3, unsigned int i2,
     unsigned int i1) const
 {
-  return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2) * i3)];
+  unsigned long int i1_l = i1;
+  unsigned long int i2_l = i2;
+  unsigned long int i3_l = i3;
+  unsigned long int n1_l = static_cast<unsigned long int>(n1);
+  unsigned long int n2_l = static_cast<unsigned long int>(n2);
+  unsigned long int index = i1_l + n1_l * (i2_l + n2_l * i3_l);
+  return data[index];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -325,13 +346,28 @@ template<typename type> type Array<type>::operator()(unsigned int i3, unsigned i
 //   returned value: element
 template<typename type> type Array<type>::operator()(int i4, int i3, int i2, int i1) const
 {
-  return data[i1 + n1 * (i2 + n2 * (i3 + n3 * i4))];
+  long int i1_l = i1;
+  long int i2_l = i2;
+  long int i3_l = i3;
+  long int i4_l = i4;
+  long int n1_l = n1;
+  long int n2_l = n2;
+  long int n3_l = n3;
+  long int index = i1_l + n1_l * (i2_l + n2_l * (i3_l + n3_l * i4_l));
+  return data[index];
 }
 template<typename type> type Array<type>::operator()(unsigned int i4, unsigned int i3,
     unsigned int i2, unsigned int i1) const
 {
-  return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
-      * (i3 + static_cast<unsigned int>(n3) * i4))];
+  unsigned long int i1_l = i1;
+  unsigned long int i2_l = i2;
+  unsigned long int i3_l = i3;
+  unsigned long int i4_l = i4;
+  unsigned long int n1_l = static_cast<unsigned long int>(n1);
+  unsigned long int n2_l = static_cast<unsigned long int>(n2);
+  unsigned long int n3_l = static_cast<unsigned long int>(n3);
+  unsigned long int index = i1_l + n1_l * (i2_l + n2_l * (i3_l + n3_l * i4_l));
+  return data[index];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -345,13 +381,32 @@ template<typename type> type Array<type>::operator()(unsigned int i4, unsigned i
 //   returned value: element
 template<typename type> type Array<type>::operator()(int i5, int i4, int i3, int i2, int i1) const
 {
-  return data[i1 + n1 * (i2 + n2 * (i3 + n3 * (i4 + n4 * i5)))];
+  long int i1_l = i1;
+  long int i2_l = i2;
+  long int i3_l = i3;
+  long int i4_l = i4;
+  long int i5_l = i5;
+  long int n1_l = n1;
+  long int n2_l = n2;
+  long int n3_l = n3;
+  long int n4_l = n4;
+  long int index = i1_l + n1_l * (i2_l + n2_l * (i3_l + n3_l * (i4_l + n4_l * i5_l)));
+  return data[index];
 }
 template<typename type> type Array<type>::operator()(unsigned int i5, unsigned int i4,
     unsigned int i3, unsigned int i2, unsigned int i1) const
 {
-  return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
-      * (i3 + static_cast<unsigned int>(n3) * (i4 + static_cast<unsigned int>(n4) * i5)))];
+  unsigned long int i1_l = i1;
+  unsigned long int i2_l = i2;
+  unsigned long int i3_l = i3;
+  unsigned long int i4_l = i4;
+  unsigned long int i5_l = i5;
+  unsigned long int n1_l = static_cast<unsigned long int>(n1);
+  unsigned long int n2_l = static_cast<unsigned long int>(n2);
+  unsigned long int n3_l = static_cast<unsigned long int>(n3);
+  unsigned long int n4_l = static_cast<unsigned long int>(n4);
+  unsigned long int index = i1_l + n1_l * (i2_l + n2_l * (i3_l + n3_l * (i4_l + n4_l * i5_l)));
+  return data[index];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -380,11 +435,19 @@ template<typename type> type &Array<type>::operator()(unsigned int i1)
 //   returned value: element
 template<typename type> type &Array<type>::operator()(int i2, int i1)
 {
-  return data[i1 + n1 * i2];
+  long int i1_l = i1;
+  long int i2_l = i2;
+  long int n1_l = n1;
+  long int index = i1_l + n1_l * i2_l;
+  return data[index];
 }
 template<typename type> type &Array<type>::operator()(unsigned int i2, unsigned int i1)
 {
-  return data[i1 + static_cast<unsigned int>(n1) * i2];
+  unsigned long int i1_l = i1;
+  unsigned long int i2_l = i2;
+  unsigned long int n1_l = static_cast<unsigned long int>(n1);
+  unsigned long int index = i1_l + n1_l * i2_l;
+  return data[index];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -398,12 +461,24 @@ template<typename type> type &Array<type>::operator()(unsigned int i2, unsigned 
 //   returned value: element
 template<typename type> type &Array<type>::operator()(int i3, int i2, int i1)
 {
-  return data[i1 + n1 * (i2 + n2 * i3)];
+  long int i1_l = i1;
+  long int i2_l = i2;
+  long int i3_l = i3;
+  long int n1_l = n1;
+  long int n2_l = n2;
+  long int index = i1_l + n1_l * (i2_l + n2_l * i3_l);
+  return data[index];
 }
 template<typename type> type &Array<type>::operator()(unsigned int i3, unsigned int i2,
     unsigned int i1)
 {
-  return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2) * i3)];
+  unsigned long int i1_l = i1;
+  unsigned long int i2_l = i2;
+  unsigned long int i3_l = i3;
+  unsigned long int n1_l = static_cast<unsigned long int>(n1);
+  unsigned long int n2_l = static_cast<unsigned long int>(n2);
+  unsigned long int index = i1_l + n1_l * (i2_l + n2_l * i3_l);
+  return data[index];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -417,13 +492,28 @@ template<typename type> type &Array<type>::operator()(unsigned int i3, unsigned 
 //   returned value: element
 template<typename type> type &Array<type>::operator()(int i4, int i3, int i2, int i1)
 {
-  return data[i1 + n1 * (i2 + n2 * (i3 + n3 * i4))];
+  long int i1_l = i1;
+  long int i2_l = i2;
+  long int i3_l = i3;
+  long int i4_l = i4;
+  long int n1_l = n1;
+  long int n2_l = n2;
+  long int n3_l = n3;
+  long int index = i1_l + n1_l * (i2_l + n2_l * (i3_l + n3_l * i4_l));
+  return data[index];
 }
 template<typename type> type &Array<type>::operator()(unsigned int i4, unsigned int i3,
     unsigned int i2, unsigned int i1)
 {
-  return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
-      * (i3 + static_cast<unsigned int>(n3) * i4))];
+  unsigned long int i1_l = i1;
+  unsigned long int i2_l = i2;
+  unsigned long int i3_l = i3;
+  unsigned long int i4_l = i4;
+  unsigned long int n1_l = static_cast<unsigned long int>(n1);
+  unsigned long int n2_l = static_cast<unsigned long int>(n2);
+  unsigned long int n3_l = static_cast<unsigned long int>(n3);
+  unsigned long int index = i1_l + n1_l * (i2_l + n2_l * (i3_l + n3_l * i4_l));
+  return data[index];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -437,13 +527,32 @@ template<typename type> type &Array<type>::operator()(unsigned int i4, unsigned 
 //   returned value: element
 template<typename type> type &Array<type>::operator()(int i5, int i4, int i3, int i2, int i1)
 {
-  return data[i1 + n1 * (i2 + n2 * (i3 + n3 * (i4 + n4 * i5)))];
+  long int i1_l = i1;
+  long int i2_l = i2;
+  long int i3_l = i3;
+  long int i4_l = i4;
+  long int i5_l = i5;
+  long int n1_l = n1;
+  long int n2_l = n2;
+  long int n3_l = n3;
+  long int n4_l = n4;
+  long int index = i1_l + n1_l * (i2_l + n2_l * (i3_l + n3_l * (i4_l + n4_l * i5_l)));
+  return data[index];
 }
 template<typename type> type &Array<type>::operator()(unsigned int i5, unsigned int i4,
     unsigned int i3, unsigned int i2, unsigned int i1)
 {
-  return data[i1 + static_cast<unsigned int>(n1) * (i2 + static_cast<unsigned int>(n2)
-      * (i3 + static_cast<unsigned int>(n3) * (i4 + static_cast<unsigned int>(n4) * i5)))];
+  unsigned long int i1_l = i1;
+  unsigned long int i2_l = i2;
+  unsigned long int i3_l = i3;
+  unsigned long int i4_l = i4;
+  unsigned long int i5_l = i5;
+  unsigned long int n1_l = static_cast<unsigned long int>(n1);
+  unsigned long int n2_l = static_cast<unsigned long int>(n2);
+  unsigned long int n3_l = static_cast<unsigned long int>(n3);
+  unsigned long int n4_l = static_cast<unsigned long int>(n4);
+  unsigned long int index = i1_l + n1_l * (i2_l + n2_l * (i3_l + n3_l * (i4_l + n4_l * i5_l)));
+  return data[index];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -526,7 +635,8 @@ template<typename type> void Array<type>::Slice(int dimension, int index_start, 
   {
     if (index_end > n2)
       throw BlacklightException("Attempting to slice outside array bounds.");
-    data += index_start * n1;
+    long int index_shift = static_cast<long int>(index_start) * static_cast<long int>(n1);
+    data += index_shift;
     n2 = index_end - index_start + 1;
     n3 = 1;
     n4 = 1;
@@ -538,7 +648,9 @@ template<typename type> void Array<type>::Slice(int dimension, int index_start, 
   {
     if (index_end > n3)
       throw BlacklightException("Attempting to slice outside array bounds.");
-    data += index_start * n2 * n1;
+    long int index_shift =
+        static_cast<long int>(index_start) * static_cast<long int>(n2) * static_cast<long int>(n1);
+    data += index_shift;
     n3 = index_end - index_start + 1;
     n4 = 1;
     n5 = 1;
@@ -549,7 +661,9 @@ template<typename type> void Array<type>::Slice(int dimension, int index_start, 
   {
     if (index_end > n4)
       throw BlacklightException("Attempting to slice outside array bounds.");
-    data += index_start * n3 * n2 * n1;
+    long int index_shift = static_cast<long int>(index_start) * static_cast<long int>(n3)
+        * static_cast<long int>(n2) * static_cast<long int>(n1);
+    data += index_shift;
     n4 = index_end - index_start + 1;
     n5 = 1;
   }
@@ -559,7 +673,9 @@ template<typename type> void Array<type>::Slice(int dimension, int index_start, 
   {
     if (index_end > n5)
       throw BlacklightException("Attempting to slice outside array bounds.");
-    data += index_start * n4 * n3 * n2 * n1;
+    long int index_shift = static_cast<long int>(index_start) * static_cast<long int>(n4)
+        * static_cast<long int>(n3) * static_cast<long int>(n2) * static_cast<long int>(n1);
+    data += index_shift;
     n4 = index_end - index_start + 1;
   }
 
@@ -568,7 +684,8 @@ template<typename type> void Array<type>::Slice(int dimension, int index_start, 
     throw BlacklightException("Attempting to slice at invalid dimension.");
 
   // Recalculate number of elements
-  n_tot = n1 * n2 * n3 * n4 * n5;
+  n_tot = static_cast<long int>(n1) * static_cast<long int>(n2) * static_cast<long int>(n3)
+      * static_cast<long int>(n4) * static_cast<long int>(n5);
   return;
 }
 
@@ -581,10 +698,10 @@ template<typename type> void Array<type>::Slice(int dimension, int index_start, 
 //   offset_dest: 1D index in destination array of first element to be overwritten
 //   num_elements: number of elements to copy
 // Outputs: (none)
-template<typename type> void Array<type>::CopyFrom(const Array<type> &other, int offset_src,
-    int offset_dest, int num_elements)
+template<typename type> void Array<type>::CopyFrom(const Array<type> &other, long int offset_src,
+    long int offset_dest, long int num_elements)
 {
-  if (offset_src < 0 or offset_dest < 0 or num_elements <= 0
+  if (offset_src < 0l or offset_dest < 0l or num_elements <= 0l
       or offset_src + num_elements > other.n_tot or offset_dest + num_elements > n_tot)
     throw BlacklightException("Invalid deep copy.");
   std::memcpy(data + offset_dest, other.data + offset_src,
@@ -602,7 +719,7 @@ template<typename type> void Array<type>::CopyFrom(const Array<type> &other, int
 template<typename type> void Array<type>::Zero()
 {
   if (allocated)
-    for (int n = 0; n < n_tot; n++)
+    for (long int n = 0; n < n_tot; n++)
       data[n] = static_cast<type>(0);
   return;
 }
@@ -617,7 +734,7 @@ template<typename type> void Array<type>::Zero()
 template<> void Array<float>::SetNaN()
 {
   if (allocated)
-    for (int n = 0; n < n_tot; n++)
+    for (long int n = 0; n < n_tot; n++)
       data[n] = std::numeric_limits<float>::quiet_NaN();
   return;
 }
@@ -632,7 +749,7 @@ template<> void Array<float>::SetNaN()
 template<> void Array<double>::SetNaN()
 {
   if (allocated)
-    for (int n = 0; n < n_tot; n++)
+    for (long int n = 0; n < n_tot; n++)
       data[n] = std::numeric_limits<double>::quiet_NaN();
   return;
 }

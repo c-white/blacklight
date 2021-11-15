@@ -25,7 +25,7 @@ template<typename type> struct Array
   // Data
   type *data;
   int n1, n2, n3, n4, n5;
-  int n_tot;
+  long int n_tot;
   bool allocated = false;
   bool is_copy = false;
   static constexpr int max_dims = 5;
@@ -68,7 +68,8 @@ template<typename type> struct Array
   // Functions - miscellaneous
   void Swap(Array<type> &other);
   void Slice(int dimension, int index_start, int index_end);
-  void CopyFrom(const Array<type> &other, int offset_src, int offset_dest, int num_elements);
+  void CopyFrom(const Array<type> &other, long int offset_src, long int offset_dest,
+      long int num_elements);
   void Zero();
   void SetNaN();
   std::size_t GetNumBytes() const;
