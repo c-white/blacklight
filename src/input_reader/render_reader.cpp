@@ -30,17 +30,20 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
   if (key == "num_images")
   {
     render_num_images = std::stoi(val);
-    render_num_features = new std::optional<int>[render_num_images.value()];
-    render_quantities = new std::optional<int> *[render_num_images.value()]();
-    render_types = new std::optional<RenderType> *[render_num_images.value()]();
-    render_min_vals = new std::optional<double> *[render_num_images.value()]();
-    render_max_vals = new std::optional<double> *[render_num_images.value()]();
-    render_thresh_vals = new std::optional<double> *[render_num_images.value()]();
-    render_tau_scales = new std::optional<double> *[render_num_images.value()]();
-    render_opacities = new std::optional<double> *[render_num_images.value()]();
-    render_x_vals = new std::optional<double> *[render_num_images.value()]();
-    render_y_vals = new std::optional<double> *[render_num_images.value()]();
-    render_z_vals = new std::optional<double> *[render_num_images.value()]();
+    if (render_num_images.value() > 0)
+    {
+      render_num_features = new std::optional<int>[render_num_images.value()];
+      render_quantities = new std::optional<int> *[render_num_images.value()]();
+      render_types = new std::optional<RenderType> *[render_num_images.value()]();
+      render_min_vals = new std::optional<double> *[render_num_images.value()]();
+      render_max_vals = new std::optional<double> *[render_num_images.value()]();
+      render_thresh_vals = new std::optional<double> *[render_num_images.value()]();
+      render_tau_scales = new std::optional<double> *[render_num_images.value()]();
+      render_opacities = new std::optional<double> *[render_num_images.value()]();
+      render_x_vals = new std::optional<double> *[render_num_images.value()]();
+      render_y_vals = new std::optional<double> *[render_num_images.value()]();
+      render_z_vals = new std::optional<double> *[render_num_images.value()]();
+    }
   }
 
   // Read number of features in a particular image

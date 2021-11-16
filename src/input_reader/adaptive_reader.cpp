@@ -27,11 +27,14 @@ void InputReader::ReadAdaptive(const std::string &key, const std::string &val)
   if (key == "num_regions")
   {
     adaptive_num_regions = std::stoi(val);
-    adaptive_region_levels = new std::optional<int>[adaptive_num_regions.value()];
-    adaptive_region_x_min_vals = new std::optional<double>[adaptive_num_regions.value()];
-    adaptive_region_x_max_vals = new std::optional<double>[adaptive_num_regions.value()];
-    adaptive_region_y_min_vals = new std::optional<double>[adaptive_num_regions.value()];
-    adaptive_region_y_max_vals = new std::optional<double>[adaptive_num_regions.value()];
+    if (adaptive_num_regions.value() > 0)
+    {
+      adaptive_region_levels = new std::optional<int>[adaptive_num_regions.value()];
+      adaptive_region_x_min_vals = new std::optional<double>[adaptive_num_regions.value()];
+      adaptive_region_x_max_vals = new std::optional<double>[adaptive_num_regions.value()];
+      adaptive_region_y_min_vals = new std::optional<double>[adaptive_num_regions.value()];
+      adaptive_region_y_max_vals = new std::optional<double>[adaptive_num_regions.value()];
+    }
   }
 
   // Read minimum refinement level for a particular region
