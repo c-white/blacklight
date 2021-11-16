@@ -1,6 +1,6 @@
 # General parameters
 model_type  = simulation  # type of model (simulation, formula)
-num_threads = 1           # number of threads to use in parallel
+num_threads = 4           # number of threads to use in parallel
 
 # Output parameters
 output_format = npz                          # format of output file (npz, npy, raw)
@@ -44,7 +44,7 @@ ray_terminate   = multiplicative  # termination condition (photon, multiplicativ
 ray_factor      = 1.005           # constant for terminate (only used for ray_terminate != photon)
 ray_integrator  = dp              # time integrator for geodesics (dp, rk4, rk2)
 ray_step        = 0.01            # step size control relative to radial coordinate
-ray_max_steps   = 3000            # maximum number of steps allowed for each geodesic
+ray_max_steps   = 2000            # maximum number of steps allowed for each geodesic
 ray_max_retries = 20              # maximum number of times a step can fail (dp)
 ray_tol_abs     = 1.0e-8          # absolute tolerance for taking full steps (dp)
 ray_tol_rel     = 1.0e-8          # relative tolerance for taking full steps (dp)
