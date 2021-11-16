@@ -155,7 +155,7 @@ def main(**kwargs):
   b_vals = np.where(b_vals <= 0.0031308, 12.92 * b_vals, 1.055 * b_vals ** (1.0 / 2.4) - 0.055)
   image = np.concatenate((r_vals[:,:,None], g_vals[:,:,None], b_vals[:,:,None]), axis=2)
   for level in range(1, max_level + 1):
-    r_vals = 3.2406 * image_adpative[level][0,...] - 1.5372 * image_adaptive[level][1,...] \
+    r_vals = 3.2406 * image_adaptive[level][0,...] - 1.5372 * image_adaptive[level][1,...] \
         - 0.4986 * image_adaptive[level][2,...]
     g_vals = -0.9689 * image_adaptive[level][0,...] + 1.8758 * image_adaptive[level][1,...] \
         + 0.0415 * image_adaptive[level][2,...]

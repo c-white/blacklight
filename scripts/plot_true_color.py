@@ -106,8 +106,6 @@ def main(**kwargs):
 
   # Calculate root grid in gravitational radii
   elif kwargs['axes'] == 'rg':
-    if width_rg is None:
-      raise RuntimeError('Must supply width.')
     half_width = 0.5 * width_rg
     scale_exponent = int('{0:24.16e}'.format(half_width).split('e')[1])
     if scale_exponent in (0, 1):
@@ -123,10 +121,6 @@ def main(**kwargs):
 
   # Calculate root grid in cm
   elif kwargs['axes'] == 'cm' or (kwargs['axes'] is None and distance_pc is None):
-    if width_rg is None:
-      raise RuntimeError('Must supply width.')
-    if mass_msun is None:
-      raise RuntimeError('Must supply mass.')
     rg = gg_msun * mass_msun / c ** 2
     half_width = 0.5 * width_rg * rg
     scale_exponent = int('{0:24.16e}'.format(half_width).split('e')[1])
@@ -143,10 +137,6 @@ def main(**kwargs):
 
   # Calculate root grid in muas
   else:
-    if width_rg is None:
-      raise RuntimeError('Must supply width.')
-    if mass_msun is None:
-      raise RuntimeError('Must supply mass.')
     if distance_pc is None:
       raise RuntimeError('Must supply distance.')
     rg = gg_msun * mass_msun / c ** 2
@@ -165,7 +155,7 @@ def main(**kwargs):
 
   # Calculate adaptive grid
   if max_level > 0:
-    num_blocks_root_linear = image.shape[-1] / image_adaptive[1].shape[-1]
+    num_blocks_root_linear = image.shape[0] / image_adaptive[1].shape[1]
     block_width = (extent[1] - extent[0]) / num_blocks_root_linear
     extent_adaptive = {}
     for level in range(1, max_level + 1):
