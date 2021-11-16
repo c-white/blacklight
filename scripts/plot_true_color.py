@@ -86,15 +86,32 @@ def main(**kwargs):
   for level in range(1, max_level + 1):
     intensity_adaptive[level] /= wavelengths_nm[:,None,None,None] ** 2
 
-  # Calculate RGB colors
+  # Calculate XYZ colors
   xyz = intensity_to_xyz(wavelengths_nm, intensity, True)
+  if max_level > 0:
+    xyz_adaptive = {}
+    for level in range(1, max_level + 1):
+      xyz_adaptive[level] = intensity_to_xyz(wavelengths_nm, intensity_adaptive[level], False)
+
+  # Normalize XYZ colors
+  if kwargs['y_max'] is None:
+    y_max = np.nanmax(xyz[1])
+    for level in range(1, max_level + 1):
+      y_max_adaptive = np.nanmax(xyz_adaptive[level][1])
+      y_max = np.nanmax((y_max, y_max_adaptive))
+  else:
+    y_max = kwargs['y_max']
+  xyz /= y_max
+  for level in range(1, max_level + 1):
+    xyz_adaptive[level] /= y_max
+
+  # Calculate RGB colors
   rgb = xyz_to_rgb(xyz)
   image = np.concatenate((rgb[0,:,:,None], rgb[1,:,:,None], rgb[2,:,:,None]), axis=2)
   if max_level > 0:
     image_adaptive = {}
     for level in range(1, max_level + 1):
-      xyz = intensity_to_xyz(wavelengths_nm, intensity_adaptive[level], False)
-      rgb = xyz_to_rgb(xyz)
+      rgb = xyz_to_rgb(xyz_adaptive[level])
       image_adaptive[level] = \
           np.concatenate((rgb[0,:,:,:,None], rgb[1,:,:,:,None], rgb[2,:,:,:,None]), axis=3)
 
@@ -440,7 +457,7 @@ def intensity_to_xyz(wavelengths, intensities, warn):
     z += weight * match_z[n] * intensity
 
   # Combine results
-  return np.array((x, y, z)) / np.nanmax(y)
+  return np.array((x, y, z))
 
 # Function for converting from XYZ to sRGB1
 def xyz_to_rgb(vals):
@@ -467,6 +484,7 @@ if __name__ == '__main__':
   parser.add_argument('-d', '--distance', type=float, help='distance to black hole in parsecs')
   parser.add_argument('-a', '--axes', choices=('pixel','rg','cm','muas'), help='axes labels')
   parser.add_argument('-l', '--max_level', type=int, help='maximum adaptive level to plot')
+  parser.add_argument('-y', '--y_max', type=float, help='fixed normalization of XYZ colors')
   parser.add_argument('--notex', action='store_true',
       help='flag indicating external tex distribution should not be used')
   args = parser.parse_args()
