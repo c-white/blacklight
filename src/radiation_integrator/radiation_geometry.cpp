@@ -15,7 +15,7 @@
 //   x, y, z: Cartesian Kerr-Schild coordinates
 // Outputs:
 //   returned value: radial spherical Kerr-Schild coordinate
-double RadiationIntegrator::RadialGeodesicCoordinate(double x, double y, double z)
+double RadiationIntegrator::RadialGeodesicCoordinate(double x, double y, double z) const
 {
   double a2 = bh_a * bh_a;
   double rr2 = x * x + y * y + z * z;
@@ -31,7 +31,7 @@ double RadiationIntegrator::RadialGeodesicCoordinate(double x, double y, double 
 //   *p_x1, *p_x2, *p_x3: Cartesian Kerr-Schild coordinates
 // Outputs:
 //   *p_x1, *p_x2, *p_x3: spherical Kerr-Schild coordinates
-void RadiationIntegrator::CKSToSKS(double *p_x1, double *p_x2, double *p_x3)
+void RadiationIntegrator::CKSToSKS(double *p_x1, double *p_x2, double *p_x3) const
 {
   double x = *p_x1;
   double y = *p_x2;
@@ -61,6 +61,7 @@ void RadiationIntegrator::CKSToSKS(double *p_x1, double *p_x2, double *p_x3)
 //   Assumes jacobian is allocated to be 4*4.
 //   Jacobian contains dx_geodesic^mu/dx_simulation^nu with indices (mu, nu).
 void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, double jacobian[4][4])
+    const
 {
   // Calculate Jacobian for spherical Kerr-Schild simulation
   if (simulation_coord == Coordinates::sph_ks)
@@ -129,6 +130,7 @@ void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, doubl
 //   Assumes gcov is allocated to be 4*4.
 //   Assumes Minkowski coordinates if ray_flat == true.
 void RadiationIntegrator::CovariantGeodesicMetric(double x, double y, double z, double gcov[4][4])
+    const
 {
   // Handle flat case
   if (ray_flat)
@@ -196,7 +198,7 @@ void RadiationIntegrator::CovariantGeodesicMetric(double x, double y, double z, 
 //   Assumes gcon is allocated to be 4*4.
 //   Assumes Minkowski coordinates if ray_flat == true.
 void RadiationIntegrator::ContravariantGeodesicMetric(double x, double y, double z,
-    double gcon[4][4])
+    double gcon[4][4]) const
 {
   // Handle flat case
   if (ray_flat)
@@ -264,7 +266,7 @@ void RadiationIntegrator::ContravariantGeodesicMetric(double x, double y, double
 //   Assumes connection is allocated to be 4*4*4.
 //   Assumes Minkowski coordinates if ray_flat == true.
 void RadiationIntegrator::GeodesicConnection(double x, double y, double z,
-    double connection[4][4][4])
+    double connection[4][4][4]) const
 {
   // Handle flat case
   if (ray_flat)
@@ -411,6 +413,7 @@ void RadiationIntegrator::GeodesicConnection(double x, double y, double z,
 // Notes:
 //   Assumes gcov is allocated to be 4*4.
 void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z, double gcov[4][4])
+    const
 {
   // Calculate spherical Kerr-Schild metric
   if (simulation_coord == Coordinates::sph_ks)
@@ -491,7 +494,7 @@ void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z
 // Notes:
 //   Assumes gcon is allocated to be 4*4.
 void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, double z,
-    double gcon[4][4])
+    double gcon[4][4]) const
 {
   // Calculate spherical Kerr-Schild metric
   if (simulation_coord == Coordinates::sph_ks)
@@ -587,7 +590,7 @@ void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, doub
 //       ordering of basis vectors.
 void RadiationIntegrator::Tetrad(const double ucon[4], const double ucov[4], const double kcon[4],
     const double kcov[4], const double up_con[4], const double gcov[4][4], const double gcon[4][4],
-    double tetrad[4][4])
+    double tetrad[4][4]) const
 {
   // Calculate fluid-frame frequency
   double omega = 0.0;
