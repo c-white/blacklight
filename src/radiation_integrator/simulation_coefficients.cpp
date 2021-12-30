@@ -36,7 +36,7 @@
 //       or image_emission_ave == true or image_tau_int == true or render_num_images > 0.
 //   References beta-dependent temperature ratio electron model from 2016 AA 586 A38 (E1).
 //   References entropy-based electron model from 2017 MNRAS 466 705 (E2).
-//   References arxiv:2108.10359v1 (M) for transfer coefficients.
+//   References 2021 ApJ 921 17 (M) for transfer coefficients.
 //   Transfer coefficients are calculated in their invariant forms, disagreeing with their
 //       definitions in (M) but agreeing with their usages in 2018 MNRAS 475 43.
 //   Faraday coefficients have additional trap for when Theta_e ~ 0 (K_2(1/Theta_e) ~ 0), where
@@ -50,7 +50,7 @@
 //       sample_bb3[adaptive_level] if image_polarization == false and adaptive_level > 0.
 void RadiationIntegrator::CalculateSimulationCoefficients()
 {
-  // Precalculate power-law values
+  // Precalculate power-law values (M 38-42)
   if (first_time and plasma_power_frac != 0.0)
   {
     double var_a = std::pow(3.0, plasma_p / 2.0) * (plasma_p - 1.0);
@@ -79,7 +79,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
     }
   }
 
-  // Precalculate kappa-distribution values
+  // Precalculate kappa-distribution values (M 43,44,46-48,50-54)
   if (first_time and plasma_kappa_frac != 0.0)
   {
     double var_a = 4.0 * Math::pi * std::tgamma(plasma_kappa - 4.0 / 3.0);
@@ -104,7 +104,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
     kappa_jj_x_i = 3.0 * std::pow(plasma_kappa, -1.5);
     kappa_aa_low = var_g * var_i * var_j / var_k * var_l * var_m;
     kappa_aa_high = var_n * var_o * var_p;
-    kappa_aa_x_i = std::pow(-1.75 + 1.6 * plasma_kappa, 0.86);
+    kappa_aa_x_i = std::pow(-1.75 + 1.6 * plasma_kappa, -0.86);
     if (image_light and image_polarization)
     {
       double var_q = 14.3 * std::pow(plasma_w, -0.928);
@@ -489,7 +489,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
             }
           }
 
-          // Calculate thermal synchrotron absorptivities from Kirchoff's law
+          // Calculate thermal synchrotron absorptivities from Kirchoff's law (M 31)
           if (plasma_thermal_frac != 0.0)
           {
             // Calculate absorptivities
@@ -569,7 +569,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
           {
             double var_a = std::pow(nu_cgs / (nu_c_cgs * sin_theta_b), -(plasma_p + 2.0) / 2.0);
             double coefficient = plasma_power_frac * n_e_cgs * Physics::e * Physics::e
-                / (Physics::m_e * Physics::c) * var_a;
+                / (Physics::m_e * Physics::c) * power_aa * var_a;
             alpha_i[adaptive_level](l,m,n) += coefficient;
             if (image_light and image_polarization)
             {
@@ -616,7 +616,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
               double var_d = std::pow(std::pow(sin_theta_b, -2.4) - 1.0, 0.48);
               double var_e = std::pow(xx, -0.35);
               double var_f = std::pow(std::pow(sin_theta_b, -2.5) - 1.0, 0.44);
-              double var_g = std::pow(plasma_kappa, -0.44) / plasma_w;
+              double var_g = 1.0 / std::sqrt(xx);
               double var_h = cos_theta_b >= 0.0 ? 1.0 : -1.0;
               double jj_q_low = coefficient_low * kappa_jj_low_q;
               double jj_v_low = coefficient_low * kappa_jj_low_v * var_d * var_e;
@@ -673,6 +673,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
                 * nu_c_cgs * sin2_theta_b / (Physics::m_e * Physics::c * nu_2_cgs);
             double var_b = plasma_kappa_frac * 2.0 * n_e_cgs * Physics::e * Physics::e * nu_c_cgs
                 * cos_theta_b / (Physics::m_e * Physics::c * nu_cgs);
+            double var_c = 1.0 / std::sqrt(xx);
             double rho_q_low = var_a * kappa_rho_q_low_a * (1.0 - std::exp(kappa_rho_q_low_b
                 * std::pow(xx, 0.84)) - std::sin(kappa_rho_q_low_c * xx)
                 * std::exp(kappa_rho_q_low_d * std::pow(xx, kappa_rho_q_low_e)));
@@ -680,9 +681,9 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
                 * std::pow(xx, 0.84)) - std::sin(kappa_rho_q_high_c * xx)
                 * std::exp(kappa_rho_q_high_d * std::pow(xx, kappa_rho_q_high_e)));
             double rho_v_low = kappa_rho_v * var_b * kappa_rho_v_low_a
-                * (1.0 - 0.17 * std::log(1.0 + kappa_rho_v_low_b / std::sqrt(xx)));
+                * (1.0 - 0.17 * std::log(1.0 + kappa_rho_v_low_b * var_c));
             double rho_v_high = kappa_rho_v * var_b * kappa_rho_v_high_a
-                * (1.0 - 0.17 * std::log(1.0 + kappa_rho_v_high_b / std::sqrt(xx)));
+                * (1.0 - 0.17 * std::log(1.0 + kappa_rho_v_high_b * var_c));
             rho_q[adaptive_level](l,m,n) +=
                 (1.0 - kappa_rho_frac) * rho_q_low + kappa_rho_frac * rho_q_high;
             rho_v[adaptive_level](l,m,n) +=
