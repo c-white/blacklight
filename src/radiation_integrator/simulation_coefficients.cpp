@@ -524,25 +524,25 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
                 * nu_c_cgs * nu_c_cgs * sin2_theta_b / (Physics::m_e * Physics::c * nu_2_cgs);
             double coefficient_v = plasma_thermal_frac * 2.0 * n_e_cgs * Physics::e * Physics::e
                 * nu_c_cgs * cos_theta_b / (Physics::m_e * Physics::c * nu_cgs);
-            double kk_0 = std::cyl_bessel_k(0.0, 1.0 / theta_e);
-            double kk_1 = std::cyl_bessel_k(1.0, 1.0 / theta_e);
-            double kk_2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
-            double xx = nu_cgs / nu_s_cgs;
-            double xx_neg_1_2 = 1.0 / std::sqrt(xx);
-            double var_a = 2.011 * std::exp(-19.78 * std::pow(xx, -0.5175));
-            double var_b = std::cos(39.89 * xx_neg_1_2) * std::exp(-70.16 * std::pow(xx, -0.6));
-            double var_c = 0.011 * std::exp(-1.69 * xx_neg_1_2);
-            double var_d = 0.003135 * std::pow(xx, 4.0 / 3.0);
-            double var_e = 0.5 * (1.0 + std::tanh(10.0 * std::log(0.6648 * xx_neg_1_2)));
-            double f_0 = var_a - var_b - var_c;
-            double f_m = f_0 + (var_c - var_d) * var_e;
-            double delta_jj_5 = 0.4379 * std::log(1.0 + 1.3414 * std::pow(xx, -0.7515));
-            double factor_q = f_m * (kk_1 / kk_2 + 6.0 * theta_e);
-            double factor_v = (kk_0 - delta_jj_5) / kk_2;
-            if (theta_e < theta_e_zero)
+            double factor_q = 0.0;
+            double factor_v = 1.0;
+            if (theta_e >= theta_e_zero)
             {
-              factor_q = 0.0;
-              factor_v = 1.0;
+              double kk_0 = std::cyl_bessel_k(0.0, 1.0 / theta_e);
+              double kk_1 = std::cyl_bessel_k(1.0, 1.0 / theta_e);
+              double kk_2 = std::cyl_bessel_k(2.0, 1.0 / theta_e);
+              double xx = nu_cgs / nu_s_cgs;
+              double xx_neg_1_2 = 1.0 / std::sqrt(xx);
+              double var_a = 2.011 * std::exp(-19.78 * std::pow(xx, -0.5175));
+              double var_b = std::cos(39.89 * xx_neg_1_2) * std::exp(-70.16 * std::pow(xx, -0.6));
+              double var_c = 0.011 * std::exp(-1.69 * xx_neg_1_2);
+              double var_d = 0.003135 * std::pow(xx, 4.0 / 3.0);
+              double var_e = 0.5 * (1.0 + std::tanh(10.0 * std::log(0.6648 * xx_neg_1_2)));
+              double f_0 = var_a - var_b - var_c;
+              double f_m = f_0 + (var_c - var_d) * var_e;
+              double delta_jj_5 = 0.4379 * std::log(1.0 + 1.3414 * std::pow(xx, -0.7515));
+              factor_q = f_m * (kk_1 / kk_2 + 6.0 * theta_e);
+              factor_v = (kk_0 - delta_jj_5) / kk_2;
             }
             rho_q[adaptive_level](l,m,n) = coefficient_q * factor_q;
             rho_v[adaptive_level](l,m,n) = coefficient_v * factor_v;
