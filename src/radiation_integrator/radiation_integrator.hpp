@@ -178,6 +178,7 @@ struct RadiationIntegrator
   const float fallback_bb3 = 0.0f;
 
   // Limiter data
+  const double theta_e_zero = 0.01;
   const double delta_tau_max = 100.0;
 
   // Camera data

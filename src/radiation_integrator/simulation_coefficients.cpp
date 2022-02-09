@@ -39,9 +39,9 @@
 //   References 2021 ApJ 921 17 (M) for transfer coefficients.
 //   Transfer coefficients are calculated in their invariant forms, disagreeing with their
 //       definitions in (M) but agreeing with their usages in 2018 MNRAS 475 43.
-//   Faraday coefficients have additional trap for when Theta_e ~ 0 (K_2(1/Theta_e) ~ 0), where
-//       rho_Q ~ 0 and rho_V is given by cold-plasma rotation measure considerations, but
-//       numerically one might get NaN, and the rho_V formula has the wrong asymptotic behavior.
+//   Faraday coefficients have additional trap for when Theta_e ~ 0, where rho_Q ~ 0 and rho_V is
+//       given by cold-plasma rotation measure considerations, but numerically one might get NaN,
+//       and the rho_V formula has the wrong asymptotic behavior.
 //   Tetrad is chosen such that j_U, alpha_U, rho_U = 0.
 //   Deallocates sample_cut[adaptive_level], sample_rho[adaptive_level],
 //       sample_pgas[adaptive_level], and sample_kappa[adaptive_level] if adaptive_level > 0.
@@ -539,10 +539,10 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
             double delta_jj_5 = 0.4379 * std::log(1.0 + 1.3414 * std::pow(xx, -0.7515));
             double factor_q = f_m * (kk_1 / kk_2 + 6.0 * theta_e);
             double factor_v = (kk_0 - delta_jj_5) / kk_2;
-            if (kk_2 == 0.0 or factor_v > 2.0 * Math::pi)
+            if (theta_e < theta_e_zero)
             {
               factor_q = 0.0;
-              factor_v = 2.0 * Math::pi;
+              factor_v = 1.0;
             }
             rho_q[adaptive_level](l,m,n) = coefficient_q * factor_q;
             rho_v[adaptive_level](l,m,n) = coefficient_v * factor_v;
