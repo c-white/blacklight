@@ -292,6 +292,7 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
           else
           {
             while (static_cast<double>(time[t_ind++]) > x0);
+            t_ind--;
             if (slow_interp)
             {
               t_ind--;
@@ -483,7 +484,8 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
     std::ostringstream message;
     message << "Snapshot " << snapshot << " at time " << snapshot_time;
     message << " requires significant extrapolation forward in time (" << num_extrap_camera_large;
-    message << "/" << num_pix << " pixels, by up to " << val_extrap_camera_large << ").";
+    message << "/" << num_pix << " pixels, by up to " << val_extrap_camera_large;
+    message << " gravitational times).";
     throw BlacklightException(message.str().c_str());
   }
   if (num_extrap_source_large > 0)
@@ -491,7 +493,8 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
     std::ostringstream message;
     message << "Snapshot " << snapshot << " at time " << snapshot_time;
     message << " requires significant extrapolation backward in time (" << num_extrap_source_large;
-    message << "/" << num_pix << " pixels, by up to " << val_extrap_source_large << ").";
+    message << "/" << num_pix << " pixels, by up to " << val_extrap_source_large;
+    message << " gravitational times).";
     throw BlacklightException(message.str().c_str());
   }
 
@@ -501,7 +504,8 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
     std::ostringstream message;
     message << "Snapshot " << snapshot << " at time " << snapshot_time;
     message << " requires moderate extrapolation forward in time (" << num_extrap_camera_small;
-    message << "/" << num_pix << " pixels, by up to " << val_extrap_camera_small << ").";
+    message << "/" << num_pix << " pixels, by up to " << val_extrap_camera_small;
+    message << " gravitational times).";
     BlacklightWarning(message.str().c_str());
   }
   if (num_extrap_source_small > 0)
@@ -509,7 +513,8 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
     std::ostringstream message;
     message << "Snapshot " << snapshot << " at time " << snapshot_time;
     message << " requires moderate extrapolation backward in time (" << num_extrap_source_small;
-    message << "/" << num_pix << " pixels, by up to " << val_extrap_source_small << ").";
+    message << "/" << num_pix << " pixels, by up to " << val_extrap_source_small;
+    message << " gravitational times).";
     BlacklightWarning(message.str().c_str());
   }
   return;
