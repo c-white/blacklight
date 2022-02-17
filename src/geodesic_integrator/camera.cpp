@@ -67,6 +67,7 @@ void GeodesicIntegrator::InitializeCamera()
     cam_x[1] = camera_r * sth * cph;
     cam_x[2] = camera_r * sth * sph;
   }
+  double z_sign = cam_x[3] >= 0.0 ? 1.0 : -1.0;
 
   // Calculate metric in spherical coordinates
   double a2 = bh_a * bh_a;
@@ -89,18 +90,63 @@ void GeodesicIntegrator::InitializeCamera()
   double g_con_th_th = 1.0 / sigma;
   double g_con_th_ph = 0.0;
   double g_con_ph_ph = 1.0 / (sigma * sth * sth);
-  if (ray_flat)
+  if (ray_flat and not camera_pole)
   {
     g_cov_r_r = 1.0;
+    g_cov_r_th = 0.0;
     g_cov_r_ph = 0.0;
     g_cov_th_th = r2;
+    g_cov_th_ph = 0.0;
     g_cov_ph_ph = r2 * sth * sth;
     g_con_t_t = -1.0;
     g_con_t_r = 0.0;
+    g_con_t_th = 0.0;
+    g_con_t_ph = 0.0;
     g_con_r_r = 1.0;
+    g_con_r_th = 0.0;
     g_con_r_ph = 0.0;
     g_con_th_th = 1.0 / r2;
+    g_con_th_ph = 0.0;
     g_con_ph_ph = 1.0 / (r2 * sth * sth);
+  }
+  if (camera_pole and not ray_flat)
+  {
+    double f = 2.0 * bh_m * camera_r / (r2 + a2);
+    g_cov_r_r = 1.0 + f;
+    g_cov_r_th = 0.0;
+    g_cov_r_ph = 0.0;
+    g_cov_th_th = 1.0;
+    g_cov_th_ph = 0.0;
+    g_cov_ph_ph = 1.0;
+    g_con_t_t = -1.0 - f;
+    g_con_t_r = z_sign * f;
+    g_con_t_th = 0.0;
+    g_con_t_ph = 0.0;
+    g_con_r_r = 1.0 - f;
+    g_con_r_th = 0.0;
+    g_con_r_ph = 0.0;
+    g_con_th_th = 1.0;
+    g_con_th_ph = 0.0;
+    g_con_ph_ph = 1.0;
+  }
+  if (ray_flat and camera_pole)
+  {
+    g_cov_r_r = 1.0;
+    g_cov_r_th = 0.0;
+    g_cov_r_ph = 0.0;
+    g_cov_th_th = 1.0;
+    g_cov_th_ph = 0.0;
+    g_cov_ph_ph = 1.0;
+    g_con_t_t = -1.0;
+    g_con_t_r = 0.0;
+    g_con_t_th = 0.0;
+    g_con_t_ph = 0.0;
+    g_con_r_r = 1.0;
+    g_con_r_th = 0.0;
+    g_con_r_ph = 0.0;
+    g_con_th_th = 1.0;
+    g_con_th_ph = 0.0;
+    g_con_ph_ph = 1.0;
   }
 
   // Calculate camera velocity in spherical coordinates
@@ -127,12 +173,29 @@ void GeodesicIntegrator::InitializeCamera()
   double dx_dph = sth * (-camera_r * sph - bh_a * cph);
   double dy_dph = sth * (camera_r * cph - bh_a * sph);
   double dz_dph = 0.0;
-  if (ray_flat)
+  if (ray_flat and not camera_pole)
   {
+    dx_dr = sth * cph;
+    dy_dr = sth * sph;
+    dz_dr = cth;
     dx_dth = camera_r * cth * cph;
     dy_dth = camera_r * cth * sph;
+    dz_dth = -camera_r * sth;
     dx_dph = -camera_r * sth * sph;
     dy_dph = camera_r * sth * cph;
+    dz_dph = 0.0;
+  }
+  if (camera_pole)
+  {
+    dx_dr = 0.0;
+    dy_dr = 0.0;
+    dz_dr = z_sign;
+    dx_dth = 1.0;
+    dy_dth = 0.0;
+    dz_dth = 0.0;
+    dx_dph = 0.0;
+    dy_dph = 1.0;
+    dz_dph = 0.0;
   }
 
   // Calculate camera velocity
@@ -175,7 +238,7 @@ void GeodesicIntegrator::InitializeCamera()
       -cam_x[2] / (cam_x[1] * cam_x[1] + cam_x[2] * cam_x[2]) + bh_a / (r2 + a2) * dr_dx;
   double dph_dy = cam_x[1] / (cam_x[1] * cam_x[1] + cam_x[2] * cam_x[2]) + bh_a / (r2 + a2) * dr_dy;
   double dph_dz = bh_a / (r2 + a2) * dr_dz;
-  if (ray_flat)
+  if (ray_flat and not camera_pole)
   {
     dr_dx = cam_x[1] / camera_r;
     dr_dy = cam_x[2] / camera_r;
@@ -185,6 +248,18 @@ void GeodesicIntegrator::InitializeCamera()
     dth_dz = -sth / camera_r;
     dph_dx = -sph / (camera_r * sth);
     dph_dy = cph / (camera_r * sth);
+    dph_dz = 0.0;
+  }
+  if (camera_pole)
+  {
+    dr_dx = 0.0;
+    dr_dy = 0.0;
+    dr_dz = z_sign;
+    dth_dx = 1.0;
+    dth_dy = 0.0;
+    dth_dz = 0.0;
+    dph_dx = 0.0;
+    dph_dy = 1.0;
     dph_dz = 0.0;
   }
 
