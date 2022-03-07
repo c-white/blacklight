@@ -414,7 +414,7 @@ void GeodesicIntegrator::IntegrateGeodesicsDP()
 //            ----------------
 //             1/6 1/3 1/3 1/6
 //   Step size in affine parameter is taken to be the product of user input ray_step with the radial
-//       coordinate.
+//       displacement above the horizon.
 void GeodesicIntegrator::IntegrateGeodesicsRK4()
 {
   // Allocate arrays
@@ -622,7 +622,7 @@ void GeodesicIntegrator::IntegrateGeodesicsRK4()
 //          ----------------
 //           1/2 1/2
 //   Step size in affine parameter is taken to be the product of user input ray_step with the radial
-//       coordinate.
+//       displacement above the horizon.
 void GeodesicIntegrator::IntegrateGeodesicsRK2()
 {
   // Allocate arrays
