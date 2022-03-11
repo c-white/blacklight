@@ -11,11 +11,11 @@
 
 // Blacklight headers
 #include "blacklight.hpp"
-#include "athena_reader/athena_reader.hpp"                // AthenaReader
 #include "geodesic_integrator/geodesic_integrator.hpp"    // GeodesicIntegrator
 #include "input_reader/input_reader.hpp"                  // InputReader
 #include "output_writer/output_writer.hpp"                // OutputWriter
 #include "radiation_integrator/radiation_integrator.hpp"  // RadiationIntegrator
+#include "simulation_reader/simulation_reader.hpp"        // SimulationReader
 #include "utils/exceptions.hpp"                           // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
   // Prepare pointers to objects
   InputReader *p_input_reader;
   GeodesicIntegrator *p_geodesic_integrator;
-  AthenaReader *p_athena_reader;
+  SimulationReader *p_simulation_reader;
   RadiationIntegrator *p_radiation_integrator;
   OutputWriter *p_output_writer;
 
@@ -109,10 +109,10 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  // Set up Athena++ reader
+  // Set up simulation reader
   try
   {
-    p_athena_reader = new AthenaReader(p_input_reader);
+    p_simulation_reader = new SimulationReader(p_input_reader);
   }
   catch (const BlacklightException &exception)
   {
@@ -121,12 +121,12 @@ int main(int argc, char *argv[])
   }
   catch (const std::bad_optional_access &exception)
   {
-    std::cout << "Error: AthenaReader unable to find all needed values in input file.\n";
+    std::cout << "Error: SimulationReader unable to find all needed values in input file.\n";
     return 1;
   }
   catch (...)
   {
-    std::cout << "Error: Could not set up AthenaReader.\n";
+    std::cout << "Error: Could not set up SimulationReader.\n";
     return 1;
   }
 
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
   try
   {
     p_radiation_integrator =
-        new RadiationIntegrator(p_input_reader, p_geodesic_integrator, p_athena_reader);
+        new RadiationIntegrator(p_input_reader, p_geodesic_integrator, p_simulation_reader);
   }
   catch (const BlacklightException &exception)
   {
@@ -177,10 +177,10 @@ int main(int argc, char *argv[])
   // Go through runs
   for (int n = 0; n < num_runs; n++)
   {
-    // Read Athena++ file
+    // Read simulation file
     try
     {
-      time_read += p_athena_reader->Read(n);
+      time_read += p_simulation_reader->Read(n);
     }
     catch (const BlacklightException &exception)
     {
@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
     }
     catch (...)
     {
-      std::cout << "Error: Could not read Athena++ file.\n";
+      std::cout << "Error: Could not read simulation file.\n";
       return 1;
     }
 
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
   // Free memory
   delete p_output_writer;
   delete p_radiation_integrator;
-  delete p_athena_reader;
+  delete p_simulation_reader;
   delete p_geodesic_integrator;
   delete p_input_reader;
 

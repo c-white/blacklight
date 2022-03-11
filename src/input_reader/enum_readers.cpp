@@ -17,7 +17,7 @@
 //   returned value: valid ModelType
 // Notes:
 //   Valid options:
-//     "simulation": Athena++ output
+//     "simulation": GRMHD simulation output
 //     "formula": parameterized formula from 2020 ApJ 897 148
 ModelType InputReader::ReadModelType(const std::string &string)
 {
@@ -51,6 +51,27 @@ OutputFormat InputReader::ReadOutputFormat(const std::string &string)
     return OutputFormat::raw;
   else
     throw BlacklightException("Unknown string used for OutputFormat value.");
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function for interpreting strings as SimulationFormat enums
+// Inputs:
+//   string: string to be interpreted
+// Outputs:
+//   returned value: valid SimulationFormat
+// Notes:
+//   Valid options:
+//     "athena": Athena++
+//     "harm": certain variants of the HARM code
+SimulationFormat InputReader::ReadSimulationFormat(const std::string &string)
+{
+  if (string == "athena")
+    return SimulationFormat::athena;
+  else if (string == "harm")
+    return SimulationFormat::harm;
+  else
+    throw BlacklightException("Unknown string used for SimulationFormat value.");
 }
 
 //--------------------------------------------------------------------------------------------------

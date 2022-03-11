@@ -10,10 +10,10 @@
 
 // Blacklight headers
 #include "radiation_integrator.hpp"
-#include "../blacklight.hpp"                   // enums
-#include "../athena_reader/athena_reader.hpp"  // AthenaReader
-#include "../utils/array.hpp"                  // Array
-#include "../utils/exceptions.hpp"             // BlacklightException, BlacklightWarning
+#include "../blacklight.hpp"                           // enums
+#include "../simulation_reader/simulation_reader.hpp"  // SimulationReader
+#include "../utils/array.hpp"                          // Array
+#include "../utils/exceptions.hpp"                     // BlacklightException, BlacklightWarning
 
 //--------------------------------------------------------------------------------------------------
 
@@ -21,45 +21,45 @@
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Acquires values from AthenaReader that were not available at construction.
+//   Acquires values from SimulationReader that were not available at construction.
 void RadiationIntegrator::ObtainGridData()
 {
   // Copy grid metadata
   if (simulation_coord == Coordinates::sph_ks and simulation_interp and simulation_block_interp)
-    n_3_root = p_athena_reader->n_3_root;
+    n_3_root = p_simulation_reader->n_3_root;
 
   // Copy grid layout
   if (simulation_interp and simulation_block_interp)
   {
-    levels = p_athena_reader->levels;
-    locations = p_athena_reader->locations;
+    levels = p_simulation_reader->levels;
+    locations = p_simulation_reader->locations;
   }
 
   // Copy coordinates
-  x1f = p_athena_reader->x1f;
-  x2f = p_athena_reader->x2f;
-  x3f = p_athena_reader->x3f;
-  x1v = p_athena_reader->x1v;
-  x2v = p_athena_reader->x2v;
-  x3v = p_athena_reader->x3v;
+  x1f = p_simulation_reader->x1f;
+  x2f = p_simulation_reader->x2f;
+  x3f = p_simulation_reader->x3f;
+  x1v = p_simulation_reader->x1v;
+  x2v = p_simulation_reader->x2v;
+  x3v = p_simulation_reader->x3v;
 
   // Copy time
-  time = p_athena_reader->time;
+  time = p_simulation_reader->time;
 
   // Copy cell values
-  grid_prim = p_athena_reader->prim;
-  grid_bb = p_athena_reader->bb;
+  grid_prim = p_simulation_reader->prim;
+  grid_bb = p_simulation_reader->bb;
 
   // Copy indices
-  ind_rho = p_athena_reader->ind_rho;
-  ind_pgas = p_athena_reader->ind_pgas;
-  ind_kappa = p_athena_reader->ind_kappa;
-  ind_uu1 = p_athena_reader->ind_uu1;
-  ind_uu2 = p_athena_reader->ind_uu2;
-  ind_uu3 = p_athena_reader->ind_uu3;
-  ind_bb1 = p_athena_reader->ind_bb1;
-  ind_bb2 = p_athena_reader->ind_bb2;
-  ind_bb3 = p_athena_reader->ind_bb3;
+  ind_rho = p_simulation_reader->ind_rho;
+  ind_pgas = p_simulation_reader->ind_pgas;
+  ind_kappa = p_simulation_reader->ind_kappa;
+  ind_uu1 = p_simulation_reader->ind_uu1;
+  ind_uu2 = p_simulation_reader->ind_uu2;
+  ind_uu3 = p_simulation_reader->ind_uu3;
+  ind_bb1 = p_simulation_reader->ind_bb1;
+  ind_bb2 = p_simulation_reader->ind_bb2;
+  ind_bb3 = p_simulation_reader->ind_bb3;
 
   // Calculate maximum refinement level and number of blocks in x^3-direction at each level
   if (simulation_coord == Coordinates::sph_ks and simulation_interp and simulation_block_interp)

@@ -1,4 +1,4 @@
-// Blacklight Athena++ reader - HDF5 general structure interface
+// Blacklight simulation reader - HDF5 general structure interface
 
 // C++ headers
 #include <cstring>  // memcpy
@@ -7,7 +7,7 @@
 #include <string>   // string
 
 // Blacklight headers
-#include "athena_reader.hpp"
+#include "simulation_reader.hpp"
 #include "../utils/array.hpp"       // Array
 #include "../utils/exceptions.hpp"  // BlacklightException
 
@@ -23,7 +23,7 @@
 //   Must have superblock version 0.
 //   Must have size of offsets 8.
 //   Must have size of lengths 8.
-void AthenaReader::ReadHDF5Superblock()
+void SimulationReader::ReadHDF5Superblock()
 {
   // Check format signature
   data_stream.seekg(0);
@@ -73,7 +73,7 @@ void AthenaReader::ReadHDF5Superblock()
 //   Assumes stream pointer is already set.
 //   Must have size of offsets 8.
 //   Must be run on little-endian machine.
-void AthenaReader::ReadHDF5RootGroupSymbolTableEntry()
+void SimulationReader::ReadHDF5RootGroupSymbolTableEntry()
 {
   // Skip reading link name offset
   data_stream.ignore(8);
@@ -104,7 +104,7 @@ void AthenaReader::ReadHDF5RootGroupSymbolTableEntry()
 //   Assumes root_name_heap_address set.
 //   Changes stream pointer.
 //   Must have size of offsets 8.
-void AthenaReader::ReadHDF5RootHeap()
+void SimulationReader::ReadHDF5RootHeap()
 {
   // Check local heap signature and version
   data_stream.seekg(static_cast<std::streamoff>(root_name_heap_address));
@@ -139,7 +139,7 @@ void AthenaReader::ReadHDF5RootHeap()
 //   Must have attribute message version 1.
 //   Must have size of offsets 8.
 //   Must be run on little-endian machine.
-void AthenaReader::ReadHDF5RootObjectHeader()
+void SimulationReader::ReadHDF5RootObjectHeader()
 {
   // Check object header version
   data_stream.seekg(static_cast<std::streamoff>(root_object_header_address));
@@ -294,7 +294,7 @@ void AthenaReader::ReadHDF5RootObjectHeader()
 //   Must have only 1 level of children.
 //   Must have size of offsets 8.
 //   Must be run on little-endian machine.
-void AthenaReader::ReadHDF5Tree()
+void SimulationReader::ReadHDF5Tree()
 {
   // Check signature
   data_stream.seekg(static_cast<std::streamoff>(btree_address));
@@ -349,7 +349,7 @@ void AthenaReader::ReadHDF5Tree()
 //   Must have attribute message version 1.
 //   Must have size of offsets 8.
 //   Must be run on little-endian machine.
-void AthenaReader::ReadHDF5FloatAttribute(const char *attribute_name, float *p_val)
+void SimulationReader::ReadHDF5FloatAttribute(const char *attribute_name, float *p_val)
 {
   // Check object header version
   data_stream.seekg(static_cast<std::streamoff>(root_object_header_address));

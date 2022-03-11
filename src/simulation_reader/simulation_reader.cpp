@@ -1,4 +1,4 @@
-// Blacklight Athena++ reader
+// Blacklight simulation reader
 
 // C++ headers
 #include <cstdio>    // snprintf
@@ -12,7 +12,7 @@
 #include <omp.h>  // omp_get_wtime
 
 // Blacklight headers
-#include "athena_reader.hpp"
+#include "simulation_reader.hpp"
 #include "../blacklight.hpp"                 // enums
 #include "../input_reader/input_reader.hpp"  // InputReader
 #include "../utils/array.hpp"                // Array
@@ -20,13 +20,13 @@
 
 //--------------------------------------------------------------------------------------------------
 
-// Athena++ reader constructor
+// Simulation reader constructor
 // Inputs:
 //   p_input_reader_: pointer to object containing input parameters
 // Notes:
 //   File is not opened for writing until Read() function is called because the file name might be
 //       reformatted after this constructor is called.
-AthenaReader::AthenaReader(const InputReader *p_input_reader_)
+SimulationReader::SimulationReader(const InputReader *p_input_reader_)
   : p_input_reader(p_input_reader_)
 {
   // Copy general input data
@@ -99,8 +99,8 @@ AthenaReader::AthenaReader(const InputReader *p_input_reader_)
 
 //--------------------------------------------------------------------------------------------------
 
-// Athena++ reader destructor
-AthenaReader::~AthenaReader()
+// Simulation reader destructor
+SimulationReader::~SimulationReader()
 {
   if (num_dataset_names > 0)
     delete[] dataset_names;
@@ -123,7 +123,7 @@ AthenaReader::~AthenaReader()
 
 //--------------------------------------------------------------------------------------------------
 
-// Athena++ reader read and initialize function
+// Simulation reader read and initialize function
 // Inputs:
 //   snapshot: index (starting at 0) of which snapshot is about to be prepared
 // Outputs:
@@ -136,7 +136,7 @@ AthenaReader::~AthenaReader()
 //   Initializes all member objects.
 //   Implements a subset of the HDF5 standard:
 //       portal.hdfgroup.org/display/HDF5/File+Format+Specification
-double AthenaReader::Read(int snapshot)
+double SimulationReader::Read(int snapshot)
 {
   // Only proceed if needed
   if (model_type != ModelType::simulation)
@@ -293,7 +293,7 @@ double AthenaReader::Read(int snapshot)
 //   file_number: number of simulation file to construct
 // Outputs:
 //   returned_value: string containing formatted filename
-std::string AthenaReader::FormatFilename(int file_number)
+std::string SimulationReader::FormatFilename(int file_number)
 {
   // Locate braces
   std::string::size_type simulation_pos_open = simulation_file.find_first_of('{');
@@ -336,7 +336,7 @@ std::string AthenaReader::FormatFilename(int file_number)
 // Outputs: (none)
 // Notes:
 //   Assumes metadata set.
-void AthenaReader::VerifyVariables()
+void SimulationReader::VerifyVariables()
 {
   // Check that array of all primitives is present
   int ind_prim;

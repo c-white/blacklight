@@ -42,13 +42,14 @@ struct InputReader
   std::optional<std::string> checkpoint_sample_file;
 
   // Data - simulation parameters
+  std::optional<SimulationFormat> simulation_format;
   std::optional<std::string> simulation_file;
   std::optional<bool> simulation_multiple;
   std::optional<int> simulation_start;
   std::optional<int> simulation_end;
   std::optional<Coordinates> simulation_coord;
-  std::optional<double> simulation_m_msun;
   std::optional<double> simulation_a;
+  std::optional<double> simulation_m_msun;
   std::optional<double> simulation_rho_cgs;
   std::optional<std::string> simulation_kappa_name;
   std::optional<bool> simulation_interp;
@@ -217,6 +218,7 @@ struct InputReader
   // Internal functions - enum_readers.cpp
   ModelType ReadModelType(const std::string &string);
   OutputFormat ReadOutputFormat(const std::string &string);
+  SimulationFormat ReadSimulationFormat(const std::string &string);
   Coordinates ReadCoordinates(const std::string &string);
   Camera ReadCamera(const std::string &string);
   RayTerminate ReadRayTerminate(const std::string &string);

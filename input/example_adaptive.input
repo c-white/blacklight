@@ -14,11 +14,11 @@ checkpoint_sample_save   = false  # flag indicating simulation sampling should b
 checkpoint_sample_load   = false  # flag indicating simulation sampling should be loaded
 
 # Simulation parameters
-simulation_file         = data/mock.athdf  # file containing Athena++ data dump if needed
+simulation_file         = data/mock.athdf  # file containing data dump
 simulation_multiple     = false            # flag for processing multiple files
 simulation_coord        = sph_ks           # simulation coordinates (sph_ks, cart_ks)
-simulation_m_msun       = 4.152e6          # black hole mass in solar masses
 simulation_a            = 0.0              # dimensionless black hole spin
+simulation_m_msun       = 4.152e6          # black hole mass in solar masses
 simulation_rho_cgs      = 1.0e-16          # unit code density in g/cm^3
 simulation_interp       = true             # flag indicating interpolation should be used
 simulation_block_interp = false            # flag indicating interpolation should cross blocks

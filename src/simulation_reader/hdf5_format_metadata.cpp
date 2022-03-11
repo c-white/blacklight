@@ -1,4 +1,4 @@
-// Blacklight Athena++ reader - HDF5 interface for reading metadata
+// Blacklight simulation reader - HDF5 interface for reading metadata
 
 // C++ headers
 #include <cstring>  // memcpy, size_t
@@ -7,7 +7,7 @@
 #include <string>   // getline, string
 
 // Blacklight headers
-#include "athena_reader.hpp"
+#include "simulation_reader.hpp"
 #include "../utils/exceptions.hpp"  // BlacklightException
 
 //--------------------------------------------------------------------------------------------------
@@ -23,7 +23,7 @@
 //   Must have symbol table entry cache type 0.
 //   Must have size of offsets 8.
 //   Must be run on little-endian machine.
-unsigned long int AthenaReader::ReadHDF5DatasetHeaderAddress(const char *name)
+unsigned long int SimulationReader::ReadHDF5DatasetHeaderAddress(const char *name)
 {
   // Go through children
   for (int n = 0; n < num_children; n++)
@@ -91,7 +91,7 @@ unsigned long int AthenaReader::ReadHDF5DatasetHeaderAddress(const char *name)
 //   Must have data layout message version 3.
 //   Must have size of offsets 8.
 //   Must be run on little-endian machine.
-void AthenaReader::ReadHDF5DataObjectHeader(unsigned long int data_object_header_address,
+void SimulationReader::ReadHDF5DataObjectHeader(unsigned long int data_object_header_address,
     unsigned char **p_datatype_raw, unsigned char **p_dataspace_raw, unsigned char **p_data_raw)
 {
   // Check object header version
@@ -218,7 +218,7 @@ void AthenaReader::ReadHDF5DataObjectHeader(unsigned long int data_object_header
 // Notes:
 //   Must not have permutation indices.
 //   Must be run on little-endian machine.
-void AthenaReader::ReadHDF5DataspaceDims(const unsigned char *dataspace_raw,
+void SimulationReader::ReadHDF5DataspaceDims(const unsigned char *dataspace_raw,
     unsigned long int **p_dims, int *p_num_dims)
 {
   // Read and check metadata

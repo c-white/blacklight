@@ -127,6 +127,8 @@ int InputReader::Read()
       checkpoint_sample_file = val;
 
     // Store simulation parameters
+    else if (key == "simulation_format")
+      simulation_format = ReadSimulationFormat(val);
     else if (key == "simulation_file")
       simulation_file = val;
     else if (key == "simulation_multiple")
@@ -137,10 +139,10 @@ int InputReader::Read()
       simulation_end = std::stoi(val);
     else if (key == "simulation_coord")
       simulation_coord = ReadCoordinates(val);
-    else if (key == "simulation_m_msun")
-      simulation_m_msun = std::stod(val);
     else if (key == "simulation_a")
       simulation_a = std::stod(val);
+    else if (key == "simulation_m_msun")
+      simulation_m_msun = std::stod(val);
     else if (key == "simulation_rho_cgs")
       simulation_rho_cgs = std::stod(val);
     else if (key == "simulation_kappa_name")

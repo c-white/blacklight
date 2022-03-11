@@ -5,9 +5,9 @@
 
 // Blacklight headers
 #include "../blacklight.hpp"                               // enums
-#include "../athena_reader/athena_reader.hpp"              // AthenaReader
 #include "../geodesic_integrator/geodesic_integrator.hpp"  // GeodesicIntegrator
 #include "../input_reader/input_reader.hpp"                // InputReader
+#include "../simulation_reader/simulation_reader.hpp"      // SimulationReader
 #include "../utils/array.hpp"                              // Array
 
 //--------------------------------------------------------------------------------------------------
@@ -17,13 +17,14 @@ struct RadiationIntegrator
 {
   // Constructors and destructor
   RadiationIntegrator(const InputReader *p_input_reader,
-      const GeodesicIntegrator *p_geodesic_integrator, const AthenaReader *p_athena_reader_);
+      const GeodesicIntegrator *p_geodesic_integrator,
+      const SimulationReader *p_simulation_reader_);
   RadiationIntegrator(const RadiationIntegrator &source) = delete;
   RadiationIntegrator &operator=(const RadiationIntegrator &source) = delete;
   ~RadiationIntegrator();
 
   // Pointers to other objects
-  const AthenaReader *p_athena_reader;
+  const SimulationReader *p_simulation_reader;
 
   // Input data - general
   ModelType model_type;

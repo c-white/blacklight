@@ -10,9 +10,9 @@
 // Blacklight headers
 #include "radiation_integrator.hpp"
 #include "../blacklight.hpp"                               // Physics, enums
-#include "../athena_reader/athena_reader.hpp"              // AthenaReader
 #include "../geodesic_integrator/geodesic_integrator.hpp"  // GeodesicIntegrator
 #include "../input_reader/input_reader.hpp"                // InputReader
+#include "../simulation_reader/simulation_reader.hpp"      // SimulationReader
 #include "../utils/array.hpp"                              // Array
 #include "../utils/exceptions.hpp"                         // BlacklightException, BlacklightWarning
 
@@ -22,10 +22,10 @@
 // Inputs:
 //   p_input_reader: pointer to object containing input parameters
 //   p_geodesic_integrator: pointer to object containing ray data
-//   p_athena_reader_: pointer to object containing raw simulation data
+//   p_simulation_reader_: pointer to object containing raw simulation data
 RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
-    const GeodesicIntegrator *p_geodesic_integrator, const AthenaReader *p_athena_reader_)
-  : p_athena_reader(p_athena_reader_)
+    const GeodesicIntegrator *p_geodesic_integrator, const SimulationReader *p_simulation_reader_)
+  : p_simulation_reader(p_simulation_reader_)
 {
   // Copy general input data
   model_type = p_input_reader->model_type.value();
@@ -405,7 +405,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
 
   // Copy slow-light extrapolation tolerance
   if (slow_light_on)
-    extrapolation_tolerance = p_athena_reader->extrapolation_tolerance;
+    extrapolation_tolerance = p_simulation_reader->extrapolation_tolerance;
 
   // Set and calculate geometry data
   if (model_type == ModelType::simulation)

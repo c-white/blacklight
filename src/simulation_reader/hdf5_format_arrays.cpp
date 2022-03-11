@@ -1,4 +1,4 @@
-// Blacklight Athena++ reader - HDF5 interface for reading arrays
+// Blacklight simulation reader - HDF5 interface for reading arrays
 
 // C++ headers
 #include <cstring>  // memcpy
@@ -8,7 +8,7 @@
 #include <omp.h>  // pragmas
 
 // Blacklight headers
-#include "athena_reader.hpp"
+#include "simulation_reader.hpp"
 #include "../utils/array.hpp"       // Array
 #include "../utils/exceptions.hpp"  // BlacklightException
 
@@ -21,7 +21,7 @@
 //   int_array: array allocated and set (indirectly)
 // Notes:
 //   Changes stream pointer.
-void AthenaReader::ReadHDF5IntArray(const char *name, Array<int> &int_array)
+void SimulationReader::ReadHDF5IntArray(const char *name, Array<int> &int_array)
 {
   // Locate header
   unsigned long int header_address = ReadHDF5DatasetHeaderAddress(name);
@@ -47,7 +47,7 @@ void AthenaReader::ReadHDF5IntArray(const char *name, Array<int> &int_array)
 //   float_array: array allocated and set (indirectly)
 // Notes:
 //   Changes stream pointer.
-void AthenaReader::ReadHDF5FloatArray(const char *name, Array<float> &float_array)
+void SimulationReader::ReadHDF5FloatArray(const char *name, Array<float> &float_array)
 {
   // Locate header
   unsigned long int header_address = ReadHDF5DatasetHeaderAddress(name);
@@ -78,7 +78,7 @@ void AthenaReader::ReadHDF5FloatArray(const char *name, Array<float> &float_arra
 // Notes:
 //   Must have datatype version 1.
 //   Must be a 1D array.
-void AthenaReader::SetHDF5StringArray(const unsigned char *datatype_raw,
+void SimulationReader::SetHDF5StringArray(const unsigned char *datatype_raw,
     const unsigned char *dataspace_raw, const unsigned char *data_raw, bool allocate,
     std::string **p_string_array, int *p_array_length)
 {
@@ -146,7 +146,7 @@ void AthenaReader::SetHDF5StringArray(const unsigned char *datatype_raw,
 //   Must have trivial padding.
 //   Must have no offset.
 //   Must be run on little-endian machine.
-void AthenaReader::SetHDF5IntArray(const unsigned char *datatype_raw,
+void SimulationReader::SetHDF5IntArray(const unsigned char *datatype_raw,
     const unsigned char *dataspace_raw, const unsigned char *data_raw, Array<int> &int_array)
 {
   // Check datatype version and class
@@ -251,7 +251,7 @@ void AthenaReader::SetHDF5IntArray(const unsigned char *datatype_raw,
 //   Must have datatype version 1.
 //   Must be standard 4-byte floats.
 //   Must be run on little-endian machine.
-void AthenaReader::SetHDF5FloatArray(const unsigned char *datatype_raw,
+void SimulationReader::SetHDF5FloatArray(const unsigned char *datatype_raw,
     const unsigned char *dataspace_raw, const unsigned char *data_raw, Array<float> &float_array)
 {
   // Check datatype version and class

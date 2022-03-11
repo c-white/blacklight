@@ -1,7 +1,7 @@
-// Blacklight Athena++ reader header
+// Blacklight simulation reader header
 
-#ifndef ATHENA_READER_H_
-#define ATHENA_READER_H_
+#ifndef SIMULATION_READER_H_
+#define SIMULATION_READER_H_
 
 // C++ headers
 #include <fstream>  // ifstream
@@ -14,14 +14,14 @@
 
 //--------------------------------------------------------------------------------------------------
 
-// Athena++ reader
-struct AthenaReader
+// Simulation reader
+struct SimulationReader
 {
   // Constructors and destructor
-  AthenaReader(const InputReader *p_input_reader_);
-  AthenaReader(const AthenaReader &source) = delete;
-  AthenaReader &operator=(const AthenaReader &source) = delete;
-  ~AthenaReader();
+  SimulationReader(const InputReader *p_input_reader_);
+  SimulationReader(const SimulationReader &source) = delete;
+  SimulationReader &operator=(const SimulationReader &source) = delete;
+  ~SimulationReader();
 
   // Pointers to other objects
   const InputReader *p_input_reader;
@@ -83,7 +83,7 @@ struct AthenaReader
   // External function
   double Read(int snapshot);
 
-  // Internal functions - athena_reader.cpp
+  // Internal functions - simulation_reader.cpp
   std::string FormatFilename(int file_number);
   void VerifyVariables();
 
