@@ -36,7 +36,7 @@ namespace CellValues
 enum struct ModelType {simulation, formula};
 enum struct OutputFormat {npz, npy, raw};
 enum struct SimulationFormat {athena, harm};
-enum struct Coordinates {sph_ks, cart_ks};
+enum struct Coordinates {sks, cks};
 enum struct Camera {plane, pinhole};
 enum struct RayTerminate {photon, multiplicative, additive};
 enum struct RayIntegrator {dp, rk4, rk2};

@@ -33,7 +33,7 @@ double RadiationIntegrator::RadialGeodesicCoordinate(double x, double y, double 
 //   *p_x1, *p_x2, *p_x3: simulation coordinates
 void RadiationIntegrator::ConvertFromCKS(double *p_x1, double *p_x2, double *p_x3) const
 {
-  if (simulation_coord == Coordinates::sph_ks)
+  if (simulation_coord == Coordinates::sks)
   {
     double x = *p_x1;
     double y = *p_x2;
@@ -67,7 +67,7 @@ void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, doubl
     const
 {
   // Calculate Jacobian for spherical Kerr-Schild simulation
-  if (simulation_coord == Coordinates::sph_ks)
+  if (simulation_coord == Coordinates::sks)
   {
     // Calculate spherical position
     double a2 = bh_a * bh_a;
@@ -100,7 +100,7 @@ void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, doubl
   }
 
   // Calculate Jacobian for Cartesian Kerr-Schild simulation
-  else if (simulation_coord == Coordinates::cart_ks)
+  else if (simulation_coord == Coordinates::cks)
   {
     jacobian[0][0] = 1.0;
     jacobian[0][1] = 0.0;
@@ -419,7 +419,7 @@ void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z
     const
 {
   // Calculate spherical Kerr-Schild metric
-  if (simulation_coord == Coordinates::sph_ks)
+  if (simulation_coord == Coordinates::sks)
   {
     // Calculate useful quantities
     double a2 = bh_a * bh_a;
@@ -451,7 +451,7 @@ void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z
   }
 
   // Calculate Cartesian Kerr-Schild metric
-  else if (simulation_coord == Coordinates::cart_ks)
+  else if (simulation_coord == Coordinates::cks)
   {
     // Calculate useful quantities
     double a2 = bh_a * bh_a;
@@ -500,7 +500,7 @@ void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, doub
     double gcon[4][4]) const
 {
   // Calculate spherical Kerr-Schild metric
-  if (simulation_coord == Coordinates::sph_ks)
+  if (simulation_coord == Coordinates::sks)
   {
     // Calculate useful quantities
     double a2 = bh_a * bh_a;
@@ -533,7 +533,7 @@ void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, doub
   }
 
   // Calculate Cartesian Kerr-Schild metric
-  else if (simulation_coord == Coordinates::cart_ks)
+  else if (simulation_coord == Coordinates::cks)
   {
     // Calculate useful quantities
     double a2 = bh_a * bh_a;

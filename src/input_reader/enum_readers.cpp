@@ -83,15 +83,15 @@ SimulationFormat InputReader::ReadSimulationFormat(const std::string &string)
 //   returned value: valid Coordinates
 // Notes:
 //   Valid options:
-//     "sph_ks": spherical Kerr-Schild
-//     "cart_ks": Cartesian Kerr-Schild
+//     "sks": spherical Kerr-Schild
+//     "cks": Cartesian Kerr-Schild
 //     "mks": modified spherical Kerr-Schild (2003 ApJ 589 444)
 Coordinates InputReader::ReadCoordinates(const std::string &string)
 {
-  if (string == "sph_ks" or string == "mks")
-    return Coordinates::sph_ks;
-  else if (string == "cart_ks")
-    return Coordinates::cart_ks;
+  if (string == "sks" or string == "mks")
+    return Coordinates::sks;
+  else if (string == "cks")
+    return Coordinates::cks;
   else
     throw BlacklightException("Unknown string used for Coordinates value.");
 }

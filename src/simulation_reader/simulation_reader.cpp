@@ -274,7 +274,7 @@ double SimulationReader::Read(int snapshot)
       ReadHDF5StringArray("header/metric", true, &p_temp_metric, &temp_count);
       metric = *p_temp_metric;
       delete[] p_temp_metric;
-      if (simulation_coord == Coordinates::sph_ks)
+      if (simulation_coord == Coordinates::sks)
       {
         if (metric != "MKS")
         {
