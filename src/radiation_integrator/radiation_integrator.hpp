@@ -36,6 +36,7 @@ struct RadiationIntegrator
   std::string checkpoint_sample_file;
 
   // Input data - simulation parameters
+  SimulationFormat simulation_format;
   Coordinates simulation_coord;
   double simulation_m_msun;
   double simulation_rho_cgs;
@@ -205,11 +206,10 @@ struct RadiationIntegrator
   Array<int> n_3_level;
   Array<int> levels;
   Array<int> locations;
-  Array<float> x1f, x2f, x3f;
-  Array<float> x1v, x2v, x3v;
-  float *time;
+  Array<double> x1f, x2f, x3f;
+  Array<double> x1v, x2v, x3v;
+  double *time;
   Array<float> *grid_prim;
-  Array<float> *grid_bb;
   int ind_rho, ind_pgas, ind_kappa;
   int ind_uu1, ind_uu2, ind_uu3;
   int ind_bb1, ind_bb2, ind_bb3;
@@ -229,7 +229,7 @@ struct RadiationIntegrator
   Array<float> *sample_bb1 = nullptr;
   Array<float> *sample_bb2 = nullptr;
   Array<float> *sample_bb3 = nullptr;
-  float extrapolation_tolerance;
+  double extrapolation_tolerance;
 
   // Coefficient data
   Array<double> *j_i = nullptr;
@@ -326,7 +326,7 @@ struct RadiationIntegrator
 
   // Internal functions - radiation_geometry.cpp
   double RadialGeodesicCoordinate(double x, double y, double z) const;
-  void CKSToSKS(double *p_x1, double *p_x2, double *p_x3) const;
+  void ConvertFromCKS(double *p_x1, double *p_x2, double *p_x3) const;
   void CoordinateJacobian(double x, double y, double z, double jacobian[4][4]) const;
   void CovariantGeodesicMetric(double x, double y, double z, double gcov[4][4]) const;
   void ContravariantGeodesicMetric(double x, double y, double z, double gcon[4][4]) const;

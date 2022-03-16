@@ -14,6 +14,7 @@ checkpoint_sample_save   = false  # flag indicating simulation sampling should b
 checkpoint_sample_load   = false  # flag indicating simulation sampling should be loaded
 
 # Simulation parameters
+simulation_format       = athena           # format of GRMHD data
 simulation_file         = data/mock.athdf  # file containing data dump
 simulation_multiple     = false            # flag for processing multiple files
 simulation_coord        = sph_ks           # simulation coordinates (sph_ks, cart_ks)

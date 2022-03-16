@@ -26,27 +26,30 @@ double RadiationIntegrator::RadialGeodesicCoordinate(double x, double y, double 
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for converting coordinates from Cartesian Kerr-Schild to spherical Kerr-Schild
+// Function for converting from Cartesian Kerr-Schild to simulation coordinates
 // Inputs:
 //   *p_x1, *p_x2, *p_x3: Cartesian Kerr-Schild coordinates
 // Outputs:
-//   *p_x1, *p_x2, *p_x3: spherical Kerr-Schild coordinates
-void RadiationIntegrator::CKSToSKS(double *p_x1, double *p_x2, double *p_x3) const
+//   *p_x1, *p_x2, *p_x3: simulation coordinates
+void RadiationIntegrator::ConvertFromCKS(double *p_x1, double *p_x2, double *p_x3) const
 {
-  double x = *p_x1;
-  double y = *p_x2;
-  double z = *p_x3;
-  double a2 = bh_a * bh_a;
-  double rr2 = x * x + y * y + z * z;
-  double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
-  double r = std::sqrt(r2);
-  double th = std::acos(z / r);
-  double ph = std::atan2(y, x) - std::atan(bh_a / r);
-  ph += ph < 0.0 ? 2.0 * Math::pi : 0.0;
-  ph -= ph >= 2.0 * Math::pi ? 2.0 * Math::pi : 0.0;
-  *p_x1 = r;
-  *p_x2 = th;
-  *p_x3 = ph;
+  if (simulation_coord == Coordinates::sph_ks)
+  {
+    double x = *p_x1;
+    double y = *p_x2;
+    double z = *p_x3;
+    double a2 = bh_a * bh_a;
+    double rr2 = x * x + y * y + z * z;
+    double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
+    double r = std::sqrt(r2);
+    double th = std::acos(z / r);
+    double ph = std::atan2(y, x) - std::atan(bh_a / r);
+    ph += ph < 0.0 ? 2.0 * Math::pi : 0.0;
+    ph -= ph >= 2.0 * Math::pi ? 2.0 * Math::pi : 0.0;
+    *p_x1 = r;
+    *p_x2 = th;
+    *p_x3 = ph;
+  }
   return;
 }
 

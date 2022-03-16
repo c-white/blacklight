@@ -8,6 +8,7 @@
 
 // Blacklight headers
 #include "simulation_reader.hpp"
+#include "../blacklight.hpp"        // enums
 #include "../utils/array.hpp"       // Array
 #include "../utils/exceptions.hpp"  // BlacklightException
 
@@ -17,7 +18,7 @@
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Indirectly sets root_object_header_address, btree_address, and root_name_heap_address.
+//   Indirectly sets root_object_header_address, root_btree_address, and root_name_heap_address.
 //   Changes stream pointer.
 //   Does not allow for superblock to be anywhere but beginning of file.
 //   Must have superblock version 0.
@@ -69,7 +70,7 @@ void SimulationReader::ReadHDF5Superblock()
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Sets root_object_header_address, btree_address, and root_name_heap_address.
+//   Sets root_object_header_address, root_btree_address, and root_name_heap_address.
 //   Assumes stream pointer is already set.
 //   Must have size of offsets 8.
 //   Must be run on little-endian machine.
@@ -89,25 +90,26 @@ void SimulationReader::ReadHDF5RootGroupSymbolTableEntry()
   data_stream.ignore(4);
 
   // Read B-tree and name heap addresses
-  data_stream.read(reinterpret_cast<char *>(&btree_address), 8);
+  data_stream.read(reinterpret_cast<char *>(&root_btree_address), 8);
   data_stream.read(reinterpret_cast<char *>(&root_name_heap_address), 8);
   return;
 }
 
 //--------------------------------------------------------------------------------------------------
 
-// Function to read HDF5 root local heap
-// Inputs: (none)
-// Outputs: (none)
+// Function to read HDF5 local heap
+// Inputs:
+//   heap_address: global address of start of heap
+// Outputs:
+//   returned value: global address of start of heap data segment
 // Notes:
 //   Sets root_data_segment_address.
-//   Assumes root_name_heap_address set.
 //   Changes stream pointer.
 //   Must have size of offsets 8.
-void SimulationReader::ReadHDF5RootHeap()
+unsigned long int SimulationReader::ReadHDF5Heap(unsigned long int heap_address)
 {
   // Check local heap signature and version
-  data_stream.seekg(static_cast<std::streamoff>(root_name_heap_address));
+  data_stream.seekg(static_cast<std::streamoff>(heap_address));
   const unsigned char expected_signature[] = {'H', 'E', 'A', 'P'};
   for (int n = 0; n < 4; n++)
     if (data_stream.get() != expected_signature[n])
@@ -120,8 +122,9 @@ void SimulationReader::ReadHDF5RootHeap()
   data_stream.ignore(16);
 
   // Read address of data segment
-  data_stream.read(reinterpret_cast<char *>(&root_data_segment_address), 8);
-  return;
+  unsigned long int data_segment_address;
+  data_stream.read(reinterpret_cast<char *>(&data_segment_address), 8);
+  return data_segment_address;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -141,6 +144,13 @@ void SimulationReader::ReadHDF5RootHeap()
 //   Must be run on little-endian machine.
 void SimulationReader::ReadHDF5RootObjectHeader()
 {
+  // Only proceed for Athena++ data
+  if (simulation_format != SimulationFormat::athena)
+  {
+    first_time_root_object_header = false;
+    return;
+  }
+
   // Check object header version
   data_stream.seekg(static_cast<std::streamoff>(root_object_header_address));
   if (data_stream.get() != 1)
@@ -273,64 +283,9 @@ void SimulationReader::ReadHDF5RootObjectHeader()
     throw BlacklightException("Could not find needed file-level attributes.");
   if (num_variables.n1 != num_dataset_names)
     throw BlacklightException("DatasetNames and NumVariables file-level attribute mismatch.");
-  VerifyVariables();
 
   // Update first time flag
   first_time_root_object_header = false;
-  return;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// Function to locate children of root node in HDF5 tree
-// Inputs: (none)
-// Outputs: (none)
-// Notes:
-//   Allocates and sets children_addresses.
-//   Sets num_children.
-//   Assumes btree_address set.
-//   Changes stream pointer.
-//   Must have B-tree version 1.
-//   Must have only 1 level of children.
-//   Must have size of offsets 8.
-//   Must be run on little-endian machine.
-void SimulationReader::ReadHDF5Tree()
-{
-  // Check signature
-  data_stream.seekg(static_cast<std::streamoff>(btree_address));
-  const unsigned char expected_signature[] = {'T', 'R', 'E', 'E'};
-  for (int n = 0; n < 4; n++)
-    if (data_stream.get() != expected_signature[n])
-      throw BlacklightException("Unexpected HDF5 B-tree signature.");
-
-  // Check node type and level
-  if (data_stream.get() != 0)
-    throw BlacklightException("Unexpected HDF5 node type.");
-  if (data_stream.get() != 0)
-    throw BlacklightException("Unexpected HDF5 node level.");
-
-  // Read number of children
-  unsigned short int num_entries;
-  data_stream.read(reinterpret_cast<char *>(&num_entries), 2);
-  if (first_time_tree)
-    num_children = num_entries;
-  else if (num_children != num_entries)
-    throw BlacklightException("File layout mismatch upon subsequent read.");
-
-  // Skip addresses of siblings
-  data_stream.ignore(16);
-
-  // Read addresses of children
-  if (first_time_tree)
-    children_addresses = new unsigned long int[num_children];
-  for (int n = 0; n < num_children; n++)
-  {
-    data_stream.ignore(8);
-    data_stream.read(reinterpret_cast<char *>(children_addresses + n), 8);
-  }
-
-  // Update first time flag
-  first_time_tree = false;
   return;
 }
 

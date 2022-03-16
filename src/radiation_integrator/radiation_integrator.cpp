@@ -54,12 +54,15 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   // Copy simulation parameters
   if (model_type == ModelType::simulation)
   {
+    simulation_format = p_input_reader->simulation_format.value();
     simulation_coord = p_input_reader->simulation_coord.value();
     simulation_m_msun = p_input_reader->simulation_m_msun.value();
     simulation_rho_cgs = p_input_reader->simulation_rho_cgs.value();
     simulation_interp = p_input_reader->simulation_interp.value();
-    if (simulation_interp)
+    if (simulation_format == SimulationFormat::athena and simulation_interp)
       simulation_block_interp = p_input_reader->simulation_block_interp.value();
+    else if (p_input_reader->simulation_block_interp.has_value())
+      BlacklightWarning("Ignoring simulation_block_interp selection.");
   }
 
   // Copy formula parameters

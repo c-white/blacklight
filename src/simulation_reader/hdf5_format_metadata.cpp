@@ -14,25 +14,60 @@
 
 // Function to locate HDF5 header address for dataset with given name
 // Inputs:
-//   name: name of dataset
+//   name: null-terminated name of dataset, possibly including intermediate slashes, excluding
+//       leading slash
+//   btree_address: address of B-tree node containing dataset
+//   data_segment_address: address of data segment in local name heap of B-tree
 // Outputs:
 //   returned value: address within file of header
 // Notes:
-//   Assumes children_addresses set.
 //   Changes stream pointer.
-//   Must have symbol table entry cache type 0.
+//   Must have B-tree version 1.
+//   Must have symbol table entry cache type 0 or 1.
 //   Must have size of offsets 8.
 //   Must be run on little-endian machine.
-unsigned long int SimulationReader::ReadHDF5DatasetHeaderAddress(const char *name)
+unsigned long int SimulationReader::ReadHDF5DatasetHeaderAddress(const char *name,
+    unsigned long int btree_address, unsigned long int data_segment_address)
 {
+  // Parse name
+  std::string name_str(name);
+  std::string::size_type slash_pos = name_str.find("/");
+
+  // Check tree signature
+  data_stream.seekg(static_cast<std::streamoff>(btree_address));
+  const unsigned char expected_tree_signature[] = {'T', 'R', 'E', 'E'};
+  for (int n = 0; n < 4; n++)
+    if (data_stream.get() != expected_tree_signature[n])
+      throw BlacklightException("Unexpected HDF5 B-tree signature.");
+
+  // Check node type
+  if (data_stream.get() != 0)
+    throw BlacklightException("Unexpected HDF5 node type.");
+
+  // Skip node level
+  data_stream.ignore(1);
+
+  // Read number of children
+  unsigned short int num_children;
+  data_stream.read(reinterpret_cast<char *>(&num_children), 2);
+
+  // Skip addresses of siblings
+  data_stream.ignore(16);
+
   // Go through children
-  for (int n = 0; n < num_children; n++)
+  std::streamoff list_begin = data_stream.tellg();
+  for (int n_child = 0; n_child < num_children; n_child++)
   {
+    // Get child address
+    data_stream.seekg(list_begin + 16 * n_child + 8);
+    unsigned long int child_address = 0;
+    data_stream.read(reinterpret_cast<char *>(&child_address), 8);
+
     // Check symbol table node signature and version
-    data_stream.seekg(static_cast<std::streamoff>(children_addresses[n]));
-    const unsigned char expected_signature[] = {'S', 'N', 'O', 'D'};
+    data_stream.seekg(static_cast<std::streamoff>(child_address));
+    const unsigned char expected_symbol_table_signature[] = {'S', 'N', 'O', 'D'};
     for (int m = 0; m < 4; m++)
-      if (data_stream.get() != expected_signature[m])
+      if (data_stream.get() != expected_symbol_table_signature[m])
         throw BlacklightException("Unexpected HDF5 symbol table node signature.");
     if (data_stream.get() != 1)
       throw BlacklightException("Unexpected HDF5 symbol table node version.");
@@ -43,7 +78,7 @@ unsigned long int SimulationReader::ReadHDF5DatasetHeaderAddress(const char *nam
     data_stream.read(reinterpret_cast<char *>(&num_symbols), 2);
 
     // Go through symbols
-    for (int m = 0; m < num_symbols; m++)
+    for (int n_symbol = 0; n_symbol < num_symbols; n_symbol++)
     {
       // Read addresses
       unsigned long int link_name_offset, object_header_address;
@@ -53,19 +88,64 @@ unsigned long int SimulationReader::ReadHDF5DatasetHeaderAddress(const char *nam
       // Check cache type
       unsigned int cache_type;
       data_stream.read(reinterpret_cast<char *>(&cache_type), 4);
-      if (cache_type != 0)
+      data_stream.ignore(4);
+      if (cache_type == 0 or cache_type == 1)
+        data_stream.ignore(16);
+      else
         throw BlacklightException("Unexpected HDF5 symbol table entry cache type.");
 
-      // Skip remaining entry
-      data_stream.ignore(20);
-
-      // Compare name
+      // Search for match to dataset name
       std::streamoff position = data_stream.tellg();
-      data_stream.seekg(static_cast<std::streamoff>(root_data_segment_address + link_name_offset));
-      std::string dataset_name;
-      std::getline(data_stream, dataset_name, '\0');
-      if (dataset_name == name)
+      data_stream.seekg(static_cast<std::streamoff>(data_segment_address + link_name_offset));
+      std::string local_name;
+      std::getline(data_stream, local_name, '\0');
+      if (slash_pos == std::string::npos and local_name == name_str)
         return object_header_address;
+
+      // Search for match to group name
+      if (slash_pos != std::string::npos and name_str.compare(0, slash_pos, local_name) == 0)
+      {
+        // Go to data object header
+        data_stream.seekg(static_cast<std::streamoff>(object_header_address));
+
+        // Check data object header version
+        if (data_stream.get() != 1)
+          throw BlacklightException("Unexpected HDF5 object header version.");
+        data_stream.ignore(1);
+
+        // Get number of messages
+        unsigned short int num_messages;
+        data_stream.read(reinterpret_cast<char *>(&num_messages), 2);
+
+        // Skip to list of messages
+        data_stream.ignore(12);
+
+        // Go through messages
+        for (int n_message = 0; n_message < num_messages; n_message++)
+        {
+          unsigned short int message_type;
+          data_stream.read(reinterpret_cast<char *>(&message_type), 2);
+          if (message_type != 17)
+            continue;
+          unsigned short int message_size;
+          data_stream.read(reinterpret_cast<char *>(&message_size), 2);
+          if (message_size != 16)
+            throw BlacklightException("Unexpected HDF5 header message size.");
+          unsigned char message_flags;
+          data_stream.read(reinterpret_cast<char *>(&message_flags), 1);
+          if (message_flags & 0b00000010)
+            throw BlacklightException("Unexpected HDF5 header message flag.");
+          data_stream.ignore(3);
+          unsigned long int btree_node_address, heap_node_address;
+          data_stream.read(reinterpret_cast<char *>(&btree_node_address), 8);
+          data_stream.read(reinterpret_cast<char *>(&heap_node_address), 8);
+          unsigned long int data_segment_node_address = ReadHDF5Heap(heap_node_address);
+          return ReadHDF5DatasetHeaderAddress(name + slash_pos + 1, btree_node_address,
+              data_segment_node_address);
+        }
+      }
+
+      // Prepare for next symbol
       data_stream.seekg(position);
     }
   }
