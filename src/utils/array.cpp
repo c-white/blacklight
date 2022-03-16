@@ -676,7 +676,7 @@ template<typename type> void Array<type>::Slice(int dimension, int index_start, 
     long int index_shift = static_cast<long int>(index_start) * static_cast<long int>(n4)
         * static_cast<long int>(n3) * static_cast<long int>(n2) * static_cast<long int>(n1);
     data += index_shift;
-    n4 = index_end - index_start + 1;
+    n5 = index_end - index_start + 1;
   }
 
   // Account for invalid dimension
