@@ -101,7 +101,7 @@ void SimulationReader::ConvertPrimitives(Array<float> &primitives)
         double g_rr = 1.0 + f;
         double g_rth = 0.0;
         double g_rph = -a * (1.0 + f) * sth * sth;
-        double g_thth = 2.0 * r / f;
+        double g_thth = sigma;
         double g_thph = 0.0;
         double g_phph = (r * r + a * a + a * a * f * sth * sth) * sth * sth;
         double gtt = -(1.0 + f);
