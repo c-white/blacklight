@@ -45,7 +45,11 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
 
   // Copy simulation parameters
   if (model_type == ModelType::simulation)
+  {
     simulation_multiple = p_input_reader->simulation_multiple.value();
+    if (simulation_multiple)
+      simulation_start = p_input_reader->simulation_start.value();
+  }
 
   // Copy camera parameters
   if (output_format == OutputFormat::npz and output_camera)
@@ -242,7 +246,7 @@ void OutputWriter::Write(int snapshot)
   std::string output_file_formatted = output_file;
   if (model_type == ModelType::simulation and simulation_multiple)
   {
-    int file_number = snapshot + (slow_light_on ? slow_offset : 0);
+    int file_number = snapshot + (slow_light_on ? slow_offset : simulation_start);
     output_file_formatted = FormatFilename(file_number);
   }
   p_output_stream =

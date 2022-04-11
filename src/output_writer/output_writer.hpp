@@ -43,6 +43,7 @@ struct OutputWriter
 
   // Input data - simulation parameters
   bool simulation_multiple;
+  int simulation_start;
 
   // Input data - camera parameters
   Camera camera_type;
