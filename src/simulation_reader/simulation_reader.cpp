@@ -13,10 +13,11 @@
 
 // Blacklight headers
 #include "simulation_reader.hpp"
-#include "../blacklight.hpp"                 // enums
+#include "../blacklight.hpp"                 // Math, enums
 #include "../input_reader/input_reader.hpp"  // InputReader
 #include "../utils/array.hpp"                // Array
 #include "../utils/exceptions.hpp"           // BlacklightException, BlacklightWarning
+#include "../utils/file_io.hpp"              // ReadBinary
 
 //--------------------------------------------------------------------------------------------------
 
@@ -170,9 +171,13 @@ double SimulationReader::Read(int snapshot)
         throw BlacklightException("Could not open file for reading.");
 
       // Read basic data about file
-      ReadHDF5Superblock();
-      root_data_segment_address = ReadHDF5Heap(root_name_heap_address);
-      ReadHDF5RootObjectHeader();
+      if (simulation_format == SimulationFormat::athena
+          or simulation_format == SimulationFormat::iharm3d)
+      {
+        ReadHDF5Superblock();
+        root_data_segment_address = ReadHDF5Heap(root_name_heap_address);
+        ReadHDF5RootObjectHeader();
+      }
 
       // Read time
       if (simulation_format == SimulationFormat::athena)
@@ -181,12 +186,14 @@ double SimulationReader::Read(int snapshot)
         ReadHDF5FloatAttribute("Time", &time_temp);
         latest_time = time_temp;
       }
-      else if (simulation_format == SimulationFormat::harm)
+      else if (simulation_format == SimulationFormat::iharm3d)
       {
         Array<double> time_temp(1);
         ReadHDF5DoubleArray("t", time_temp);
         latest_time = time_temp(0);
       }
+      else if (simulation_format == SimulationFormat::harm3d)
+        data_stream >> latest_time;
     }
 
     // Check range of files covers desired time
@@ -248,9 +255,13 @@ double SimulationReader::Read(int snapshot)
       throw BlacklightException("Could not open file for reading.");
 
     // Read basic data about file
-    ReadHDF5Superblock();
-    root_data_segment_address = ReadHDF5Heap(root_name_heap_address);
-    ReadHDF5RootObjectHeader();
+    if (simulation_format == SimulationFormat::athena
+        or simulation_format == SimulationFormat::iharm3d)
+    {
+      ReadHDF5Superblock();
+      root_data_segment_address = ReadHDF5Heap(root_name_heap_address);
+      ReadHDF5RootObjectHeader();
+    }
 
     // Read time
     if (simulation_format == SimulationFormat::athena)
@@ -259,15 +270,17 @@ double SimulationReader::Read(int snapshot)
       ReadHDF5FloatAttribute("Time", &time_temp);
       time[n] = time_temp;
     }
-    else if (simulation_format == SimulationFormat::harm)
+    else if (simulation_format == SimulationFormat::iharm3d)
     {
       Array<double> time_temp(1);
       ReadHDF5DoubleArray("t", time_temp);
       time[n] = time_temp(0);
     }
+    else if (simulation_format == SimulationFormat::harm3d)
+      data_stream >> time[n];
 
     // Read metric
-    if (first_time and simulation_format == SimulationFormat::harm)
+    if (first_time and simulation_format == SimulationFormat::iharm3d)
     {
       std::string *p_temp_metric;
       int temp_count;
@@ -308,7 +321,8 @@ double SimulationReader::Read(int snapshot)
         ReadHDF5IntArray("Levels", levels);
         ReadHDF5IntArray("LogicalLocations", locations);
       }
-      else if (simulation_format == SimulationFormat::harm)
+      else if (simulation_format == SimulationFormat::iharm3d
+          or simulation_format == SimulationFormat::harm3d)
       {
         levels.Allocate(1);
         levels(0) = 0;
@@ -331,7 +345,7 @@ double SimulationReader::Read(int snapshot)
         ReadHDF5FloatArray("x2v", x2v);
         ReadHDF5FloatArray("x3v", x3v);
       }
-      else if (simulation_format == SimulationFormat::harm)
+      else if (simulation_format == SimulationFormat::iharm3d)
       {
         Array<int> num_cells;
         Array<double> x_start, dx;
@@ -342,8 +356,8 @@ double SimulationReader::Read(int snapshot)
         x1v.Allocate(1, num_cells(0));
         for (int i = 0; i < num_cells(0); i++)
         {
-          x1f(i+1) = x_start(0) + (i + 1) * dx(0);
-          x1v(i) = 0.5 * (x1f(i) + x1f(i+1));
+          x1f(0,i+1) = x_start(0) + (i + 1) * dx(0);
+          x1v(0,i) = 0.5 * (x1f(0,i) + x1f(0,i+1));
         }
         ReadHDF5IntArray("header/n2", num_cells);
         ReadHDF5DoubleArray("header/geom/startx2", x_start);
@@ -352,8 +366,8 @@ double SimulationReader::Read(int snapshot)
         x2v.Allocate(1, num_cells(0));
         for (int j = 0; j < num_cells(0); j++)
         {
-          x2f(j+1) = x_start(0) + (j + 1) * dx(0);
-          x2v(j) = 0.5 * (x2f(j) + x2f(j+1));
+          x2f(0,j+1) = x_start(0) + (j + 1) * dx(0);
+          x2v(0,j) = 0.5 * (x2f(0,j) + x2f(0,j+1));
         }
         ReadHDF5IntArray("header/n3", num_cells);
         ReadHDF5DoubleArray("header/geom/startx3", x_start);
@@ -362,10 +376,79 @@ double SimulationReader::Read(int snapshot)
         x3v.Allocate(1, num_cells(0));
         for (int k = 0; k < num_cells(0); k++)
         {
-          x3f(k+1) = x_start(0) + (k + 1) * dx(0);
-          x3v(k) = 0.5 * (x3f(k) + x3f(k+1));
+          x3f(0,k+1) = x_start(0) + (k + 1) * dx(0);
+          x3v(0,k) = 0.5 * (x3f(0,k) + x3f(0,k+1));
         }
         ConvertCoordinates();
+      }
+      else if (simulation_format == SimulationFormat::harm3d)
+      {
+        int num_cells_1, num_cells_2, num_cells_3;
+        data_stream >> num_cells_1 >> num_cells_2 >> num_cells_3;
+        double x1_start, x2_start, x3_start;
+        data_stream >> x1_start >> x2_start >> x3_start;
+        double dx1, dx2, dx3;
+        data_stream >> dx1 >> dx2 >> dx3;
+        x1f.Allocate(1, num_cells_1 + 1);
+        x1v.Allocate(1, num_cells_1);
+        for (int i = 0; i < num_cells_1; i++)
+        {
+          x1f(0,i+1) = x1_start + (i + 1) * dx1;
+          x1v(0,i) = 0.5 * (x1f(0,i) + x1f(0,i+1));
+        }
+        x2f.Allocate(1, num_cells_2 + 1);
+        x2v.Allocate(1, num_cells_2);
+        for (int j = 0; j < num_cells_2; j++)
+        {
+          x2f(0,j+1) = x2_start + (j + 1) * dx2;
+          x2v(0,j) = 0.5 * (x2f(0,j) + x2f(0,j+1));
+        }
+        x3f.Allocate(1, num_cells_3 + 1);
+        x3v.Allocate(1, num_cells_3);
+        for (int k = 0; k < num_cells_3; k++)
+        {
+          x3f(0,k+1) = x3_start + (k + 1) * dx3;
+          x3v(0,k) = 0.5 * (x3f(0,k) + x3f(0,k+1));
+        }
+        data_stream >> metric_a;
+        if (metric_a != simulation_a)
+        {
+          std::ostringstream message;
+          message << "Given spin of " << simulation_a << " does not match file value of ";
+          message << metric_a << "; ignoring the latter.";
+          BlacklightWarning(message.str().c_str());
+        }
+        data_stream >> adiabatic_gamma;
+        double temp_val;
+        data_stream >> temp_val;
+        data_stream >> metric_h;
+        data_stream >> temp_val;
+        data_stream.seekg(1, std::ios_base::cur);
+        ConvertCoordinates();
+      }
+      if (simulation_coord == Coordinates::sks and x2f.n2 == 1 and
+          (x2f(0,0) != 0.0 or x2f(0,x2f.n1-1) != Math::pi))
+      {
+        std::ostringstream message;
+        message.setf(std::ios_base::scientific);
+        message.precision(16);
+        message << "Changing theta range from [" << x2f(0,0) << ", " << x2f(0,x2f.n1-1);
+        message << "] to [0, pi].";
+        BlacklightWarning(message.str().c_str());
+        x2f(0,0) = 0.0;
+        x2f(0,x2f.n1-1) = Math::pi;
+      }
+      if (simulation_coord == Coordinates::sks and x3f.n2 == 1 and
+          (x3f(0,0) != 0.0 or x3f(0,x3f.n1-1) != 2.0 * Math::pi))
+      {
+        std::ostringstream message;
+        message.setf(std::ios_base::scientific);
+        message.precision(16);
+        message << "Changing phi range from [" << x3f(0,0) << ", " << x3f(0,x3f.n1-1);
+        message << "] to [0, 2*pi].";
+        BlacklightWarning(message.str().c_str());
+        x3f(0,0) = 0.0;
+        x3f(0,x3f.n1-1) = 2.0 * Math::pi;
       }
     }
 
@@ -389,7 +472,7 @@ double SimulationReader::Read(int snapshot)
       bb.Slice(5, num_variables(ind_hydro), num_variables(ind_hydro) + num_variables(ind_bb) - 1);
       ReadHDF5FloatArray("B", bb);
     }
-    else if (simulation_format == SimulationFormat::harm)
+    else if (simulation_format == SimulationFormat::iharm3d)
     {
       VerifyVariablesHarm();
       if (first_time)
@@ -412,7 +495,53 @@ double SimulationReader::Read(int snapshot)
         for (int j = 0; j < x2v.n1; j++)
           for (int i = 0; i < x1v.n1; i++)
             prim[n](ind_pgas,0,k,j,i) *= static_cast<float>(adiabatic_gamma - 1.0);
-      ConvertPrimitives(prim[n]);
+      ConvertPrimitives3(prim[n]);
+    }
+    else if (simulation_format == SimulationFormat::harm3d)
+    {
+      if (first_time)
+      {
+        int n5 = plasma_model == PlasmaModel::code_kappa ? 11 : 10;
+        int n4 = levels.n1;
+        int n3 = x3v.n1;
+        int n2 = x2v.n1;
+        int n1 = x1v.n1;
+        prim[n].Allocate(n5, n4, n3, n2, n1);
+        ind_rho = 0;
+        ind_pgas = 1;
+        ind_kappa = 10;
+        ind_u0 = 2;
+        ind_uu1 = 3;
+        ind_uu2 = 4;
+        ind_uu3 = 5;
+        ind_b0 = 6;
+        ind_bb1 = 7;
+        ind_bb2 = 8;
+        ind_bb3 = 9;
+      }
+      for (int i = 0; i < x1v.n1; i++)
+        for (int j = 0; j < x2v.n1; j++)
+          for (int k = 0; k < x3v.n1; k++)
+          {
+            data_stream.seekg(6 * 4, std::ios_base::cur);
+            ReadBinary(&data_stream, &prim[n](ind_rho,0,k,j,i));
+            ReadBinary(&data_stream, &prim[n](ind_pgas,0,k,j,i));
+            ReadBinary(&data_stream, &prim[n](ind_u0,0,k,j,i));
+            ReadBinary(&data_stream, &prim[n](ind_uu1,0,k,j,i));
+            ReadBinary(&data_stream, &prim[n](ind_uu2,0,k,j,i));
+            ReadBinary(&data_stream, &prim[n](ind_uu3,0,k,j,i));
+            ReadBinary(&data_stream, &prim[n](ind_b0,0,k,j,i));
+            ReadBinary(&data_stream, &prim[n](ind_bb1,0,k,j,i));
+            ReadBinary(&data_stream, &prim[n](ind_bb2,0,k,j,i));
+            ReadBinary(&data_stream, &prim[n](ind_bb3,0,k,j,i));
+            if (plasma_model == PlasmaModel::code_kappa)
+              ReadBinary(&data_stream, &prim[n](ind_kappa,0,k,j,i));
+          }
+      for (int k = 0; k < x3v.n1; k++)
+        for (int j = 0; j < x2v.n1; j++)
+          for (int i = 0; i < x1v.n1; i++)
+            prim[n](ind_pgas,0,k,j,i) *= static_cast<float>(adiabatic_gamma - 1.0);
+      ConvertPrimitives4(prim[n]);
     }
 
     // Close input file

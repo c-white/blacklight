@@ -35,7 +35,7 @@ namespace CellValues
 // Scoped enumerations
 enum struct ModelType {simulation, formula};
 enum struct OutputFormat {npz, npy, raw};
-enum struct SimulationFormat {athena, harm};
+enum struct SimulationFormat {athena, iharm3d, harm3d};
 enum struct Coordinates {sks, cks};
 enum struct Camera {plane, pinhole};
 enum struct RayTerminate {photon, multiplicative, additive};

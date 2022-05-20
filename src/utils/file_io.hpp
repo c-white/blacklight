@@ -12,15 +12,13 @@
 //--------------------------------------------------------------------------------------------------
 
 // Functions for writing binary data
-void WriteBinary(std::ofstream *p_stream, int val);
-void WriteBinary(std::ofstream *p_stream, double val);
-void WriteBinary(std::ofstream *p_stream, double vals[], long int num);
+template<typename type> void WriteBinary(std::ofstream *p_stream, type val);
+template<typename type> void WriteBinary(std::ofstream *p_stream, type vals[], long int num);
 template<typename type> void WriteBinary(std::ofstream *p_stream, const Array<type> &array);
 
 // Functions for reading binary data
-void ReadBinary(std::ifstream *p_stream, int *p_val);
-void ReadBinary(std::ifstream *p_stream, double *p_val);
-void ReadBinary(std::ifstream *p_stream, double vals[], int num);
+template<typename type> void ReadBinary(std::ifstream *p_stream, type *p_val);
+template<typename type> void ReadBinary(std::ifstream *p_stream, type vals[], long int num);
 template<typename type> void ReadBinary(std::ifstream *p_stream, Array<type> *p_array);
 
 #endif

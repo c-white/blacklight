@@ -68,8 +68,8 @@ struct SimulationReader
   int ind_hydro;
   int ind_bb;
   int ind_rho, ind_pgas, ind_kappa;
-  int ind_uu1, ind_uu2, ind_uu3;
-  int ind_bb1, ind_bb2, ind_bb3;
+  int ind_u0, ind_uu1, ind_uu2, ind_uu3;
+  int ind_b0, ind_bb1, ind_bb2, ind_bb3;
   double adiabatic_gamma;
   int num_arrays;
   int latest_file_number;
@@ -96,7 +96,8 @@ struct SimulationReader
 
   // Internal functions - simulation_geometry.cpp
   void ConvertCoordinates();
-  void ConvertPrimitives(Array<float> &primitives);
+  void ConvertPrimitives3(Array<float> &primitives);
+  void ConvertPrimitives4(Array<float> &primitives);
 
   // Internal functions - hdf5_format_structure.cpp
   void ReadHDF5Superblock();

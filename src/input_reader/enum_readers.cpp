@@ -63,13 +63,16 @@ OutputFormat InputReader::ReadOutputFormat(const std::string &string)
 // Notes:
 //   Valid options:
 //     "athena": Athena++
-//     "harm": certain variants of the HARM code
+//     "iharm3d": modern variant of the HARM code
+//     "harm3d": older variant of the HARM code
 SimulationFormat InputReader::ReadSimulationFormat(const std::string &string)
 {
   if (string == "athena")
     return SimulationFormat::athena;
-  else if (string == "harm")
-    return SimulationFormat::harm;
+  else if (string == "iharm3d")
+    return SimulationFormat::iharm3d;
+  else if (string == "harm3d")
+    return SimulationFormat::harm3d;
   else
     throw BlacklightException("Unknown string used for SimulationFormat value.");
 }

@@ -49,7 +49,7 @@ void SimulationReader::ConvertCoordinates()
 
 //--------------------------------------------------------------------------------------------------
 
-// Function to convert primitives from modified to standard spherical Kerr-Schild
+// Function to convert primitive 3-vectors from modified to standard spherical Kerr-Schild
 // Inputs:
 //   primitives: primitive array with modified vector components
 // Outputs:
@@ -58,7 +58,7 @@ void SimulationReader::ConvertCoordinates()
 //   Assumes x1v and x2v are set in standard coordinates.
 //   Assumes x2v_alt is set in modified coordinates.
 //   Assumes ind_uu1, ind_uu2, ind_uu3, ind_bb1, ind_bb2, and ind_bb3 are set.
-void SimulationReader::ConvertPrimitives(Array<float> &primitives)
+void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
 {
   // Extract parameters
   double a = simulation_a;
@@ -154,6 +154,94 @@ void SimulationReader::ConvertPrimitives(Array<float> &primitives)
         double b1 = (bb1 + b0 * u1) / u0;
         double b2 = (bb2 + b0 * u2) / u0;
         double b3 = (bb3 + b0 * u3) / u0;
+
+        // Transform magnetic 4-vector from modified coordinate frame to standard coordinate frame
+        double bt = b0;
+        double br = dr_dx1 * b1;
+        double bth = dth_dx2 * b2;
+        double bph = b3;
+
+        // Calculate magnetic field in standard coordinate frame
+        double bbr = br * ut - bt * ur;
+        double bbth = bth * ut - bt * uth;
+        double bbph = bph * ut - bt * uph;
+
+        // Save results
+        primitives(ind_uu1,0,k,j,i) = static_cast<float>(uur);
+        primitives(ind_uu2,0,k,j,i) = static_cast<float>(uuth);
+        primitives(ind_uu3,0,k,j,i) = static_cast<float>(uuph);
+        primitives(ind_bb1,0,k,j,i) = static_cast<float>(bbr);
+        primitives(ind_bb2,0,k,j,i) = static_cast<float>(bbth);
+        primitives(ind_bb3,0,k,j,i) = static_cast<float>(bbph);
+      }
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to convert primitive 4-vectors from modified to standard spherical Kerr-Schild
+// Inputs:
+//   primitives: primitive array with modified vector components
+// Outputs:
+//   primitives: primitive array with standard vector components
+// Notes:
+//   Assumes x1v and x2v are set in standard coordinates.
+//   Assumes x2v_alt is set in modified coordinates.
+//   Assumes ind_u0, ind_uu1, ind_uu2, ind_uu3, ind_b0, ind_bb1, ind_bb2, and ind_bb3 are set.
+void SimulationReader::ConvertPrimitives4(Array<float> &primitives)
+{
+  // Extract parameters
+  double a = simulation_a;
+  double h = metric_h;
+  int n1 = x1v.n1;
+  int n2 = x2v.n1;
+  int n3 = x3v.n1;
+
+  // Go through cells in parallel
+  #pragma omp parallel for schedule(static) collapse(2)
+  for (int k = 0; k < n3; k++)
+    for (int j = 0; j < n2; j++)
+      for (int i = 0; i < n1; i++)
+      {
+        // Extract coordinates
+        double r = x1v(0,i);
+        double th = x2v(0,j);
+        double cth = std::cos(th);
+        double x2 = x2v_alt(j);
+
+        // Extract primitives
+        double u0 = primitives(ind_u0,0,k,j,i);
+        double u1 = primitives(ind_uu1,0,k,j,i);
+        double u2 = primitives(ind_uu2,0,k,j,i);
+        double u3 = primitives(ind_uu3,0,k,j,i);
+        double b0 = primitives(ind_b0,0,k,j,i);
+        double b1 = primitives(ind_bb1,0,k,j,i);
+        double b2 = primitives(ind_bb2,0,k,j,i);
+        double b3 = primitives(ind_bb3,0,k,j,i);
+
+        // Calculate Jacobian of transformation
+        double dr_dx1 = r;
+        double dth_dx2 = Math::pi + (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2);
+
+        // Calculate standard metric
+        double sigma = r * r + a * a * cth * cth;
+        double f = 2.0 * r / sigma;
+        double gtt = -(1.0 + f);
+        double gtr = f;
+        double gtth = 0.0;
+        double gtph = 0.0;
+        double alpha = 1.0 / std::sqrt(-gtt);
+
+        // Transform velocity from modified coordinate frame to standard coordinate frame
+        double ut = u0;
+        double ur = dr_dx1 * u1;
+        double uth = dth_dx2 * u2;
+        double uph = u3;
+
+        // Transform velocity from standard coordinate frame to standard normal frame
+        double uur = ur + alpha * alpha * gtr * ut;
+        double uuth = uth + alpha * alpha * gtth * ut;
+        double uuph = uph + alpha * alpha * gtph * ut;
 
         // Transform magnetic 4-vector from modified coordinate frame to standard coordinate frame
         double bt = b0;

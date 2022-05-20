@@ -10,56 +10,46 @@
 #include "array.hpp"    // Array
 
 // Instantiations
+template void WriteBinary<int>(std::ofstream *p_stream, int val);
+template void WriteBinary<double>(std::ofstream *p_stream, double vals[], long int num);
 template void WriteBinary<bool>(std::ofstream *p_stream, const Array<bool> &array);
 template void WriteBinary<int>(std::ofstream *p_stream, const Array<int> &array);
 template void WriteBinary<double>(std::ofstream *p_stream, const Array<double> &array);
+template void ReadBinary<int>(std::ifstream *p_stream, int *p_val);
+template void ReadBinary<float>(std::ifstream *p_stream, float *p_val);
+template void ReadBinary<double>(std::ifstream *p_stream, double vals[], long int num);
 template void ReadBinary<bool>(std::ifstream *p_stream, Array<bool> *p_array);
 template void ReadBinary<int>(std::ifstream *p_stream, Array<int> *p_array);
 template void ReadBinary<double>(std::ifstream *p_stream, Array<double> *p_array);
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for writing an integer to file
+// Function for writing single value to file
 // Inputs:
 //   *p_stream: open ofstream for file being written
 //   val: integer to write
 // Outputs: (none)
-void WriteBinary(std::ofstream *p_stream, int val)
+template<typename type> void WriteBinary(std::ofstream *p_stream, type val)
 {
   const char *data_pointer = reinterpret_cast<const char *>(&val);
-  std::streamsize data_size = sizeof(int);
+  std::streamsize data_size = sizeof(type);
   p_stream->write(data_pointer, data_size);
   return;
 }
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for writing a double to file
-// Inputs:
-//   *p_stream: open ofstream for file being written
-//   val: double to write
-// Outputs: (none)
-void WriteBinary(std::ofstream *p_stream, double val)
-{
-  const char *data_pointer = reinterpret_cast<const char *>(&val);
-  std::streamsize data_size = sizeof(double);
-  p_stream->write(data_pointer, data_size);
-  return;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// Function for writing a double array to file
+// Function for writing array to file
 // Inputs:
 //   *p_stream: open ofstream for file being written
 //   vals: array of doubles to write
 //   num: number of elements
 // Outputs: (none)
-void WriteBinary(std::ofstream *p_stream, double vals[], long int num)
+template<typename type> void WriteBinary(std::ofstream *p_stream, type vals[], long int num)
 {
   const char *data_pointer = reinterpret_cast<const char *>(vals);
   std::streamsize data_size =
-      static_cast<std::streamsize>(static_cast<std::size_t>(num) * sizeof(double));
+      static_cast<std::streamsize>(static_cast<std::size_t>(num) * sizeof(type));
   p_stream->write(data_pointer, data_size);
   return;
 }
@@ -86,54 +76,39 @@ template<typename type> void WriteBinary(std::ofstream *p_stream, const Array<ty
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for reading an integer from file
+// Function for reading single value from file
 // Inputs:
 //   *p_stream: open ifstream for file being read
 // Outputs:
-//   *p_val: integer read from file
-void ReadBinary(std::ifstream *p_stream, int *p_val)
+//   *p_val: value read from file
+template<typename type> void ReadBinary(std::ifstream *p_stream, type *p_val)
 {
   char *data_pointer = reinterpret_cast<char *>(p_val);
-  std::streamsize data_size = sizeof(int);
+  std::streamsize data_size = sizeof(type);
   p_stream->read(data_pointer, data_size);
   return;
 }
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for reading a double from file
-// Inputs:
-//   *p_stream: open ifstream for file being read
-// Outputs:
-//   *p_val: double read from file
-void ReadBinary(std::ifstream *p_stream, double *p_val)
-{
-  char *data_pointer = reinterpret_cast<char *>(p_val);
-  std::streamsize data_size = sizeof(double);
-  p_stream->read(data_pointer, data_size);
-  return;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// Function for reading a double array from file
+// Function for reading array from file
 // Inputs:
 //   *p_stream: open ifstream for file being read
 //   num: number of elements
 // Outputs:
-//   vals: array of doubles read from file
-void ReadBinary(std::ifstream *p_stream, double vals[], int num)
+//   vals: array read from file
+template<typename type> void ReadBinary(std::ifstream *p_stream, type vals[], long int num)
 {
   char *data_pointer = reinterpret_cast<char *>(vals);
   std::streamsize data_size =
-      static_cast<std::streamsize>(static_cast<std::size_t>(num) * sizeof(double));
+      static_cast<std::streamsize>(static_cast<std::size_t>(num) * sizeof(type));
   p_stream->read(data_pointer, data_size);
   return;
 }
 
 //--------------------------------------------------------------------------------------------------
 
-// Function for reading a double Array from file
+// Function for reading Array from file
 // Inputs:
 //   *p_stream: open ifstream for file being read
 // Outputs:
