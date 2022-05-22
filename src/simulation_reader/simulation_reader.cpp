@@ -1,6 +1,7 @@
 // Blacklight simulation reader
 
 // C++ headers
+#include <cmath>     // abs
 #include <cstdio>    // snprintf
 #include <fstream>   // ifstream
 #include <ios>       // ios_base
@@ -426,29 +427,44 @@ double SimulationReader::Read(int snapshot)
         data_stream.seekg(1, std::ios_base::cur);
         ConvertCoordinates();
       }
-      if (simulation_coord == Coordinates::sks and x2f.n2 == 1 and
-          (x2f(0,0) != 0.0 or x2f(0,x2f.n1-1) != Math::pi))
+    }
+
+    // Check coordinates
+    if (first_time)
+    {
+      if (simulation_coord == Coordinates::sks and x2f.n2 == 1)
       {
-        std::ostringstream message;
-        message.setf(std::ios_base::scientific);
-        message.precision(16);
-        message << "Changing theta range from [" << x2f(0,0) << ", " << x2f(0,x2f.n1-1);
-        message << "] to [0, pi].";
-        BlacklightWarning(message.str().c_str());
-        x2f(0,0) = 0.0;
-        x2f(0,x2f.n1-1) = Math::pi;
+        bool error_low = std::abs(x2f(0,0)) > (x2f(0,1) - x2f(0,0)) * angular_domain_tolerance;
+        bool error_high = std::abs(x2f(0,x2f.n1-1) - Math::pi)
+            > (x2f(0,x2f.n1-1) - x2f(0,x2f.n1-2)) * angular_domain_tolerance;
+        if (error_low or error_high)
+        {
+          std::ostringstream message;
+          message.setf(std::ios_base::scientific);
+          message.precision(16);
+          message << "Changing theta range from [" << x2f(0,0) << ", " << x2f(0,x2f.n1-1);
+          message << "] to [0, pi].";
+          BlacklightWarning(message.str().c_str());
+          x2f(0,0) = 0.0;
+          x2f(0,x2f.n1-1) = Math::pi;
+        }
       }
-      if (simulation_coord == Coordinates::sks and x3f.n2 == 1 and
-          (x3f(0,0) != 0.0 or x3f(0,x3f.n1-1) != 2.0 * Math::pi))
+      if (simulation_coord == Coordinates::sks and x3f.n2 == 1)
       {
-        std::ostringstream message;
-        message.setf(std::ios_base::scientific);
-        message.precision(16);
-        message << "Changing phi range from [" << x3f(0,0) << ", " << x3f(0,x3f.n1-1);
-        message << "] to [0, 2*pi].";
-        BlacklightWarning(message.str().c_str());
-        x3f(0,0) = 0.0;
-        x3f(0,x3f.n1-1) = 2.0 * Math::pi;
+        bool error_low = std::abs(x3f(0,0)) > (x3f(0,1) - x3f(0,0)) * angular_domain_tolerance;
+        bool error_high = std::abs(x3f(0,x3f.n1-1) - 2.0 * Math::pi)
+            > (x3f(0,x3f.n1-1) - x3f(0,x3f.n1-2)) * angular_domain_tolerance;
+        if (error_low or error_high)
+        {
+          std::ostringstream message;
+          message.setf(std::ios_base::scientific);
+          message.precision(16);
+          message << "Changing phi range from [" << x3f(0,0) << ", " << x3f(0,x3f.n1-1);
+          message << "] to [0, 2*pi].";
+          BlacklightWarning(message.str().c_str());
+          x3f(0,0) = 0.0;
+          x3f(0,x3f.n1-1) = 2.0 * Math::pi;
+        }
       }
     }
 

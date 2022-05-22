@@ -74,6 +74,7 @@ struct SimulationReader
   int num_arrays;
   int latest_file_number;
   const double extrapolation_tolerance = 1.0;
+  const double angular_domain_tolerance = 0.1;
 
   // Data
   int n_3_root;
