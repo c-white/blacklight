@@ -16,7 +16,7 @@ template void WriteBinary<bool>(std::ofstream *p_stream, const Array<bool> &arra
 template void WriteBinary<int>(std::ofstream *p_stream, const Array<int> &array);
 template void WriteBinary<double>(std::ofstream *p_stream, const Array<double> &array);
 template void ReadBinary<int>(std::ifstream *p_stream, int *p_val);
-template void ReadBinary<float>(std::ifstream *p_stream, float *p_val);
+template void ReadBinary<float>(std::ifstream *p_stream, float vals[], long int num);
 template void ReadBinary<double>(std::ifstream *p_stream, double vals[], long int num);
 template void ReadBinary<bool>(std::ifstream *p_stream, Array<bool> *p_array);
 template void ReadBinary<int>(std::ifstream *p_stream, Array<int> *p_array);
