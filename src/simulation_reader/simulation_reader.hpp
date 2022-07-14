@@ -60,6 +60,7 @@ struct SimulationReader
   unsigned long int root_data_segment_address;
   std::string metric;
   double metric_a, metric_h;
+  std::ifstream::pos_type cell_data_address;
   std::string *dataset_names;
   int num_dataset_names = 0;
   std::string *variable_names;

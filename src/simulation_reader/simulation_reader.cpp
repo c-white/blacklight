@@ -425,6 +425,7 @@ double SimulationReader::Read(int snapshot)
         data_stream >> metric_h;
         data_stream >> temp_val;
         data_stream.seekg(1, std::ios_base::cur);
+        cell_data_address = data_stream.tellg();
         ConvertCoordinates();
       }
     }
@@ -536,6 +537,8 @@ double SimulationReader::Read(int snapshot)
         ind_bb2 = 8;
         ind_bb3 = 9;
       }
+      else
+        data_stream.seekg(cell_data_address);
       ReadBinary(&data_stream, prim_transpose.data, prim_transpose.n_tot);
       #pragma omp parallel
       {
