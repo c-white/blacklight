@@ -191,6 +191,8 @@ struct InputReader
   std::optional<bool> cut_omit_far;
   std::optional<double> cut_omit_in;
   std::optional<double> cut_omit_out;
+  std::optional<double> cut_midplane_theta;
+  std::optional<double> cut_midplane_z;
   std::optional<bool> cut_plane;
   std::optional<double> cut_plane_origin_x;
   std::optional<double> cut_plane_origin_y;

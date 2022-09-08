@@ -1,7 +1,7 @@
 // Blacklight radiation integrator - formula radiative transfer coefficients
 
 // C++ headers
-#include <cmath>   // atan, atan2, cos, exp, pow, sin, sqrt
+#include <cmath>   // abs, acos, atan, atan2, cos, exp, pow, sin, sqrt
 #include <limits>  // numeric_limits
 
 // Library headers
@@ -9,6 +9,7 @@
 
 // Blacklight headers
 #include "radiation_integrator.hpp"
+#include "../blacklight.hpp"         // Math
 #include "../utils/array.hpp"        // Array
 
 //--------------------------------------------------------------------------------------------------
@@ -85,6 +86,24 @@ void RadiationIntegrator::CalculateFormulaCoefficients()
       // Cut spheres
       if ((cut_omit_in >= 0.0 and r < cut_omit_in) or (cut_omit_out >= 0.0 and r > cut_omit_out))
         continue;
+
+      // Cut with respect to midplane
+      if (cut_midplane_theta > 0.0 or cut_midplane_theta < 0.0)
+      {
+        double th = std::acos(z / r);
+        if ((cut_midplane_theta > 0.0 and std::abs(th - Math::pi / 2.0) > cut_midplane_theta)
+            or (cut_midplane_theta < 0.0 and std::abs(th - Math::pi / 2.0) < -cut_midplane_theta))
+        {
+          sample_cut[adaptive_level](m,n) = true;
+          continue;
+        }
+      }
+      if ((cut_midplane_z > 0.0 and std::abs(z) > cut_midplane_z)
+          or (cut_midplane_z < 0.0 and std::abs(z) < -cut_midplane_z))
+      {
+        sample_cut[adaptive_level](m,n) = true;
+        continue;
+      }
 
       // Cut arbitrary plane
       if (cut_plane)

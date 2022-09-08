@@ -71,11 +71,13 @@ render_num_images = 0  # number of false-color renderings
 adaptive_max_level = 0  # maximum number of adaptive levels beyond root
 
 # Cut parameters
-cut_omit_near = false  # flag indicating near half of simulation should be omitted
-cut_omit_far  = false  # flag indicating far half of simulation should be omitted
-cut_omit_in   = -1.0   # if nonneg., radius inside of which simulation is omitted
-cut_omit_out  = -1.0   # if nonneg., radius outside of which simulation is omitted
-cut_plane     = false  # flag for domain being excluded beyond a certain plane
+cut_omit_near      = false  # flag indicating plasma in near half of domain is ignored
+cut_omit_far       = false  # flag indicating plasma in far half of domain is ignored
+cut_omit_in        = -1.0   # if nonneg., radius inside of which plasma is ignored
+cut_omit_out       = -1.0   # if nonneg., radius outside of which plasma is ignored
+cut_midplane_theta = 0.0    # if nonzero, degrees off midplane within which plasma is kept
+cut_midplane_z     = 0.0    # if nonzero, distance off midplane within which plasma is kept
+cut_plane          = false  # flag for domain being excluded beyond a certain plane
 
 # Fallback parameters
 fallback_nan = true  # flag indicating any fallback should result in NaN for that ray

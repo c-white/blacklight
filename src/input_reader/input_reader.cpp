@@ -375,6 +375,10 @@ int InputReader::Read()
       cut_omit_in = std::stod(val);
     else if (key == "cut_omit_out")
       cut_omit_out = std::stod(val);
+    else if (key == "cut_midplane_theta")
+      cut_midplane_theta = std::stod(val) * Math::pi / 180.0;
+    else if (key == "cut_midplane_z")
+      cut_midplane_z = std::stod(val);
     else if (key == "cut_plane")
       cut_plane = ReadBool(val);
     else if (key == "cut_plane_origin")

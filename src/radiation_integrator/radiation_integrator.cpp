@@ -329,6 +329,8 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   cut_omit_far = p_input_reader->cut_omit_far.value();
   cut_omit_in = p_input_reader->cut_omit_in.value();
   cut_omit_out = p_input_reader->cut_omit_out.value();
+  cut_midplane_theta = p_input_reader->cut_midplane_theta.value();
+  cut_midplane_z = p_input_reader->cut_midplane_z.value();
   cut_plane = p_input_reader->cut_plane.value();
   if (cut_plane)
   {

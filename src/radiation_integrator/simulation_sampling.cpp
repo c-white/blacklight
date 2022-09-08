@@ -2,6 +2,7 @@
 
 // C++ headers
 #include <algorithm>  // max, min
+#include <cmath>      // abs, acos
 #include <limits>     // numeric_limits
 #include <sstream>    // ostringstream
 
@@ -10,7 +11,7 @@
 
 // Blacklight headers
 #include "radiation_integrator.hpp"
-#include "../blacklight.hpp"                           // enums
+#include "../blacklight.hpp"                           // Math, enums
 #include "../simulation_reader/simulation_reader.hpp"  // SimulationReader
 #include "../utils/array.hpp"                          // Array
 #include "../utils/exceptions.hpp"                     // BlacklightException, BlacklightWarning
@@ -228,6 +229,24 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
 
         // Cut spheres
         if ((cut_omit_in >= 0.0 and r < cut_omit_in) or (cut_omit_out >= 0.0 and r > cut_omit_out))
+        {
+          sample_cut[adaptive_level](m,n) = true;
+          continue;
+        }
+
+        // Cut with respect to midplane
+        if (cut_midplane_theta > 0.0 or cut_midplane_theta < 0.0)
+        {
+          double th = std::acos(x3 / r);
+          if ((cut_midplane_theta > 0.0 and std::abs(th - Math::pi / 2.0) > cut_midplane_theta)
+              or (cut_midplane_theta < 0.0 and std::abs(th - Math::pi / 2.0) < -cut_midplane_theta))
+          {
+            sample_cut[adaptive_level](m,n) = true;
+            continue;
+          }
+        }
+        if ((cut_midplane_z > 0.0 and std::abs(x3) > cut_midplane_z)
+            or (cut_midplane_z < 0.0 and std::abs(x3) < -cut_midplane_z))
         {
           sample_cut[adaptive_level](m,n) = true;
           continue;

@@ -153,6 +153,8 @@ struct RadiationIntegrator
   bool cut_omit_far;
   double cut_omit_in;
   double cut_omit_out;
+  double cut_midplane_theta;
+  double cut_midplane_z;
   bool cut_plane;
   double cut_plane_origin_x, cut_plane_origin_y, cut_plane_origin_z;
   double cut_plane_normal_x, cut_plane_normal_y, cut_plane_normal_z;
