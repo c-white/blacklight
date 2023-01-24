@@ -259,6 +259,8 @@ int InputReader::Read()
       image_emission_ave = ReadBool(val);
     else if (key == "image_tau_int")
       image_tau_int = ReadBool(val);
+    else if (key == "image_crossings")
+      image_crossings = ReadBool(val);
 
     // Store rendering parameters
     else if (key.compare(0, 7, "render_") == 0)

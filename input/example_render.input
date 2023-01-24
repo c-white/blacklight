@@ -64,6 +64,7 @@ image_tau             = false     # flag for producing image of optical depths
 image_lambda_ave      = false     # flag for producing lambda-averaged images
 image_emission_ave    = false     # flag for producing emission-averaged images
 image_tau_int         = false     # flag for producing tau-integrated images
+image_crossings       = false     # flag for counting plane crossings of geodesics
 
 # Rendering parameters
 render_num_images     = 1                 # number of false-color renderings

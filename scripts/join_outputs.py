@@ -27,7 +27,7 @@ def main(**kwargs):
     names_specified = False
     quantities = ('rho', 'n_e', 'p_gas', 'Theta_e', 'B', 'sigma', 'beta_inverse')
     names = ['positions', 'directions', 'I_nu', 'Q_nu', 'U_nu', 'V_nu', 'time', 'length', 'lambda',
-        'emission', 'tau', 'rendering']
+        'emission', 'tau', 'crossings', 'rendering']
     names += ['lambda_ave_' + quantity for quantity in quantities]
     names += ['emission_ave_' + quantity for quantity in quantities]
     names += ['tau_int_' + quantity for quantity in quantities]
@@ -74,7 +74,7 @@ def main(**kwargs):
       for n in range(1, adaptive_num_levels_all[filename_in] + 1):
         adaptive_block_locs_all[filename_in][n] = f_in['adaptive_block_locs_{0}'.format(n)]
         if adaptive_block_size is None:
-          if names_present[0] in ('positions', 'directions', 'time', 'length'):
+          if names_present[0] in ('positions', 'directions', 'time', 'length', 'crossings'):
             adaptive_block_size = f_in['adaptive_{0}_{1}'.format(names_present[0],n)].shape[1]
           elif names_present[0] == 'rendering':
             adaptive_block_size = f_in['adaptive_{0}_{1}'.format(names_present[0],n)].shape[3]
@@ -122,7 +122,7 @@ def main(**kwargs):
     for name in names_present:
       if name in ('positions', 'directions'):
         shape = (adaptive_num_blocks[n], adaptive_block_size, adaptive_block_size, 4)
-      elif name in ('time', 'length'):
+      elif name in ('time', 'length', 'crossings'):
         shape = (adaptive_num_blocks[n], adaptive_block_size, adaptive_block_size)
       elif name == 'rendering':
         shape = \
@@ -144,7 +144,7 @@ def main(**kwargs):
             name_local = 'adaptive_{0}_{1}'.format(name, n)
             if name in ('positions', 'directions'):
               data[name_local][block_counts[n],:,:,:] = f_in[name_local][block,:,:,:]
-            elif name in ('time', 'length'):
+            elif name in ('time', 'length', 'crossings'):
               data[name_local][block_counts[n],:,:] = f_in[name_local][block,:,:]
             elif name == 'rendering':
               data[name_local][:,:,block_counts[n],:,:] = f_in[name_local][:,:,block,:,:]

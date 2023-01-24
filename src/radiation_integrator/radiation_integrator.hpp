@@ -76,6 +76,7 @@ struct RadiationIntegrator
   bool image_lambda_ave;
   bool image_emission_ave;
   bool image_tau_int;
+  bool image_crossings;
 
   // Input data - rendering parameters
   int render_num_images;
@@ -257,6 +258,7 @@ struct RadiationIntegrator
   int image_offset_lambda_ave = 0;
   int image_offset_emission_ave = 0;
   int image_offset_tau_int = 0;
+  int image_offset_crossings = 0;
 
   // Rendering data
   Array<double> *render = nullptr;

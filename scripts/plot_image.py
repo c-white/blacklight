@@ -26,6 +26,7 @@ def main(**kwargs):
   cmap_u = 'PiYG'
   cmap_v = 'RdBu_r'
   cmap_level = 'plasma'
+  cmap_crossings = 'plasma'
   cmap_name = 'viridis'
   nan_color = 'gray'
   interpolation = 'none'
@@ -45,8 +46,6 @@ def main(**kwargs):
       kwargs['refinement_level'])) > 1:
     raise RuntimeError('Can have at most one of Stokes Q/U/V, named quantity, or refinement level' \
         + ' selected.')
-  if kwargs['refinement_level'] and (kwargs['vmin'] is not None or kwargs['vmax'] is not None):
-    raise RuntimeError('Cannot override vmin or vmax when plotting refinement level.')
 
   # Prepare metadata
   width_rg = kwargs['width']
@@ -130,6 +129,8 @@ def main(**kwargs):
           raise RuntimeError('Cannot specify frequency for plot of ray times.')
         elif kwargs['name'] is not None and kwargs['name'] == 'length':
           raise RuntimeError('Cannot specify frequency for plot of ray lengths.')
+        elif kwargs['name'] is not None and kwargs['name'] == 'crossings':
+          raise RuntimeError('Cannot specify frequency for plot of plane crossings.')
         if len(image.shape) == 2 and kwargs['frequency_num'] != 1:
           raise RuntimeError('Only single frequency found in file.')
         if len(image.shape) == 3:
@@ -267,14 +268,47 @@ def main(**kwargs):
   # Calculate refinement parameters
   if kwargs['refinement_level']:
     label = 'level'
-    vmin = -0.5 if kwargs['vmin'] is None else kwargs['vmin']
-    vmax = max_level + 0.5 if kwargs['vmax'] is None else kwargs['vmax']
-    tick_locs = np.arange(0, max_level + 1)
+    min_level = 0.0
+    vmin = 0.0 if kwargs['vmin'] is None else round(kwargs['vmin'])
+    vmax = float(max_level) if kwargs['vmax'] is None else round(kwargs['vmax'])
+    num_ticks = int(vmax) - int(vmin) + 1
+    tick_locs = np.linspace(vmin, vmax, num_ticks)
+    vmin_eff = vmin if int(vmin) - int(min_level) <= 0 else vmin - 1.0
+    vmax_eff = vmax if int(vmax) - int(max_level) >= 0 else vmax + 1.0
     cmap_chosen = cmap_level if kwargs['cmap'] is None else kwargs['cmap']
     cmap_continuous = plt.get_cmap(cmap_chosen)
-    cmap_vals = [cmap_continuous(float(x) / max_level) for x in tick_locs]
-    cmap = LinearSegmentedColormap.from_list('levels', cmap_vals, max_level + 1)
-    bounds = np.linspace(vmin, vmax, max_level + 2)
+    cmap_vals = [cmap_continuous((x - vmin_eff) / (vmax_eff - vmin_eff)) for x in tick_locs]
+    cmap = LinearSegmentedColormap.from_list('levels', cmap_vals, num_ticks)
+    cmap.set_under(cmap_continuous(0.0))
+    cmap.set_over(cmap_continuous(1.0))
+    vmin -= 0.5
+    vmax += 0.5
+    bounds = np.linspace(vmin, vmax, num_ticks + 1)
+
+  # Calculate plane crossing parameters
+  elif kwargs['name'] == 'crossings':
+    label = 'crossings'
+    min_crossings = np.min(image)
+    max_crossings = np.max(image)
+    for level in range(1, max_level + 1):
+      for block in range(num_blocks[level]):
+        max_crossings = max(max_crossings, np.max(image_adaptive[level][block,...]))
+        min_crossings = min(min_crossings, np.min(image_adaptive[level][block,...]))
+    vmin = 0.0 if kwargs['vmin'] is None else round(kwargs['vmin'])
+    vmax = float(max_crossings) if kwargs['vmax'] is None else round(kwargs['vmax'])
+    num_ticks = int(vmax) - int(vmin) + 1
+    tick_locs = np.linspace(vmin, vmax, num_ticks)
+    vmin_eff = vmin if int(vmin) - int(min_crossings) <= 0 else vmin - 1.0
+    vmax_eff = vmax if int(vmax) - int(max_crossings) >= 0 else vmax + 1.0
+    cmap_chosen = cmap_crossings if kwargs['cmap'] is None else kwargs['cmap']
+    cmap_continuous = plt.get_cmap(cmap_chosen)
+    cmap_vals = [cmap_continuous((x - vmin_eff) / (vmax_eff - vmin_eff)) for x in tick_locs]
+    cmap = LinearSegmentedColormap.from_list('crossings', cmap_vals, num_ticks)
+    cmap.set_under(cmap_continuous(0.0))
+    cmap.set_over(cmap_continuous(1.0))
+    vmin -= 0.5
+    vmax += 0.5
+    bounds = np.linspace(vmin, vmax, num_ticks + 1)
 
   # Calculate named quantity parameters
   elif kwargs['name'] is not None:
@@ -284,10 +318,10 @@ def main(**kwargs):
         'B': r'B', 'sigma': r'\sigma', 'beta_inverse': r'\beta^{-1}'}
     label_unit = {'time': r' ($\mathrm{s}$)', 'length': r' ($\mathrm{cm}$)',
         'lambda': r' ($\mathrm{s\ cm}$)',
-        'emission': r' ($\mathrm{erg\ s^2\ cm^{-2}\ sr^{-1}\ Hz^{-1}}$)', 'tau': r'',
+        'emission': r' ($\mathrm{erg\ s^2\ cm^{-2}\ sr^{-1}\ Hz^{-1}}$)', 'tau': '',
         'rho': r' ($\mathrm{g\ cm^{-3}}$)', 'n_e': r' ($\mathrm{cm^{-3}}$)',
-        'p_gas': r' ($\mathrm{dyne\ cm^{-2}}$)', 'Theta_e': r'', 'B': r' ($\mathrm{gauss}$)',
-        'sigma': r'', 'beta_inverse': r''}
+        'p_gas': r' ($\mathrm{dyne\ cm^{-2}}$)', 'Theta_e': '', 'B': r' ($\mathrm{gauss}$)',
+        'sigma': '', 'beta_inverse': ''}
     try:
       if kwargs['name'] in ('time', 'length', 'lambda', 'tau', 'emission'):
         key_mid = kwargs['name']
@@ -322,7 +356,7 @@ def main(**kwargs):
     cmap.set_bad(nan_color)
     bounds = None
 
-  # Calculate intensity parameters
+  # Calculate Stokes parameters
   else:
     vmax = np.nanmax(np.abs(image))
     for level in range(1, max_level + 1):
@@ -381,7 +415,7 @@ def main(**kwargs):
   # Make colorbar
   cb = plt.colorbar(ticks=tick_locs, boundaries=bounds)
   cb.set_label(label, labelpad=labelpad)
-  if kwargs['refinement_level']:
+  if kwargs['refinement_level'] or kwargs['name'] == 'crossings':
     cb.ax.tick_params(length=0)
 
   # Adjust axes

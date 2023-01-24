@@ -60,6 +60,11 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
         // Prepare integrated quantities
         double integrated_lambda = 0.0;
         double integrated_emission = 0.0;
+        bool plane_sign = true;
+        double x1_init = sample_pos[adaptive_level](m,0,1);
+        double x2_init = sample_pos[adaptive_level](m,0,2);
+        double x3_init = sample_pos[adaptive_level](m,0,3);
+        int crossings_count = 0;
 
         // Go through samples
         for (int n = 0; n < num_steps; n++)
@@ -158,6 +163,13 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
                 image[adaptive_level](index,m) = cell_values[adaptive_level](a,m,n);
               }
           }
+          if (image_crossings and l == 0)
+          {
+            bool plane_sign_new = x1_init * x1 + x2_init * x2 + x3_init * x3 > 0.0;
+            if (plane_sign_new != plane_sign)
+              crossings_count++;
+            plane_sign = plane_sign_new;
+          }
         }
 
         // Store integrated quantities
@@ -165,6 +177,8 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
           image[adaptive_level](image_offset_lambda+l,m) = integrated_lambda;
         if (image_emission)
           image[adaptive_level](image_offset_emission+l,m) = integrated_emission;
+        if (image_crossings and l == 0)
+          image[adaptive_level](image_offset_crossings,m) = static_cast<double>(crossings_count);
 
         // Normalize integrated quantities
         if (image_lambda_ave)

@@ -130,6 +130,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       BlacklightWarning("Ignoring image_tau_int selection.");
     image_tau_int = false;
   }
+  image_crossings = p_input_reader->image_crossings.value();
 
   // Copy rendering parameters
   if (model_type == ModelType::simulation)
@@ -194,7 +195,8 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     }
   }
   if (not (image_light or image_time or image_length or image_lambda or image_emission or image_tau
-      or image_lambda_ave or image_emission_ave or image_tau_int or render_num_images > 0))
+      or image_lambda_ave or image_emission_ave or image_tau_int or image_crossings
+      or render_num_images > 0))
     throw BlacklightException("No image or rendering selected.");
 
   // Copy slow-light parameters
@@ -442,6 +444,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     image_offset_lambda_ave = image_num_quantities;
     image_offset_emission_ave = image_num_quantities;
     image_offset_tau_int = image_num_quantities;
+    image_offset_crossings = image_num_quantities;
   }
   if (image_time)
   {
@@ -453,6 +456,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     image_offset_lambda_ave = image_num_quantities;
     image_offset_emission_ave = image_num_quantities;
     image_offset_tau_int = image_num_quantities;
+    image_offset_crossings = image_num_quantities;
   }
   if (image_length)
   {
@@ -463,6 +467,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     image_offset_lambda_ave = image_num_quantities;
     image_offset_emission_ave = image_num_quantities;
     image_offset_tau_int = image_num_quantities;
+    image_offset_crossings = image_num_quantities;
   }
   if (image_lambda)
   {
@@ -472,6 +477,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     image_offset_lambda_ave = image_num_quantities;
     image_offset_emission_ave = image_num_quantities;
     image_offset_tau_int = image_num_quantities;
+    image_offset_crossings = image_num_quantities;
   }
   if (image_emission)
   {
@@ -480,6 +486,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     image_offset_lambda_ave = image_num_quantities;
     image_offset_emission_ave = image_num_quantities;
     image_offset_tau_int = image_num_quantities;
+    image_offset_crossings = image_num_quantities;
   }
   if (image_tau)
   {
@@ -487,20 +494,28 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     image_offset_lambda_ave = image_num_quantities;
     image_offset_emission_ave = image_num_quantities;
     image_offset_tau_int = image_num_quantities;
+    image_offset_crossings = image_num_quantities;
   }
   if (image_lambda_ave)
   {
     image_num_quantities += image_num_frequencies * CellValues::num_cell_values;
     image_offset_emission_ave = image_num_quantities;
     image_offset_tau_int = image_num_quantities;
+    image_offset_crossings = image_num_quantities;
   }
   if (image_emission_ave)
   {
     image_num_quantities += image_num_frequencies * CellValues::num_cell_values;
     image_offset_tau_int = image_num_quantities;
+    image_offset_crossings = image_num_quantities;
   }
   if (image_tau_int)
+  {
     image_num_quantities += image_num_frequencies * CellValues::num_cell_values;
+    image_offset_crossings = image_num_quantities;
+  }
+  if (image_crossings)
+    image_num_quantities++;
 
   // Allocate space for rendering data
   render = new Array<double>[adaptive_max_level+1];
@@ -700,7 +715,7 @@ bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double 
     if (image_light and image_polarization)
       IntegratePolarizedRadiation();
     else if (image_light or image_time or image_length or image_lambda or image_emission
-        or image_tau or image_lambda_ave or image_emission_ave or image_tau_int)
+        or image_tau or image_lambda_ave or image_emission_ave or image_tau_int or image_crossings)
       IntegrateUnpolarizedRadiation();
     time_image_end = omp_get_wtime();
     if (render_num_images > 0)

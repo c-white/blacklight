@@ -113,6 +113,7 @@ struct InputReader
   std::optional<bool> image_lambda_ave;
   std::optional<bool> image_emission_ave;
   std::optional<bool> image_tau_int;
+  std::optional<bool> image_crossings;
 
   // Data - rendering parameters
   std::optional<int> render_num_images;

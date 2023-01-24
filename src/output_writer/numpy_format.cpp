@@ -52,7 +52,7 @@ void OutputWriter::WriteNpz()
       + (image_emission ? 1 : 0) + (image_tau ? 1 : 0)
       + (image_lambda_ave ? CellValues::num_cell_values : 0)
       + (image_emission_ave ? CellValues::num_cell_values : 0)
-      + (image_tau_int ? CellValues::num_cell_values : 0);
+      + (image_tau_int ? CellValues::num_cell_values : 0) + (image_crossings ? 1 : 0);
   int num_full_arrays =
       (output_camera ? 1 : 0) + num_image_arrays + (render_num_images > 0 ? 1 : 0);
   int num_arrays = 3 + 1 + (adaptive_max_level > 0 ? 1 : 0) + num_full_arrays
@@ -267,6 +267,16 @@ void OutputWriter::WriteNpz()
           data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
       array_offset++;
     }
+  if (image_crossings)
+  {
+    image_shallow_copy = image[0];
+    image_shallow_copy.Slice(3, image_offset_crossings, image_offset_crossings);
+    data_lengths[array_offset] =
+        GenerateNpyFromArray(image_shallow_copy, 2, &data_buffers[array_offset]);
+    local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
+        data_lengths[array_offset], "crossings", &local_header_buffers[array_offset]);
+    array_offset++;
+  }
   image_deep_copy.Deallocate();
 
   // Write root render data and metadata to buffers
@@ -492,6 +502,19 @@ void OutputWriter::WriteNpz()
             data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
         array_offset++;
       }
+    if (image_crossings)
+    {
+      num_written = std::snprintf(name_buffer, max_name_length, "adaptive_crossings_%d", level);
+      if (num_written < 0 or num_written >= max_name_length)
+        throw BlacklightException("Error naming output array.");
+      image_shallow_copy = image[level];
+      image_shallow_copy.Slice(4, image_offset_crossings, image_offset_crossings);
+      data_lengths[array_offset] =
+          GenerateNpyFromArray(image_shallow_copy, 3, &data_buffers[array_offset]);
+      local_header_lengths[array_offset] = GenerateZIPLocalFileHeader(data_buffers[array_offset],
+          data_lengths[array_offset], name_buffer, &local_header_buffers[array_offset]);
+      array_offset++;
+    }
     image_deep_copy.Deallocate();
 
     // Write adaptive render data and metadata to buffers

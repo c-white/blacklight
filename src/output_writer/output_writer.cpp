@@ -76,8 +76,10 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   image_lambda_ave = p_input_reader->image_lambda_ave.value();
   image_emission_ave = p_input_reader->image_emission_ave.value();
   image_tau_int = p_input_reader->image_tau_int.value();
+  image_crossings = p_input_reader->image_crossings.value();
   if ((image_time or image_length or image_lambda or image_emission or image_tau or image_lambda_ave
-      or image_emission_ave or image_tau_int) and not (output_format == OutputFormat::npz))
+      or image_emission_ave or image_tau_int or image_crossings)
+      and not (output_format == OutputFormat::npz))
     throw BlacklightException("Only npz outputs support non-light images.");
   image_offset_time = p_radiation_integrator->image_offset_time;
   image_offset_length = p_radiation_integrator->image_offset_length;
@@ -87,6 +89,7 @@ OutputWriter::OutputWriter(const InputReader *p_input_reader_,
   image_offset_lambda_ave = p_radiation_integrator->image_offset_lambda_ave;
   image_offset_emission_ave = p_radiation_integrator->image_offset_emission_ave;
   image_offset_tau_int = p_radiation_integrator->image_offset_tau_int;
+  image_offset_crossings = p_radiation_integrator->image_offset_crossings;
 
   // Copy rendering parameters
   render_num_images = p_input_reader->render_num_images.value();
@@ -207,7 +210,7 @@ void OutputWriter::Write(int snapshot)
 
   // Make shallow copies of image data, reshaping the arrays
   if (image_light or image_time or image_length or image_lambda or image_emission or image_tau
-      or image_lambda_ave or image_emission_ave or image_tau_int)
+      or image_lambda_ave or image_emission_ave or image_tau_int or image_crossings)
   {
     image[0] = p_radiation_integrator->image[0];
     image[0].n3 = image[0].n2;
