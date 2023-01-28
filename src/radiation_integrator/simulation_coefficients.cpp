@@ -543,6 +543,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
               double delta_jj_5 = 0.4379 * std::log(1.0 + 1.3414 * std::pow(xx, -0.7515));
               factor_q = f_m * (kk_1 / kk_2 + 6.0 * theta_e);
               factor_v = (kk_0 - delta_jj_5) / kk_2;
+              factor_v = factor_v < 0.0 or factor_v > 1.0 ? 1.0 : factor_v;
             }
             rho_q[adaptive_level](l,m,n) = coefficient_q * factor_q;
             rho_v[adaptive_level](l,m,n) = coefficient_v * factor_v;
