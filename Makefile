@@ -8,11 +8,13 @@
 #     clean: remove bin/blacklight, as well as .o and .d files in obj/
 #   Compiler options:
 #     CXX=g++: use GNU g++ (default)
-#     CXX=icpc: use Intel icpc
+#     CXX=icpc: use Intel icpc for AVX512 architectures (Skylake and more recent)
+#     CXX=icpc-host: use Intel icpc for host architecture
+#     CXX=icpc-phi: use Intel icpc for Knights Landing architecture
 #   Other options:
-#     -j: many processes to work in parallel (recommended except on busy resources)
-#     -j <n>: use n processes to work in parallel
+#     -j <n>: use n processes to work in parallel (recommended)
 #     -j<n>: same as -j <n>
+#     -j: spawn as many processes as tasks, even if they outnumber cores
 
 # Set executable and directory names
 BIN_NAME = blacklight
@@ -48,7 +50,27 @@ else ifeq ($(CXX), icpc)
 DEPENDENCY_OPTIONS := -MMD -MP
 INCLUDE_OPTIONS :=
 DIALECT_OPTIONS := -std=c++17 -qopenmp
+OPTIMIZATION_OPTIONS := -O3 -ipo -xCORE-AVX512
+WARNING_OPTIONS :=
+LINKER_OPTIONS :=
+LIBRARY_OPTIONS :=
+
+# Set compiler options: icpc-host
+else ifeq ($(CXX), icpc-host)
+DEPENDENCY_OPTIONS := -MMD -MP
+INCLUDE_OPTIONS :=
+DIALECT_OPTIONS := -std=c++17 -qopenmp
 OPTIMIZATION_OPTIONS := -O3 -ipo -xhost
+WARNING_OPTIONS :=
+LINKER_OPTIONS :=
+LIBRARY_OPTIONS :=
+
+# Set compiler options: icpc-phi
+else ifeq ($(CXX), icpc-phi)
+DEPENDENCY_OPTIONS := -MMD -MP
+INCLUDE_OPTIONS :=
+DIALECT_OPTIONS := -std=c++17 -qopenmp
+OPTIMIZATION_OPTIONS := -O3 -ipo -xMIC-AVX512
 WARNING_OPTIONS :=
 LINKER_OPTIONS :=
 LIBRARY_OPTIONS :=
