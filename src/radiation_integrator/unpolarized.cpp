@@ -60,10 +60,11 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
         // Prepare integrated quantities
         double integrated_lambda = 0.0;
         double integrated_emission = 0.0;
-        bool plane_sign = true;
         double x1_init = sample_pos[adaptive_level](m,0,1);
         double x2_init = sample_pos[adaptive_level](m,0,2);
         double x3_init = sample_pos[adaptive_level](m,0,3);
+        bool plane_sign =
+            camera_x[1] * x1_init + camera_x[2] * x2_init + camera_x[3] * x3_init > 0.0;
         int crossings_count = 0;
 
         // Go through samples
@@ -165,7 +166,7 @@ void RadiationIntegrator::IntegrateUnpolarizedRadiation()
           }
           if (image_crossings and l == 0)
           {
-            bool plane_sign_new = x1_init * x1 + x2_init * x2 + x3_init * x3 > 0.0;
+            bool plane_sign_new = camera_x[1] * x1 + camera_x[2] * x2 + camera_x[3] * x3 > 0.0;
             if (plane_sign_new != plane_sign)
               crossings_count++;
             plane_sign = plane_sign_new;
