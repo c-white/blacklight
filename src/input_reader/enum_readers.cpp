@@ -236,8 +236,8 @@ FrequencyNormalization InputReader::ReadFrequencyNormalization(const std::string
 //   returned value: valid PlasmaModel
 // Notes:
 //   Valid options:
-//     "ti_te_beta": spherical Kerr-Schild
-//     "code_kappa": Cartesian Kerr-Schild
+//     "ti_te_beta": ion-electron temperature ratio a function of plasma beta
+//     "code_kappa": electron entropy included in simulation data
 PlasmaModel InputReader::ReadPlasmaModel(const std::string &string)
 {
   if (string == "ti_te_beta")
