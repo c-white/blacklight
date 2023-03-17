@@ -63,12 +63,15 @@ OutputFormat InputReader::ReadOutputFormat(const std::string &string)
 // Notes:
 //   Valid options:
 //     "athena": Athena++
+//     "athenak": AthenaK
 //     "iharm3d": modern variant of the HARM code
 //     "harm3d": older variant of the HARM code
 SimulationFormat InputReader::ReadSimulationFormat(const std::string &string)
 {
   if (string == "athena")
     return SimulationFormat::athena;
+  else if (string == "athenak")
+    return SimulationFormat::athenak;
   else if (string == "iharm3d")
     return SimulationFormat::iharm3d;
   else if (string == "harm3d")

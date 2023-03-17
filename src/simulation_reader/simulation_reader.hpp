@@ -5,6 +5,7 @@
 
 // C++ headers
 #include <fstream>  // ifstream
+#include <iosfwd>   // streampos
 #include <string>   // string
 
 // Blacklight headers
@@ -37,6 +38,8 @@ struct SimulationReader
   int simulation_end;
   Coordinates simulation_coord;
   double simulation_a;
+  double simulation_m_msun;
+  double simulation_rho_cgs;
   std::string simulation_kappa_name;
 
   // Input data - slow-light parameters
@@ -46,6 +49,7 @@ struct SimulationReader
   double slow_dt;
 
   // Input data - plasma parameters
+  double plasma_mu;
   PlasmaModel plasma_model;
 
   // Flags for tracking function calls
@@ -58,6 +62,20 @@ struct SimulationReader
   unsigned long int root_btree_address;
   unsigned long int root_name_heap_address;
   unsigned long int root_data_segment_address;
+  int athenak_location_size;
+  int athenak_variable_size;
+  std::streampos athenak_data_offset;
+  int athenak_ind_rho, athenak_ind_pgas, athenak_ind_kappa;
+  int athenak_ind_uu1, athenak_ind_uu2, athenak_ind_uu3;
+  int athenak_ind_bb1, athenak_ind_bb2, athenak_ind_bb3;
+  int athenak_block_nx;
+  int athenak_block_ny;
+  int athenak_block_nz;
+  int athenak_cells_per_block;
+  int athenak_block_size_bytes;
+  int athenak_num_blocks;
+  double athenak_time;
+  double *athenak_cell_data_double;
   std::string metric;
   double metric_a, metric_h;
   std::ifstream::pos_type cell_data_address;
@@ -93,7 +111,10 @@ struct SimulationReader
 
   // Internal functions - simulation_reader.cpp
   std::string FormatFilename(int file_number);
+  void ReadAthenaKHeader();
+  void ReadAthenaKInputs();
   void VerifyVariablesAthena();
+  void VerifyVariablesAthenaK();
   void VerifyVariablesHarm();
 
   // Internal functions - simulation_geometry.cpp

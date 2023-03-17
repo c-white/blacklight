@@ -12,6 +12,7 @@
 
 // Instantiations
 template struct Array<bool>;
+template struct Array<char>;
 template struct Array<int>;
 template struct Array<float>;
 template struct Array<double>;
