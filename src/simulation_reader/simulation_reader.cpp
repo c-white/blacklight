@@ -373,8 +373,9 @@ double SimulationReader::Read(int snapshot)
         x2v.Allocate(athenak_num_blocks, athenak_block_ny);
         x3v.Allocate(athenak_num_blocks, athenak_block_nz);
         int n5 = plasma_model == PlasmaModel::code_kappa ? 9 : 8;
-        prim[n].Allocate(n5, athenak_num_blocks, athenak_block_nz, athenak_block_ny,
-            athenak_block_nx);
+        for (int nn = 0; nn < num_read; nn++)
+          prim[nn].Allocate(n5, athenak_num_blocks, athenak_block_nz, athenak_block_ny,
+              athenak_block_nx);
       }
 
       // Go through blocks
@@ -656,7 +657,8 @@ double SimulationReader::Read(int snapshot)
         int n3 = x3v.n1;
         int n2 = x2v.n1;
         int n1 = x1v.n1;
-        prim[n].Allocate(n5, n4, n3, n2, n1);
+        for (int nn = 0; nn < num_read; nn++)
+          prim[nn].Allocate(n5, n4, n3, n2, n1);
       }
       Array<float> hydro(prim[n]);
       hydro.Slice(5, 0, num_variables(ind_hydro) - 1);
@@ -675,7 +677,8 @@ double SimulationReader::Read(int snapshot)
         int n3 = x3v.n1;
         int n2 = x2v.n1;
         int n1 = x1v.n1;
-        prim[n].Allocate(n5, n4, n3, n2, n1);
+        for (int nn = 0; nn < num_read; nn++)
+          prim[nn].Allocate(n5, n4, n3, n2, n1);
         prim_transpose.Allocate(n1, n2, n3, n5);
       }
       ReadHDF5FloatArray("prims", prim_transpose);
@@ -699,7 +702,8 @@ double SimulationReader::Read(int snapshot)
         int n3 = x3v.n1;
         int n2 = x2v.n1;
         int n1 = x1v.n1;
-        prim[n].Allocate(n5, n4, n3, n2, n1);
+        for (int nn = 0; nn < num_read; nn++)
+          prim[nn].Allocate(n5, n4, n3, n2, n1);
         prim_transpose.Allocate(n1, n2, n3, n5 + 6);
         ind_rho = 0;
         ind_pgas = 1;
