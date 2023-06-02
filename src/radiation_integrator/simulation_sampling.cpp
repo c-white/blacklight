@@ -315,7 +315,7 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
             if (slow_interp)
             {
               t_ind--;
-              t_frac = (x0 - time[t_ind]) / time[t_ind+1] - time[t_ind];
+              t_frac = (x0 - time[t_ind]) / (time[t_ind+1] - time[t_ind]);
             }
             else if (time[t_ind-1] - x0 <= x0 - time[t_ind])
               t_ind--;
