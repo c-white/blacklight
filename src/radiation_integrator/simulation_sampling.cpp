@@ -31,7 +31,8 @@ void RadiationIntegrator::ObtainGridData()
     n_3_root = p_simulation_reader->n_3_root;
 
   // Copy grid layout
-  if (simulation_format == SimulationFormat::athena and simulation_interp
+  if ((simulation_format == SimulationFormat::athena
+      or simulation_format == SimulationFormat::athenak) and simulation_interp
       and simulation_block_interp)
   {
     levels = p_simulation_reader->levels;
@@ -124,7 +125,8 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
     num_pix = block_counts[adaptive_level] * block_num_pix;
   if (first_time or adaptive_level > 0)
   {
-    if (simulation_format == SimulationFormat::athena and simulation_interp
+    if ((simulation_format == SimulationFormat::athena
+        or simulation_format == SimulationFormat::athenak) and simulation_interp
         and simulation_block_interp)
       sample_inds[adaptive_level].Allocate(num_pix, geodesic_num_steps[adaptive_level], 8,
           num_interp_inds);
@@ -392,7 +394,8 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
         }
 
         // Prepare to sample values with intrablock interpolation
-        else if (not (simulation_format == SimulationFormat::athena and simulation_block_interp))
+        else if (not ((simulation_format == SimulationFormat::athena
+            or simulation_format == SimulationFormat::athenak) and simulation_block_interp))
         {
           int i_m = i == 0 or (i != n_i - 1 and x1 >= x1v(b,i)) ? i : i - 1;
           int j_m = j == 0 or (j != n_j - 1 and x2 >= x2v(b,j)) ? j : j - 1;
@@ -698,7 +701,8 @@ void RadiationIntegrator::SampleSimulation()
       }
 
       // Set intrablock interpolated values
-      else if (not (simulation_format == SimulationFormat::athena and simulation_block_interp))
+      else if (not ((simulation_format == SimulationFormat::athena
+          or simulation_format == SimulationFormat::athenak) and simulation_block_interp))
       {
         // Extract indices and coefficients
         int b = sample_inds[adaptive_level](m,n,0);
