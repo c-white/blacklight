@@ -63,7 +63,7 @@ def main(**kwargs):
   adaptive_block_size = None
   for filename_in in kwargs['inputs']:
     with np.load(filename_in, 'r') as f_in:
-      adaptive_num_levels_all[filename_in] = f_in['adaptive_num_levels']
+      adaptive_num_levels_all[filename_in] = f_in['adaptive_num_levels'][0]
       try:
         adaptive_num_blocks_all[filename_in] = f_in['adaptive_num_blocks']
       except KeyError:
