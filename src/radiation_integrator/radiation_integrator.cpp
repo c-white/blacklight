@@ -3,6 +3,7 @@
 // C++ headers
 #include <algorithm>  // max
 #include <optional>   // optional
+#include <string>     // string
 
 // Library headers
 #include <omp.h>  // omp_get_wtime
@@ -146,38 +147,51 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   if (render_num_images > 0)
   {
     render_num_features = new int[render_num_images];
-    render_quantities = new int *[render_num_images]();
     render_types = new RenderType *[render_num_images]();
+    render_quantities = new int *[render_num_images]();
     render_min_vals = new double *[render_num_images]();
     render_max_vals = new double *[render_num_images]();
     render_thresh_vals = new double *[render_num_images]();
+    render_r_vals = new double *[render_num_images]();
     render_tau_scales = new double *[render_num_images]();
     render_opacities = new double *[render_num_images]();
     render_x_vals = new double *[render_num_images]();
     render_y_vals = new double *[render_num_images]();
     render_z_vals = new double *[render_num_images]();
+    render_lx_vals = new double *[render_num_images]();
+    render_ly_vals = new double *[render_num_images]();
+    render_lz_vals = new double *[render_num_images]();
+    render_stream_files = new std::string *[render_num_images]();
     for (int n_i = 0; n_i < render_num_images; n_i++)
     {
       int num_features = p_input_reader->render_num_features[n_i].value();
       if (num_features <= 0)
         throw BlacklightException("Must have positive number of features for each rendered image.");
       render_num_features[n_i] = num_features;
-      render_quantities[n_i] = new int[num_features];
       render_types[n_i] = new RenderType[num_features];
+      render_quantities[n_i] = new int[num_features];
       render_min_vals[n_i] = new double[num_features];
       render_max_vals[n_i] = new double[num_features];
       render_thresh_vals[n_i] = new double[num_features];
+      render_r_vals[n_i] = new double[num_features];
       render_tau_scales[n_i] = new double[num_features];
       render_opacities[n_i] = new double[num_features];
       render_x_vals[n_i] = new double[num_features];
       render_y_vals[n_i] = new double[num_features];
       render_z_vals[n_i] = new double[num_features];
+      render_lx_vals[n_i] = new double[num_features];
+      render_ly_vals[n_i] = new double[num_features];
+      render_lz_vals[n_i] = new double[num_features];
+      render_stream_files[n_i] = new std::string[num_features];
       for (int n_f = 0; n_f < num_features; n_f++)
       {
-        render_quantities[n_i][n_f] = p_input_reader->render_quantities[n_i][n_f].value();
         render_types[n_i][n_f] = p_input_reader->render_types[n_i][n_f].value();
+        render_x_vals[n_i][n_f] = p_input_reader->render_x_vals[n_i][n_f].value();
+        render_y_vals[n_i][n_f] = p_input_reader->render_y_vals[n_i][n_f].value();
+        render_z_vals[n_i][n_f] = p_input_reader->render_z_vals[n_i][n_f].value();
         if (render_types[n_i][n_f] == RenderType::fill)
         {
+          render_quantities[n_i][n_f] = p_input_reader->render_quantities[n_i][n_f].value();
           render_min_vals[n_i][n_f] = p_input_reader->render_min_vals[n_i][n_f].value();
           render_max_vals[n_i][n_f] = p_input_reader->render_max_vals[n_i][n_f].value();
           render_tau_scales[n_i][n_f] = p_input_reader->render_tau_scales[n_i][n_f].value();
@@ -186,12 +200,20 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
             or render_types[n_i][n_f] == RenderType::rise
             or render_types[n_i][n_f] == RenderType::fall)
         {
+          render_quantities[n_i][n_f] = p_input_reader->render_quantities[n_i][n_f].value();
           render_thresh_vals[n_i][n_f] = p_input_reader->render_thresh_vals[n_i][n_f].value();
           render_opacities[n_i][n_f] = p_input_reader->render_opacities[n_i][n_f].value();
         }
-        render_x_vals[n_i][n_f] = p_input_reader->render_x_vals[n_i][n_f].value();
-        render_y_vals[n_i][n_f] = p_input_reader->render_y_vals[n_i][n_f].value();
-        render_z_vals[n_i][n_f] = p_input_reader->render_z_vals[n_i][n_f].value();
+        if (render_types[n_i][n_f] == RenderType::line
+            or render_types[n_i][n_f] == RenderType::tube)
+        {
+          render_r_vals[n_i][n_f] = p_input_reader->render_r_vals[n_i][n_f].value();
+          render_opacities[n_i][n_f] = p_input_reader->render_opacities[n_i][n_f].value();
+          render_lx_vals[n_i][n_f] = p_input_reader->render_lx_vals[n_i][n_f].value();
+          render_ly_vals[n_i][n_f] = p_input_reader->render_ly_vals[n_i][n_f].value();
+          render_lz_vals[n_i][n_f] = p_input_reader->render_lz_vals[n_i][n_f].value();
+          render_stream_files[n_i][n_f] = p_input_reader->render_stream_files[n_i][n_f].value();
+        }
       }
     }
   }
@@ -552,11 +574,16 @@ RadiationIntegrator::~RadiationIntegrator()
     delete[] render_min_vals[n_i];
     delete[] render_max_vals[n_i];
     delete[] render_thresh_vals[n_i];
+    delete[] render_r_vals[n_i];
     delete[] render_tau_scales[n_i];
     delete[] render_opacities[n_i];
     delete[] render_x_vals[n_i];
     delete[] render_y_vals[n_i];
     delete[] render_z_vals[n_i];
+    delete[] render_lx_vals[n_i];
+    delete[] render_ly_vals[n_i];
+    delete[] render_lz_vals[n_i];
+    delete[] render_stream_files[n_i];
   }
   delete[] render_num_features;
   delete[] render_quantities;
@@ -564,11 +591,16 @@ RadiationIntegrator::~RadiationIntegrator()
   delete[] render_min_vals;
   delete[] render_max_vals;
   delete[] render_thresh_vals;
+  delete[] render_r_vals;
   delete[] render_tau_scales;
   delete[] render_opacities;
   delete[] render_x_vals;
   delete[] render_y_vals;
   delete[] render_z_vals;
+  delete[] render_lx_vals;
+  delete[] render_ly_vals;
+  delete[] render_lz_vals;
+  delete[] render_stream_files;
 
   // Free memory - adaptive input
   delete[] adaptive_region_levels;
@@ -642,6 +674,16 @@ RadiationIntegrator::~RadiationIntegrator()
   for (int level = 0; level <= adaptive_max_level; level++)
     render[level].Deallocate();
   delete[] render;
+  for (int n_s = 0; n_s < num_streamlines; n_s++)
+    streamlines[n_s].Deallocate();
+  delete[] streamlines;
+  if (num_streamlines > 0)
+  {
+    current_stream_distances.Deallocate();
+    previous_stream_distances.Deallocate();
+    current_stream_indices.Deallocate();
+    previous_stream_indices.Deallocate();
+  }
 
   // Free memory - adaptive data
   if (adaptive_max_level > 0)
@@ -722,6 +764,8 @@ bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double 
     if (render_num_images > 0)
     {
       time_render_start = time_image_end;
+      if (first_time)
+        ReadStreamFiles();
       Render();
       time_render_end = omp_get_wtime();
     }

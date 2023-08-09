@@ -42,7 +42,7 @@ enum struct RayTerminate {photon, multiplicative, additive};
 enum struct RayIntegrator {dp, rk4, rk2};
 enum struct FrequencySpacing {lin_freq, lin_wave, log};
 enum struct FrequencyNormalization {camera, infinity};
-enum struct RenderType {fill, thresh, rise, fall};
+enum struct RenderType {fill, thresh, rise, fall, line, tube};
 enum struct PlasmaModel {ti_te_beta, code_kappa};
 
 #endif

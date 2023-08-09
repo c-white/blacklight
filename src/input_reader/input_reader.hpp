@@ -118,16 +118,21 @@ struct InputReader
   // Data - rendering parameters
   std::optional<int> render_num_images;
   std::optional<int> *render_num_features = nullptr;
-  std::optional<int> **render_quantities = nullptr;
   std::optional<RenderType> **render_types = nullptr;
+  std::optional<int> **render_quantities = nullptr;
   std::optional<double> **render_min_vals = nullptr;
   std::optional<double> **render_max_vals = nullptr;
   std::optional<double> **render_thresh_vals = nullptr;
+  std::optional<double> **render_r_vals = nullptr;
   std::optional<double> **render_tau_scales = nullptr;
   std::optional<double> **render_opacities = nullptr;
   std::optional<double> **render_x_vals = nullptr;
   std::optional<double> **render_y_vals = nullptr;
   std::optional<double> **render_z_vals = nullptr;
+  std::optional<double> **render_lx_vals = nullptr;
+  std::optional<double> **render_ly_vals = nullptr;
+  std::optional<double> **render_lz_vals = nullptr;
+  std::optional<std::string> **render_stream_files = nullptr;
 
   // Data - slow-light parameters
   std::optional<bool> slow_light_on;

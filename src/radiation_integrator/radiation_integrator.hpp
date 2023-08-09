@@ -3,6 +3,9 @@
 #ifndef RADIATION_INTEGRATOR_H_
 #define RADIATION_INTEGRATOR_H_
 
+// C++ headers
+#include <string>  // string
+
 // Blacklight headers
 #include "../blacklight.hpp"                               // enums
 #include "../geodesic_integrator/geodesic_integrator.hpp"  // GeodesicIntegrator
@@ -81,16 +84,21 @@ struct RadiationIntegrator
   // Input data - rendering parameters
   int render_num_images;
   int *render_num_features = nullptr;
-  int **render_quantities = nullptr;
   RenderType **render_types = nullptr;
+  int **render_quantities = nullptr;
   double **render_min_vals = nullptr;
   double **render_max_vals = nullptr;
   double **render_thresh_vals = nullptr;
+  double **render_r_vals = nullptr;
   double **render_tau_scales = nullptr;
   double **render_opacities = nullptr;
   double **render_x_vals = nullptr;
   double **render_y_vals = nullptr;
   double **render_z_vals = nullptr;
+  double **render_lx_vals = nullptr;
+  double **render_ly_vals = nullptr;
+  double **render_lz_vals = nullptr;
+  std::string **render_stream_files = nullptr;
 
   // Input data - slow-light parameters
   bool slow_light_on;
@@ -262,6 +270,12 @@ struct RadiationIntegrator
 
   // Rendering data
   Array<double> *render = nullptr;
+  int num_streamlines = 0;
+  Array<double> *streamlines = nullptr;
+  Array<double> current_stream_distances;
+  Array<double> previous_stream_distances;
+  Array<int> current_stream_indices;
+  Array<int> previous_stream_indices;
 
   // Adaptive data
   int adaptive_level = 0;
@@ -322,6 +336,7 @@ struct RadiationIntegrator
   void IntegratePolarizedRadiation();
 
   // Internal functions - rendering.cpp
+  void ReadStreamFiles();
   void Render();
 
   // Internal functions - radiation_adaptive.cpp

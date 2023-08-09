@@ -33,16 +33,21 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     if (render_num_images.value() > 0)
     {
       render_num_features = new std::optional<int>[render_num_images.value()];
-      render_quantities = new std::optional<int> *[render_num_images.value()]();
       render_types = new std::optional<RenderType> *[render_num_images.value()]();
+      render_quantities = new std::optional<int> *[render_num_images.value()]();
       render_min_vals = new std::optional<double> *[render_num_images.value()]();
       render_max_vals = new std::optional<double> *[render_num_images.value()]();
       render_thresh_vals = new std::optional<double> *[render_num_images.value()]();
+      render_r_vals = new std::optional<double> *[render_num_images.value()]();
       render_tau_scales = new std::optional<double> *[render_num_images.value()]();
       render_opacities = new std::optional<double> *[render_num_images.value()]();
       render_x_vals = new std::optional<double> *[render_num_images.value()]();
       render_y_vals = new std::optional<double> *[render_num_images.value()]();
       render_z_vals = new std::optional<double> *[render_num_images.value()]();
+      render_lx_vals = new std::optional<double> *[render_num_images.value()]();
+      render_ly_vals = new std::optional<double> *[render_num_images.value()]();
+      render_lz_vals = new std::optional<double> *[render_num_images.value()]();
+      render_stream_files = new std::optional<std::string> *[render_num_images.value()]();
     }
   }
 
@@ -54,16 +59,50 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
       return;
     int num_features = std::stoi(val);
     render_num_features[image_num] = num_features;
-    render_quantities[image_num] = new std::optional<int>[num_features];
     render_types[image_num] = new std::optional<RenderType>[num_features];
+    render_quantities[image_num] = new std::optional<int>[num_features];
     render_min_vals[image_num] = new std::optional<double>[num_features];
     render_max_vals[image_num] = new std::optional<double>[num_features];
     render_thresh_vals[image_num] = new std::optional<double>[num_features];
+    render_r_vals[image_num] = new std::optional<double>[num_features];
     render_tau_scales[image_num] = new std::optional<double>[num_features];
     render_opacities[image_num] = new std::optional<double>[num_features];
     render_x_vals[image_num] = new std::optional<double>[num_features];
     render_y_vals[image_num] = new std::optional<double>[num_features];
     render_z_vals[image_num] = new std::optional<double>[num_features];
+    render_lx_vals[image_num] = new std::optional<double>[num_features];
+    render_ly_vals[image_num] = new std::optional<double>[num_features];
+    render_lz_vals[image_num] = new std::optional<double>[num_features];
+    render_stream_files[image_num] = new std::optional<std::string>[num_features];
+  }
+
+  // Read type
+  else if (key.size() >= 8 and key.compare(key.size() - 5, key.npos, "_type") == 0)
+  {
+    std::size_t pos;
+    int image_num = std::stoi(key, &pos) - 1;
+    int feature_num = std::stoi(key.substr(pos + 1)) - 1;
+    if (image_num >= render_num_images.value()
+        or feature_num >= render_num_features[image_num].value())
+      return;
+    if (val == "fill")
+      render_types[image_num][feature_num] = RenderType::fill;
+    else if (val == "thresh")
+      render_types[image_num][feature_num] = RenderType::thresh;
+    else if (val == "rise")
+      render_types[image_num][feature_num] = RenderType::rise;
+    else if (val == "fall")
+      render_types[image_num][feature_num] = RenderType::fall;
+    else if (val == "line")
+      render_types[image_num][feature_num] = RenderType::line;
+    else if (val == "tube")
+      render_types[image_num][feature_num] = RenderType::tube;
+    else
+    {
+      std::ostringstream message;
+      message << "Invalid render type (" << val << ") in input file.";
+      throw BlacklightException(message.str().c_str());
+    }
   }
 
   // Read quantity
@@ -93,31 +132,6 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     {
       std::ostringstream message;
       message << "Invalid render quantity (" << val << ") in input file.";
-      throw BlacklightException(message.str().c_str());
-    }
-  }
-
-  // Read type
-  else if (key.size() >= 8 and key.compare(key.size() - 5, key.npos, "_type") == 0)
-  {
-    std::size_t pos;
-    int image_num = std::stoi(key, &pos) - 1;
-    int feature_num = std::stoi(key.substr(pos + 1)) - 1;
-    if (image_num >= render_num_images.value()
-        or feature_num >= render_num_features[image_num].value())
-      return;
-    if (val == "fill")
-      render_types[image_num][feature_num] = RenderType::fill;
-    else if (val == "thresh")
-      render_types[image_num][feature_num] = RenderType::thresh;
-    else if (val == "rise")
-      render_types[image_num][feature_num] = RenderType::rise;
-    else if (val == "fall")
-      render_types[image_num][feature_num] = RenderType::fall;
-    else
-    {
-      std::ostringstream message;
-      message << "Invalid render type (" << val << ") in input file.";
       throw BlacklightException(message.str().c_str());
     }
   }
@@ -156,6 +170,18 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
         or feature_num >= render_num_features[image_num].value())
       return;
     render_thresh_vals[image_num][feature_num] = std::stod(val);
+  }
+
+  // Read radius
+  else if (key.size() >= 5 and key.compare(key.size() - 2, key.npos,  "_r") == 0)
+  {
+    std::size_t pos;
+    int image_num = std::stoi(key, &pos) - 1;
+    int feature_num = std::stoi(key.substr(pos + 1)) - 1;
+    if (image_num >= render_num_images.value()
+        or feature_num >= render_num_features[image_num].value())
+      return;
+    render_r_vals[image_num][feature_num] = std::stod(val);
   }
 
   // Read tau scale
@@ -211,6 +237,31 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
       return;
     ReadTriple(val, &render_x_vals[image_num][feature_num], &render_y_vals[image_num][feature_num],
         &render_z_vals[image_num][feature_num]);
+  }
+
+  // Read light values
+  else if (key.size() >= 9 and key.compare(key.size() - 6, key.npos, "_light") == 0)
+  {
+    std::size_t pos;
+    int image_num = std::stoi(key, &pos) - 1;
+    int feature_num = std::stoi(key.substr(pos + 1)) - 1;
+    if (image_num >= render_num_images.value()
+        or feature_num >= render_num_features[image_num].value())
+      return;
+    ReadTriple(val, &render_lx_vals[image_num][feature_num],
+        &render_ly_vals[image_num][feature_num], &render_lz_vals[image_num][feature_num]);
+  }
+
+  // Read streamline filename
+  else if (key.size() >= 8 and key.compare(key.size() - 5, key.npos, "_file") == 0)
+  {
+    std::size_t pos;
+    int image_num = std::stoi(key, &pos) - 1;
+    int feature_num = std::stoi(key.substr(pos + 1)) - 1;
+    if (image_num >= render_num_images.value()
+        or feature_num >= render_num_features[image_num].value())
+      return;
+    render_stream_files[image_num][feature_num] = val;
   }
 
   // Handle unknown entry

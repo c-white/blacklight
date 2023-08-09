@@ -34,28 +34,38 @@ InputReader::~InputReader()
 {
   for (int n_i = 0; n_i < render_num_images.value(); n_i++)
   {
-    delete[] render_quantities[n_i];
     delete[] render_types[n_i];
+    delete[] render_quantities[n_i];
     delete[] render_min_vals[n_i];
     delete[] render_max_vals[n_i];
     delete[] render_thresh_vals[n_i];
+    delete[] render_r_vals[n_i];
     delete[] render_tau_scales[n_i];
     delete[] render_opacities[n_i];
     delete[] render_x_vals[n_i];
     delete[] render_y_vals[n_i];
     delete[] render_z_vals[n_i];
+    delete[] render_lx_vals[n_i];
+    delete[] render_ly_vals[n_i];
+    delete[] render_lz_vals[n_i];
+    delete[] render_stream_files[n_i];
   }
   delete[] render_num_features;
-  delete[] render_quantities;
   delete[] render_types;
+  delete[] render_quantities;
   delete[] render_min_vals;
   delete[] render_max_vals;
   delete[] render_thresh_vals;
+  delete[] render_r_vals;
   delete[] render_tau_scales;
   delete[] render_opacities;
   delete[] render_x_vals;
   delete[] render_y_vals;
   delete[] render_z_vals;
+  delete[] render_lx_vals;
+  delete[] render_ly_vals;
+  delete[] render_lz_vals;
+  delete[] render_stream_files;
   delete[] adaptive_region_levels;
   delete[] adaptive_region_x_min_vals;
   delete[] adaptive_region_x_max_vals;
