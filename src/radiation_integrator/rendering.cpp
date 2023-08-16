@@ -184,19 +184,39 @@ void RadiationIntegrator::Render()
         // Calculate distances to streamlines
         for (int n_s = 0; n_s < num_streamlines; n_s++)
         {
-          int num_points = streamlines[n_s].n2;
+          int num_pieces = streamlines[n_s].n2 - 1;
           double min_distance_sq = std::numeric_limits<double>::infinity();
           int min_index = -1;
-          for (int n_p = 0; n_p < num_points; n_p++)
+          for (int n_p = 0; n_p < num_pieces; n_p++)
           {
-            double delta_x1 = streamlines[n_s](n_p,0) - x1;
-            double delta_x2 = streamlines[n_s](n_p,1) - x2;
-            double delta_x3 = streamlines[n_s](n_p,2) - x3;
-            double distance_sq = delta_x1 * delta_x1 + delta_x2 * delta_x2 + delta_x3 * delta_x3;
+            double p1_x1 = streamlines[n_s](n_p,0);
+            double p1_x2 = streamlines[n_s](n_p,1);
+            double p1_x3 = streamlines[n_s](n_p,2);
+            double p2_x1 = streamlines[n_s](n_p+1,0);
+            double p2_x2 = streamlines[n_s](n_p+1,1);
+            double p2_x3 = streamlines[n_s](n_p+1,2);
+            double l12_x1 = p2_x1 - p1_x1;
+            double l12_x2 = p2_x2 - p1_x2;
+            double l12_x3 = p2_x3 - p1_x3;
+            double l10_x1 = x1 - p1_x1;
+            double l10_x2 = x2 - p1_x2;
+            double l10_x3 = x3 - p1_x3;
+            double l20_x1 = x1 - p2_x1;
+            double l20_x2 = x2 - p2_x2;
+            double l20_x3 = x3 - p2_x3;
+            double temp_x1 = l10_x2 * l12_x3 - l10_x3 * l12_x2;
+            double temp_x2 = l10_x3 * l12_x1 - l10_x1 * l12_x3;
+            double temp_x3 = l10_x1 * l12_x2 - l10_x2 * l12_x1;
+            double distance_sq = (temp_x1 * temp_x1 + temp_x2 * temp_x2 + temp_x3 * temp_x3)
+                / (l12_x1 * l12_x1 + l12_x2 * l12_x2 + l12_x3 * l12_x3);
+            if (l10_x1 * l12_x1 + l10_x2 * l12_x2 + l10_x3 * l12_x3 < 0.0)
+              distance_sq = l10_x1 * l10_x1 + l10_x2 * l10_x2 + l10_x3 * l10_x3;
+            else if (l20_x1 * l12_x1 + l20_x2 * l12_x2 + l20_x3 * l12_x3 > 0.0)
+              distance_sq = l20_x1 * l20_x1 + l20_x2 * l20_x2 + l20_x3 * l20_x3;
             if (distance_sq < min_distance_sq)
             {
               min_distance_sq = distance_sq;
-              min_index = std::max(std::min(n_p, num_points - 2), 1);
+              min_index = n_p;
             }
           }
           current_stream_distances(thread,n_s) = min_distance_sq;
@@ -302,31 +322,12 @@ void RadiationIntegrator::Render()
                   double ray_dx2 = x2 - previous_x2;
                   double ray_dx3 = x3 - previous_x3;
                   int previous_min_index = previous_stream_indices(thread,n_s);
-                  double delta_x1 = streamlines[n_s](previous_min_index-1,0) - previous_x1;
-                  double delta_x2 = streamlines[n_s](previous_min_index-1,1) - previous_x2;
-                  double delta_x3 = streamlines[n_s](previous_min_index-1,2) - previous_x3;
-                  double distance_sq_left =
-                      delta_x1 * delta_x1 + delta_x2 * delta_x2 + delta_x3 * delta_x3;
-                  delta_x1 = streamlines[n_s](previous_min_index+1,0) - previous_x1;
-                  delta_x2 = streamlines[n_s](previous_min_index+1,1) - previous_x2;
-                  delta_x3 = streamlines[n_s](previous_min_index+1,2) - previous_x3;
-                  double distance_sq_right =
-                      delta_x1 * delta_x1 + delta_x2 * delta_x2 + delta_x3 * delta_x3;
-                  double tube_dx1 = streamlines[n_s](previous_min_index,0)
-                      - streamlines[n_s](previous_min_index-1,0);
-                  double tube_dx2 = streamlines[n_s](previous_min_index,1)
-                      - streamlines[n_s](previous_min_index-1,1);
-                  double tube_dx3 = streamlines[n_s](previous_min_index,2)
-                      - streamlines[n_s](previous_min_index-1,2);
-                  if (distance_sq_right < distance_sq_left)
-                  {
-                    tube_dx1 = streamlines[n_s](previous_min_index+1,0)
-                        - streamlines[n_s](previous_min_index,0);
-                    tube_dx2 = streamlines[n_s](previous_min_index+1,1)
-                        - streamlines[n_s](previous_min_index,1);
-                    tube_dx3 = streamlines[n_s](previous_min_index+1,2)
-                        - streamlines[n_s](previous_min_index,2);
-                  }
+                  double tube_dx1 = streamlines[n_s](previous_min_index+1,0)
+                      - streamlines[n_s](previous_min_index,0);
+                  double tube_dx2 = streamlines[n_s](previous_min_index+1,1)
+                      - streamlines[n_s](previous_min_index,1);
+                  double tube_dx3 = streamlines[n_s](previous_min_index+1,2)
+                      - streamlines[n_s](previous_min_index,2);
                   double temp =
                       std::sqrt(tube_dx1 * tube_dx1 + tube_dx2 * tube_dx2 + tube_dx3 * tube_dx3);
                   tube_dx1 /= temp;
