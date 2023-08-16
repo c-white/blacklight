@@ -42,6 +42,8 @@ InputReader::~InputReader()
     delete[] render_r_vals[n_i];
     delete[] render_tau_scales[n_i];
     delete[] render_opacities[n_i];
+    delete[] render_ambient[n_i];
+    delete[] render_diffuse[n_i];
     delete[] render_x_vals[n_i];
     delete[] render_y_vals[n_i];
     delete[] render_z_vals[n_i];
@@ -59,6 +61,8 @@ InputReader::~InputReader()
   delete[] render_r_vals;
   delete[] render_tau_scales;
   delete[] render_opacities;
+  delete[] render_ambient;
+  delete[] render_diffuse;
   delete[] render_x_vals;
   delete[] render_y_vals;
   delete[] render_z_vals;

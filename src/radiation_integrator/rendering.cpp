@@ -365,7 +365,10 @@ void RadiationIntegrator::Render()
                   light_1 /= temp;
                   light_2 /= temp;
                   light_3 /= temp;
-                  reflectance = light_1 * norm_1 + light_2 * norm_2 + light_3 * norm_3;
+                  double ambient = render_ambient[n_i][n_f];
+                  double diffuse = render_diffuse[n_i][n_f];
+                  reflectance =
+                      ambient + diffuse * (light_1 * norm_1 + light_2 * norm_2 + light_3 * norm_3);
                 }
 
                 // Calculate effect of passing through streamline

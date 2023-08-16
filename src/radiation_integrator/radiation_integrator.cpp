@@ -155,6 +155,8 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     render_r_vals = new double *[render_num_images]();
     render_tau_scales = new double *[render_num_images]();
     render_opacities = new double *[render_num_images]();
+    render_ambient = new double *[render_num_images]();
+    render_diffuse = new double *[render_num_images]();
     render_x_vals = new double *[render_num_images]();
     render_y_vals = new double *[render_num_images]();
     render_z_vals = new double *[render_num_images]();
@@ -176,6 +178,8 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
       render_r_vals[n_i] = new double[num_features];
       render_tau_scales[n_i] = new double[num_features];
       render_opacities[n_i] = new double[num_features];
+      render_ambient[n_i] = new double[num_features];
+      render_diffuse[n_i] = new double[num_features];
       render_x_vals[n_i] = new double[num_features];
       render_y_vals[n_i] = new double[num_features];
       render_z_vals[n_i] = new double[num_features];
@@ -204,11 +208,18 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
           render_thresh_vals[n_i][n_f] = p_input_reader->render_thresh_vals[n_i][n_f].value();
           render_opacities[n_i][n_f] = p_input_reader->render_opacities[n_i][n_f].value();
         }
-        if (render_types[n_i][n_f] == RenderType::line
-            or render_types[n_i][n_f] == RenderType::tube)
+        if (render_types[n_i][n_f] == RenderType::line)
         {
           render_r_vals[n_i][n_f] = p_input_reader->render_r_vals[n_i][n_f].value();
           render_opacities[n_i][n_f] = p_input_reader->render_opacities[n_i][n_f].value();
+          render_stream_files[n_i][n_f] = p_input_reader->render_stream_files[n_i][n_f].value();
+        }
+        if (render_types[n_i][n_f] == RenderType::tube)
+        {
+          render_r_vals[n_i][n_f] = p_input_reader->render_r_vals[n_i][n_f].value();
+          render_opacities[n_i][n_f] = p_input_reader->render_opacities[n_i][n_f].value();
+          render_ambient[n_i][n_f] = p_input_reader->render_ambient[n_i][n_f].value();
+          render_diffuse[n_i][n_f] = p_input_reader->render_diffuse[n_i][n_f].value();
           render_lx_vals[n_i][n_f] = p_input_reader->render_lx_vals[n_i][n_f].value();
           render_ly_vals[n_i][n_f] = p_input_reader->render_ly_vals[n_i][n_f].value();
           render_lz_vals[n_i][n_f] = p_input_reader->render_lz_vals[n_i][n_f].value();
@@ -577,6 +588,8 @@ RadiationIntegrator::~RadiationIntegrator()
     delete[] render_r_vals[n_i];
     delete[] render_tau_scales[n_i];
     delete[] render_opacities[n_i];
+    delete[] render_ambient[n_i];
+    delete[] render_diffuse[n_i];
     delete[] render_x_vals[n_i];
     delete[] render_y_vals[n_i];
     delete[] render_z_vals[n_i];
@@ -594,6 +607,8 @@ RadiationIntegrator::~RadiationIntegrator()
   delete[] render_r_vals;
   delete[] render_tau_scales;
   delete[] render_opacities;
+  delete[] render_ambient;
+  delete[] render_diffuse;
   delete[] render_x_vals;
   delete[] render_y_vals;
   delete[] render_z_vals;

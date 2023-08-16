@@ -126,6 +126,8 @@ struct InputReader
   std::optional<double> **render_r_vals = nullptr;
   std::optional<double> **render_tau_scales = nullptr;
   std::optional<double> **render_opacities = nullptr;
+  std::optional<double> **render_ambient = nullptr;
+  std::optional<double> **render_diffuse = nullptr;
   std::optional<double> **render_x_vals = nullptr;
   std::optional<double> **render_y_vals = nullptr;
   std::optional<double> **render_z_vals = nullptr;

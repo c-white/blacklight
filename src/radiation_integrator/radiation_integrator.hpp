@@ -92,6 +92,8 @@ struct RadiationIntegrator
   double **render_r_vals = nullptr;
   double **render_tau_scales = nullptr;
   double **render_opacities = nullptr;
+  double **render_ambient = nullptr;
+  double **render_diffuse = nullptr;
   double **render_x_vals = nullptr;
   double **render_y_vals = nullptr;
   double **render_z_vals = nullptr;

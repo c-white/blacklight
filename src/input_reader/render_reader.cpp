@@ -41,6 +41,8 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
       render_r_vals = new std::optional<double> *[render_num_images.value()]();
       render_tau_scales = new std::optional<double> *[render_num_images.value()]();
       render_opacities = new std::optional<double> *[render_num_images.value()]();
+      render_ambient = new std::optional<double> *[render_num_images.value()]();
+      render_diffuse = new std::optional<double> *[render_num_images.value()]();
       render_x_vals = new std::optional<double> *[render_num_images.value()]();
       render_y_vals = new std::optional<double> *[render_num_images.value()]();
       render_z_vals = new std::optional<double> *[render_num_images.value()]();
@@ -67,6 +69,8 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
     render_r_vals[image_num] = new std::optional<double>[num_features];
     render_tau_scales[image_num] = new std::optional<double>[num_features];
     render_opacities[image_num] = new std::optional<double>[num_features];
+    render_ambient[image_num] = new std::optional<double>[num_features];
+    render_diffuse[image_num] = new std::optional<double>[num_features];
     render_x_vals[image_num] = new std::optional<double>[num_features];
     render_y_vals[image_num] = new std::optional<double>[num_features];
     render_z_vals[image_num] = new std::optional<double>[num_features];
@@ -239,7 +243,31 @@ void InputReader::ReadRender(const std::string &key, const std::string &val)
         &render_z_vals[image_num][feature_num]);
   }
 
-  // Read light values
+  // Read ambient light strength
+  else if (key.size() >= 11 and key.compare(key.size() - 8, key.npos, "_ambient") == 0)
+  {
+    std::size_t pos;
+    int image_num = std::stoi(key, &pos) - 1;
+    int feature_num = std::stoi(key.substr(pos + 1)) - 1;
+    if (image_num >= render_num_images.value()
+        or feature_num >= render_num_features[image_num].value())
+      return;
+    render_ambient[image_num][feature_num] = std::stod(val);
+  }
+
+  // Read diffuse light strength
+  else if (key.size() >= 11 and key.compare(key.size() - 8, key.npos, "_diffuse") == 0)
+  {
+    std::size_t pos;
+    int image_num = std::stoi(key, &pos) - 1;
+    int feature_num = std::stoi(key.substr(pos + 1)) - 1;
+    if (image_num >= render_num_images.value()
+        or feature_num >= render_num_features[image_num].value())
+      return;
+    render_diffuse[image_num][feature_num] = std::stod(val);
+  }
+
+  // Read diffuse light direction values
   else if (key.size() >= 9 and key.compare(key.size() - 6, key.npos, "_light") == 0)
   {
     std::size_t pos;
