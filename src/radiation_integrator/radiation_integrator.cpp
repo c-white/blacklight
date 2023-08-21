@@ -551,6 +551,17 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
   if (image_crossings)
     image_num_quantities++;
 
+  // Allocate space for streamline data
+  for (int n_i = 0; n_i < render_num_images; n_i++)
+  {
+    int num_features = render_num_features[n_i];
+    for (int n_f = 0; n_f < num_features; n_f++)
+      if (render_types[n_i][n_f] == RenderType::line or render_types[n_i][n_f] == RenderType::tube)
+        num_streamlines++;
+  }
+  if (num_streamlines > 0)
+    streamlines = new Array<double>[num_streamlines];
+
   // Allocate space for rendering data
   render = new Array<double>[adaptive_max_level+1];
 
@@ -720,17 +731,19 @@ RadiationIntegrator::~RadiationIntegrator()
 //   snapshot: index (starting at 0) of which snapshot is about to be processed
 //   *p_time_sample: amount of time already taken for sampling
 //   *p_time_image: amount of time already taken for integrating image and evaluating refinement
+//   *p_time_stream: amount of time already taken for streamline integration
 //   *p_time_render: amount of time already taken for rendering
 // Outputs:
 //   *p_time_sample: incremented by additional time taken for sampling
 //   *p_time_image: incremented by additional time taken for integrating image and evaluating
 //       refinement
+//   *p_time_stream: incremented by additional time taken for streamline integration
 //   *p_time_render: incremented by additional time taken for rendering
 //   returned value: flag indicating no additional geodesics need to be run for this snapshot
 // Notes:
 //   Assumes all data arrays have been set.
 bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double *p_time_image,
-    double *p_time_render)
+    double *p_time_stream, double *p_time_render)
 {
   // Prepare timers
   double time_sample_start = 0.0;
@@ -762,28 +775,37 @@ bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double 
     else if (slow_light_on)
       CalculateSimulationSampling(snapshot);
     SampleSimulation();
+    CalculateSimulationCoefficients();
     time_sample_end = omp_get_wtime();
   }
 
-  // Integrate according to simulation data
-  if (model_type == ModelType::simulation)
+  // Integrate image according to simulation data
+  if (model_type == ModelType::simulation and (image_light or image_time or image_length
+      or image_lambda or image_emission or image_tau or image_lambda_ave or image_emission_ave
+      or image_tau_int or image_crossings))
   {
-    time_image_start = time_sample_end;
-    CalculateSimulationCoefficients();
+    time_image_start = omp_get_wtime();
     if (image_light and image_polarization)
       IntegratePolarizedRadiation();
-    else if (image_light or image_time or image_length or image_lambda or image_emission
-        or image_tau or image_lambda_ave or image_emission_ave or image_tau_int or image_crossings)
+    else
       IntegrateUnpolarizedRadiation();
     time_image_end = omp_get_wtime();
-    if (render_num_images > 0)
-    {
-      time_render_start = time_image_end;
-      if (first_time)
-        ReadStreamFiles();
-      Render();
-      time_render_end = omp_get_wtime();
-    }
+  }
+
+  // Calculate streamlines from simulation data
+  if (model_type == ModelType::simulation and num_streamlines > 0 and first_time)
+  {
+    time_stream_start = omp_get_wtime();
+    ReadStreamFiles();
+    time_stream_end = omp_get_wtime();
+  }
+
+  // Integrate rendering according to simulation data
+  if (model_type == ModelType::simulation and render_num_images > 0)
+  {
+    time_render_start = omp_get_wtime();
+    Render();
+    time_render_end = omp_get_wtime();
   }
 
   // Integrate according to formula
@@ -815,6 +837,7 @@ bool RadiationIntegrator::Integrate(int snapshot, double *p_time_sample, double 
   // Calculate elapsed time
   *p_time_sample += time_sample_end - time_sample_start;
   *p_time_image += time_image_end - time_image_start + time_refine_end - time_refine_start;
+  *p_time_stream += time_stream_end - time_stream_start;
   *p_time_render += time_render_end - time_render_start;
   return adaptive_complete;
 }

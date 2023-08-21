@@ -21,21 +21,9 @@
 // Inputs: (none)
 // Outputs: (none)
 // Notes:
-//   Allocates and initializes streamlines and all Arrays contained therein.
+//   Allocates and initializes all Arrays contained within streamlines.
 void RadiationIntegrator::ReadStreamFiles()
 {
-  // Allocate array to hold all streamlines
-  num_streamlines = 0;
-  for (int n_i = 0; n_i < render_num_images; n_i++)
-  {
-    int num_features = render_num_features[n_i];
-    for (int n_f = 0; n_f < num_features; n_f++)
-      if (render_types[n_i][n_f] == RenderType::line or render_types[n_i][n_f] == RenderType::tube)
-        num_streamlines++;
-  }
-  streamlines = new Array<double>[num_streamlines];
-
-  // Read streamline data
   for (int n_i = 0, n_s = 0; n_i < render_num_images; n_i++)
   {
     int num_features = render_num_features[n_i];

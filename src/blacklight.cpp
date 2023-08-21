@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
   double time_read = 0.0;
   double time_sample = 0.0;
   double time_image = 0.0;
+  double time_stream = 0.0;
   double time_render = 0.0;
 
   // Parse command-line inputs
@@ -200,8 +201,8 @@ int main(int argc, char *argv[])
       // Integrate radiation
       try
       {
-        adaptive_complete =
-            p_radiation_integrator->Integrate(n, &time_sample, &time_image, &time_render);
+        adaptive_complete = p_radiation_integrator->Integrate(n, &time_sample, &time_image,
+            &time_stream, &time_render);
       }
       catch (const BlacklightException &exception)
       {
@@ -260,12 +261,13 @@ int main(int argc, char *argv[])
   double time_full = omp_get_wtime() - time_start;
   std::cout << std::setprecision(7);
   std::cout << "\nCalculation completed.";
-  std::cout << "\nElapsed time:            " << time_full << " s";
-  std::cout << "\n  Integrating geodesics: " << time_geodesic << " s";
-  std::cout << "\n  Reading simulation:    " << time_read << " s";
-  std::cout << "\n  Sampling simulation:   " << time_sample << " s";
-  std::cout << "\n  Integrating image:     " << time_image << " s";
-  std::cout << "\n  Rendering:             " << time_render << " s";
+  std::cout << "\nElapsed time:              " << time_full << " s";
+  std::cout << "\n  Integrating geodesics:   " << time_geodesic << " s";
+  std::cout << "\n  Reading simulation:      " << time_read << " s";
+  std::cout << "\n  Sampling simulation:     " << time_sample << " s";
+  std::cout << "\n  Integrating image:       " << time_image << " s";
+  std::cout << "\n  Integrating streamlines: " << time_stream << " s";
+  std::cout << "\n  Rendering:               " << time_render << " s";
   std::cout << "\n\n";
 
   // End program
