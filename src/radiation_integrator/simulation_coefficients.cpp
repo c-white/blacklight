@@ -292,6 +292,13 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         // Calculate simulation metric
         CovariantSimulationMetric(x1, x2, x3, gcov_sim);
         ContravariantSimulationMetric(x1, x2, x3, gcon_sim);
+        // TODO check two above are in SKS
+        //
+        //fprintf(stderr, "coord is %g %g %g\n", x1, x2, x3);
+        double ttr = x1;
+        double tth = x2;
+        double ttp = x3;
+        ConvertFromCKS(&ttr, &tth, &ttp);
 
         // Calculate simulation velocity
         double uu0_sim = std::sqrt(1.0 + gcov_sim[1][1] * uu1_sim * uu1_sim
@@ -328,7 +335,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double bb_cgs = std::sqrt(b_sq) * b_unit;
         double sigma = b_sq / rho;
         double beta_inv = b_sq / (2.0 * pgas);
-
+        
         // Calculate electron temperature for model with T_i/T_e a function of beta (E1 1)
         double kb_tt_e_cgs = std::numeric_limits<double>::quiet_NaN();
         double theta_e = std::numeric_limits<double>::quiet_NaN();
@@ -476,6 +483,7 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
             j_i_val = coefficient * var_a * var_c * var_c;
             if (image_light or image_emission or image_emission_ave)
               j_i[adaptive_level](l,m,n) = j_i_val;
+
             if (image_light and image_polarization)
             {
               double var_d = (7.0 * std::pow(theta_e, 0.96) + 35.0)

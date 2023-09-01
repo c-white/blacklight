@@ -310,9 +310,13 @@ double SimulationReader::Read(int snapshot)
       ReadHDF5StringArray("header/metric", true, &p_temp_metric, &temp_count);
       metric = *p_temp_metric;
       delete[] p_temp_metric;
-      if (simulation_coord == Coordinates::sks)
+      if (simulation_coord == Coordinates::sks || simulation_coord == Coordinates::fmks)
       {
-        if (metric != "MKS")
+        std::string metric_lower = metric;
+        std::transform(metric_lower.begin(), metric_lower.end(), metric_lower.begin(),
+                       [](unsigned char c){ return std::tolower(c); });
+
+        if (metric != "MKS" and metric != "MMKS" and metric != "FMKS")
         {
           std::ostringstream message;
           message << "Given metric mks does not match file value of " << metric;
@@ -320,8 +324,8 @@ double SimulationReader::Read(int snapshot)
           BlacklightWarning(message.str().c_str());
         }
         Array<double> a_temp, h_temp;
-        ReadHDF5DoubleArray("header/geom/mks/a", a_temp);
-        ReadHDF5DoubleArray("header/geom/mks/hslope", h_temp);
+        ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/a").c_str(), a_temp);
+        ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/hslope").c_str(), h_temp);
         metric_a = a_temp(0);
         if (metric_a != simulation_a)
         {
@@ -331,6 +335,35 @@ double SimulationReader::Read(int snapshot)
           BlacklightWarning(message.str().c_str());
         }
         metric_h = h_temp(0);
+        if (metric == "MMKS" or metric == "FMKS") {
+          Array<double> poly_xt_temp, poly_alpha_temp, mks_smooth_temp, rin_temp;
+          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_xt").c_str(), poly_xt_temp);
+          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_alpha").c_str(), poly_alpha_temp);
+          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/mks_smooth").c_str(), mks_smooth_temp);
+          try 
+          {
+            ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/r_in").c_str(), rin_temp);
+          }
+          catch (...)
+          {
+            try
+            {
+              ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/Rin").c_str(), rin_temp);
+            }
+            catch (...) {
+              throw BlacklightException("Unable to identify r_in parameter for iharm3d-format file.");
+            }
+          }
+          metric_rin = rin_temp(0);
+          metric_poly_xt = poly_xt_temp(0);
+          metric_poly_alpha = poly_alpha_temp(0);
+          metric_mks_smooth = mks_smooth_temp(0);
+          metric_derived_poly_norm = 1.0 / (1.0 + 1.0/(metric_poly_alpha+1.0)/std::pow(metric_poly_xt, metric_poly_alpha));
+          metric_derived_poly_norm *= 0.5 * Math::pi;
+          //native_x1in = std::log(metric_rin);
+          //native_deltax1 = 
+          //native_deltax2 = 1.0 / n2;
+        }
       }
       else
         throw BlacklightException("Invalid simulation_coord for Harm format.");
@@ -525,6 +558,7 @@ double SimulationReader::Read(int snapshot)
       }
       else if (simulation_format == SimulationFormat::iharm3d)
       {
+        // TODO check that this makes sense. 
         Array<int> num_cells;
         Array<double> x_start, dx;
         ReadHDF5IntArray("header/n1", num_cells);
@@ -532,8 +566,10 @@ double SimulationReader::Read(int snapshot)
         ReadHDF5DoubleArray("header/geom/dx1", dx);
         x1f.Allocate(1, num_cells(0) + 1);
         x1v.Allocate(1, num_cells(0));
+        x1f(0,0) = x_start(0);
         for (int i = 0; i < num_cells(0); i++)
         {
+          // TODO: note the legacy code here assumed x1f started with 0, which is not always true!
           x1f(0,i+1) = x_start(0) + (i + 1) * dx(0);
           x1v(0,i) = 0.5 * (x1f(0,i) + x1f(0,i+1));
         }
@@ -610,7 +646,8 @@ double SimulationReader::Read(int snapshot)
     // Check coordinates
     if (first_time)
     {
-      if (simulation_coord == Coordinates::sks and x2f.n2 == 1)
+      // TODO: I wantonly added fmks in here and below. Check for correctness?
+      if ((simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks) and x2f.n2 == 1)
       {
         bool error_low = std::abs(x2f(0,0)) > (x2f(0,1) - x2f(0,0)) * angular_domain_tolerance;
         bool error_high = std::abs(x2f(0,x2f.n1-1) - Math::pi)
@@ -627,7 +664,7 @@ double SimulationReader::Read(int snapshot)
           x2f(0,x2f.n1-1) = Math::pi;
         }
       }
-      if (simulation_coord == Coordinates::sks and x3f.n2 == 1)
+      if ((simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks) and x3f.n2 == 1)
       {
         bool error_low = std::abs(x3f(0,0)) > (x3f(0,1) - x3f(0,0)) * angular_domain_tolerance;
         bool error_high = std::abs(x3f(0,x3f.n1-1) - 2.0 * Math::pi)
@@ -671,6 +708,7 @@ double SimulationReader::Read(int snapshot)
     {
       if (first_time)
       {
+        // TODO support num_variables and Thetae from electron thermodynamics
         VerifyVariablesHarm();
         int n5 = num_variables(0);
         int n4 = levels.n1;
@@ -1182,6 +1220,8 @@ void SimulationReader::VerifyVariablesHarm()
 {
   // Read number of primitives
   ReadHDF5IntArray("header/n_prim", num_variables);
+
+  // TODO make sure this is working correctly
 
   // Read names of primitives
   ReadHDF5StringArray("header/prim_names", num_variable_names == 0, &variable_names,

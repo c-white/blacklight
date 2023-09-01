@@ -92,10 +92,13 @@ SimulationFormat InputReader::ReadSimulationFormat(const std::string &string)
 //     "sks": spherical Kerr-Schild
 //     "cks": Cartesian Kerr-Schild
 //     "mks": modified spherical Kerr-Schild (2003 ApJ 589 444)
+//     "fmks": funky modified spherical Kerr-Schild (2022 ApJS 259 64W)
 Coordinates InputReader::ReadCoordinates(const std::string &string)
 {
   if (string == "sks" or string == "mks")
     return Coordinates::sks;
+  else if (string == "fmks")
+    return Coordinates::fmks;
   else if (string == "cks")
     return Coordinates::cks;
   else

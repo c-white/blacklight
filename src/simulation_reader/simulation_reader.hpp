@@ -77,7 +77,8 @@ struct SimulationReader
   double athenak_time;
   double *athenak_cell_data_double;
   std::string metric;
-  double metric_a, metric_h;
+  double metric_a, metric_h, metric_poly_xt, metric_poly_alpha, metric_mks_smooth, metric_rin;
+  double metric_derived_poly_norm;
   std::ifstream::pos_type cell_data_address;
   std::string *dataset_names;
   int num_dataset_names = 0;
@@ -94,6 +95,11 @@ struct SimulationReader
   int latest_file_number;
   const double extrapolation_tolerance = 1.0;
   const double angular_domain_tolerance = 0.1;
+
+  // Coordinate interpolation data
+  double sks_map_rin, sks_map_rout, sks_map_dr, sks_map_dtheta;
+  Array<double> simulation_bounds;
+  Array<double> sks_map;
 
   // Data
   int n_3_root;
@@ -119,6 +125,9 @@ struct SimulationReader
 
   // Internal functions - simulation_geometry.cpp
   void ConvertCoordinates();
+  void GenerateSKSMap(double r_in, double r_out, int n1, int n2);
+  void GetSKSCoordinate(double x1, double x2, double x3, double &r, double &theta, double &phi);
+  void SetJacobianFactors(double x1, double x2, double &dr_dx1, double &dth_dx1, double &dth_dx2);
   void ConvertPrimitives3(Array<float> &primitives);
   void ConvertPrimitives4(Array<float> &primitives);
 

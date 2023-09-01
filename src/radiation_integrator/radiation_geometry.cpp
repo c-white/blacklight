@@ -31,9 +31,12 @@ double RadiationIntegrator::RadialGeodesicCoordinate(double x, double y, double 
 //   *p_x1, *p_x2, *p_x3: Cartesian Kerr-Schild coordinates
 // Outputs:
 //   *p_x1, *p_x2, *p_x3: simulation coordinates
+// Notes:
+//   When simulation_coord == Coordinates::fmks, this still translates from CKS into
+//     SKS rather than FMKS. Recall the interpolation grid takes as input SKS.
 void RadiationIntegrator::ConvertFromCKS(double *p_x1, double *p_x2, double *p_x3) const
 {
-  if (simulation_coord == Coordinates::sks)
+  if (simulation_coord == Coordinates::sks || simulation_coord == Coordinates::fmks)
   {
     double x = *p_x1;
     double y = *p_x2;
@@ -66,8 +69,9 @@ void RadiationIntegrator::ConvertFromCKS(double *p_x1, double *p_x2, double *p_x
 void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, double jacobian[4][4])
     const
 {
+  // TODO: maybe change this? figure out how it is used.
   // Calculate Jacobian for spherical Kerr-Schild simulation
-  if (simulation_coord == Coordinates::sks)
+  if (simulation_coord == Coordinates::sks || simulation_coord == Coordinates::fmks)
   {
     // Calculate spherical position
     double a2 = bh_a * bh_a;
@@ -419,7 +423,7 @@ void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z
     const
 {
   // Calculate spherical Kerr-Schild metric
-  if (simulation_coord == Coordinates::sks)
+  if (simulation_coord == Coordinates::sks || simulation_coord == Coordinates::fmks)
   {
     // Calculate useful quantities
     double a2 = bh_a * bh_a;
@@ -500,7 +504,7 @@ void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, doub
     double gcon[4][4]) const
 {
   // Calculate spherical Kerr-Schild metric
-  if (simulation_coord == Coordinates::sks)
+  if (simulation_coord == Coordinates::sks || simulation_coord == Coordinates::fmks)
   {
     // Calculate useful quantities
     double a2 = bh_a * bh_a;

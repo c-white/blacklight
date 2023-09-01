@@ -217,6 +217,11 @@ struct RadiationIntegrator
   int ind_uu1, ind_uu2, ind_uu3;
   int ind_bb1, ind_bb2, ind_bb3;
 
+  // Interpolation grid data
+  Array<double> sks_map;
+  Array<double> simulation_bounds;
+  double sks_map_rin, sks_map_rout, sks_map_dr, sks_map_dtheta;
+
   // Sample data
   Array<int> *sample_inds = nullptr;
   Array<double> *sample_fracs = nullptr;
