@@ -36,7 +36,7 @@ void SimulationReader::ConvertCoordinates()
   {
     double r_in = std::exp(x1f(0, 0));
     double r_out = std::exp(x1f(0, n1));
-    GenerateSKSMap(r_in, r_out, 512, 512);
+    GenerateSKSMap(r_in, r_out, 2048, 2048);
     
     simulation_bounds.Allocate(6);
 
@@ -347,6 +347,18 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
         double u_2 = g_02 * u0 + g_12 * u1 + g_22 * u2 + g_23 * u3;
         double u_3 = g_03 * u0 + g_13 * u1 + g_23 * u2 + g_33 * u3;
 
+        // TODO remove
+        /*
+        fprintf(stderr, "gcov %g %g %g %g %g %g %g %g %g\n", g_01, g_02, g_03, g_11, g_12, g_13, g_22, g_23, g_33);
+        fprintf(stderr, "gcon %g %g %g %g\n", g00, g01, g02, g03);
+
+        fprintf(stderr, "%d %d %d -> %g %g (%g %g)\n", i, j, k, r, th, x1, x2);
+        fprintf(stderr, "%g %g %g\n", uu1, uu2, uu3);
+        // prims are what we expect
+        fprintf(stderr, "fmks %g %g %g %g %g %g %g\n", u0, u1, u2, u3, u_1, u_2, u_3);
+        // ucon_fmks is what we expect
+         */
+
         // Transform velocity from modified coordinate frame to standard coordinate frame
         double ut = u0;
         double ur = dr_dx1 * u1;
@@ -357,6 +369,12 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
         double uur = ur + alpha * alpha * gtr * ut;
         double uuth = uth + alpha * alpha * gtth * ut;
         double uuph = uph + alpha * alpha * gtph * ut;
+
+        // TODO remove
+        //fprintf(stderr, "ucon_ks %g %g %g %g\n", ut, ur, uth, uph);
+        //fprintf(stderr, "uprim_ks %g %g %g\n", uur, uuth, uuph);
+        // so this should be good ...
+        //std::exit(4);
 
         // Calculate magnetic 4-vector in modified coordinate frame
         double b0 = u_1 * bb1 + u_2 * bb2 + u_3 * bb3;
@@ -375,6 +393,15 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
         double bbth = bth * ut - bt * uth;
         double bbph = bph * ut - bt * uph;
 
+        // TODO remove
+        /*
+        fprintf(stderr, "fmks Bi bcon %g %g %g %g %g %g %g\n", bb1, bb2, bb3, b0, b1, b2, b3);
+        fprintf(stderr, "bcon_ks %g %g %g %g\n", bt, br, bth, bph);
+        fprintf(stderr, "bprim_ks %g %g %g\n", bbr, bbth, bbph);
+        // these values also agree
+        std::exit(4);
+         */
+        
         // Save results
         primitives(ind_uu1,0,k,j,i) = static_cast<float>(uur);
         primitives(ind_uu2,0,k,j,i) = static_cast<float>(uuth);

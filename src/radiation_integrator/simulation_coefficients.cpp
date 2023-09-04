@@ -289,16 +289,30 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double n_cgs = rho_cgs / (plasma_mu * Physics::m_p);
         double n_e_cgs = n_cgs / (1.0 + 1.0 / plasma_ne_ni);
 
+        // TODO remove
+        //fprintf(stderr, "coord %d %d %g %g %g\n", m, n, x1, x2, x3);
+        //fprintf(stderr, "rho %d %d %g %g %g %g\n", m, n, rho_cgs, pgas_cgs, n_cgs, n_e_cgs);
+
         // Calculate simulation metric
         CovariantSimulationMetric(x1, x2, x3, gcov_sim);
         ContravariantSimulationMetric(x1, x2, x3, gcon_sim);
         // TODO check two above are in SKS
         //
         //fprintf(stderr, "coord is %g %g %g\n", x1, x2, x3);
-        double ttr = x1;
-        double tth = x2;
-        double ttp = x3;
-        ConvertFromCKS(&ttr, &tth, &ttp);
+        if (0==1) {
+          double ttr = x1;
+          double tth = x2;
+          double ttp = x3;
+          ConvertFromCKS(&ttr, &tth, &ttp);
+          double idbl, jdbl;
+          double di = std::modf((ttr - sks_map_rin) / sks_map_dr, &idbl);
+          double dj = std::modf(tth / sks_map_dtheta, &jdbl);
+          int i = static_cast<int>(idbl);
+          int j = static_cast<int>(jdbl);
+          double fmks_x1 = sks_map(0, j, i)*(1-di) + di*sks_map(0, j, i+1);
+          double fmks_x2 = sks_map(1, j+1, i)*(1-dj) + dj*sks_map(1, j+1, i);
+          fprintf(stderr, "rhpcoord %d %d %g %g %g %g %g\n", m, n, ttr, tth, ttp, fmks_x1, fmks_x2);
+        }
 
         // Calculate simulation velocity
         double uu0_sim = std::sqrt(1.0 + gcov_sim[1][1] * uu1_sim * uu1_sim
@@ -335,7 +349,16 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double bb_cgs = std::sqrt(b_sq) * b_unit;
         double sigma = b_sq / rho;
         double beta_inv = b_sq / (2.0 * pgas);
-        
+
+        // TODO remove
+        /*
+        fprintf(stderr, "prims %d %d %g %g %g %g %g %g %g %g %g\n", m, n, rho, pgas, uu1_sim, uu2_sim, uu3_sim, bb1_sim, bb2_sim, bb3_sim, b_sq);
+
+        fprintf(stderr, "fourv %d %d %g %g %g %g %g %g %g %g\n", m, n, ucon_sim[0], ucon_sim[1], ucon_sim[2], ucon_sim[3], bcon_sim[0], bcon_sim[1], bcon_sim[2], bcon_sim[3]);
+
+        fprintf(stderr, "units %g %g %g\n", d_unit / (plasma_mu * Physics::m_p) / (1.0 + 1.0 / plasma_ne_ni), n_e_cgs / rho, b_unit);
+         */
+
         // Calculate electron temperature for model with T_i/T_e a function of beta (E1 1)
         double kb_tt_e_cgs = std::numeric_limits<double>::quiet_NaN();
         double theta_e = std::numeric_limits<double>::quiet_NaN();
@@ -357,6 +380,9 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
           theta_e = 1.0 / 5.0 * (std::sqrt(1.0 + 25.0 * rho_kappa_e_cbrt * rho_kappa_e_cbrt) - 1.0);
           kb_tt_e_cgs = theta_e * Physics::m_e * Physics::c * Physics::c;
         }
+
+        // TODO remove
+        //fprintf(stderr, "aux %d %d %g %g %g %g\n", m, n, bb_cgs, sigma, beta_inv, theta_e);
 
         // Skip coupling based on cell values
         if ((cut_rho_min >= 0.0 and rho_cgs < cut_rho_min)
