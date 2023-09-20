@@ -353,7 +353,7 @@ void SimulationReader::GenerateSKSMap(double r_in, double r_out, int n1, int n2)
       double theta = std::min(j * dtheta, Math::pi);
       double x2 = 0.5;
 
-      if (theta > TOLERANCE && fabs(Math::pi - theta) > TOLERANCE)
+      if (theta > TOLERANCE and fabs(Math::pi - theta) > TOLERANCE)
       {
         // bisect down to correct value for x2
         double x2a = 0.0;
