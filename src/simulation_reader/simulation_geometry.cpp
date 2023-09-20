@@ -398,7 +398,6 @@ void SimulationReader::GenerateSKSMap(double r_in, double r_out, int n1, int n2)
       sks_map(1, j, i) = x2;
     }
   }
-
   return;
 }
 
@@ -429,6 +428,7 @@ void SimulationReader::GetSKSCoordinates(double x1, double x2, double x3, double
     theta_J += 0.5 * Math::pi;
     *p_theta = theta_G + std::exp(mks_smooth * (std::log(rin) - x1)) * (theta_J - theta_G);
   }
+  return;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -477,4 +477,5 @@ void SimulationReader::SetJacobianFactors(double x1, double x2, double *p_dr_dx1
                         / ((1.0 + poly_alpha) * poly_xt)
                     - (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2));
   }
+  return;
 }
