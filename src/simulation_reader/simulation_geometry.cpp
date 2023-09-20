@@ -50,9 +50,6 @@ void SimulationReader::ConvertCoordinates()
     simulation_bounds(1) = rval;
     simulation_bounds(3) = thetaval;
     simulation_bounds(5) = phival;
-
-    // TODO: remove
-    fprintf(stderr, "bounds: %g %g %g %g %g %g\n", simulation_bounds(0), simulation_bounds(1), simulation_bounds(2), simulation_bounds(3), simulation_bounds(4), simulation_bounds(5));
   }
   else
   {
@@ -85,7 +82,8 @@ void SimulationReader::ConvertCoordinates()
 //   x1, x2, x3: coordinate point in simulation coordinates
 // Outputs:
 //   r, theta, phi: spherical Kerr-Schild coordinates for (x1, x2, x3)
-void SimulationReader::GetSKSCoordinate(double x1, double x2, double x3, double &r, double &theta, double &phi)
+void SimulationReader::GetSKSCoordinate(double x1, double x2, double x3, double &r, double &theta,
+    double &phi)
 {
   double h = metric_h;
   double poly_xt = metric_poly_xt;
@@ -195,12 +193,13 @@ void SimulationReader::GenerateSKSMap(double r_in, double r_out, int n1, int n2)
 
 //--------------------------------------------------------------------------------------------------
 
-// Function to set transformation factors from native (simulation) coordinates to spherical Kerr-Schild
+// Function to set transformation factors from native (simulation) coordinates to SKS
 // Inputs:
 //   x1, x2 simulation coordinates for where to compute the transformation
 // Outputs:
 //   dr_dx1, dth_dx1, dth_dx2: Jacobian factors
-void SimulationReader::SetJacobianFactors(double x1, double x2, double &dr_dx1, double &dth_dx1, double &dth_dx2)
+void SimulationReader::SetJacobianFactors(double x1, double x2, double &dr_dx1, double &dth_dx1,
+    double &dth_dx2)
 {
   double h = metric_h;
   double poly_xt = metric_poly_xt;
@@ -283,7 +282,8 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
         }
         else
         {
-          throw BlacklightException("Attempting to translate primitives to CKS but could not process coordinates.");
+          throw BlacklightException(
+              "Attempting to translate primitives to CKS but could not process coordinates.");
         }
         double sth = std::sin(th);
         double cth = std::cos(th);
@@ -322,7 +322,8 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
         double g_01 = dr_dx1 * g_tr + dth_dx1 * g_tth;
         double g_02 = dth_dx2 * g_tth;
         double g_03 = g_tph;
-        double g_11 = dr_dx1*dr_dx1 * g_rr + 2.0 * dr_dx1 * dth_dx1 * g_rth + dth_dx1*dth_dx1 * g_thth;
+        double g_11 =
+            dr_dx1*dr_dx1 * g_rr + 2.0 * dr_dx1 * dth_dx1 * g_rth + dth_dx1*dth_dx1 * g_thth;
         double g_12 = dr_dx1 * dth_dx2 * g_rth + dth_dx1 * dth_dx2 * g_thth;
         double g_13 = dr_dx1 * g_rph + dth_dx1 * g_thph;
         double g_22 = dth_dx2*dth_dx2 * g_thth;
@@ -347,18 +348,6 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
         double u_2 = g_02 * u0 + g_12 * u1 + g_22 * u2 + g_23 * u3;
         double u_3 = g_03 * u0 + g_13 * u1 + g_23 * u2 + g_33 * u3;
 
-        // TODO remove
-        /*
-        fprintf(stderr, "gcov %g %g %g %g %g %g %g %g %g\n", g_01, g_02, g_03, g_11, g_12, g_13, g_22, g_23, g_33);
-        fprintf(stderr, "gcon %g %g %g %g\n", g00, g01, g02, g03);
-
-        fprintf(stderr, "%d %d %d -> %g %g (%g %g)\n", i, j, k, r, th, x1, x2);
-        fprintf(stderr, "%g %g %g\n", uu1, uu2, uu3);
-        // prims are what we expect
-        fprintf(stderr, "fmks %g %g %g %g %g %g %g\n", u0, u1, u2, u3, u_1, u_2, u_3);
-        // ucon_fmks is what we expect
-         */
-
         // Transform velocity from modified coordinate frame to standard coordinate frame
         double ut = u0;
         double ur = dr_dx1 * u1;
@@ -369,12 +358,6 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
         double uur = ur + alpha * alpha * gtr * ut;
         double uuth = uth + alpha * alpha * gtth * ut;
         double uuph = uph + alpha * alpha * gtph * ut;
-
-        // TODO remove
-        //fprintf(stderr, "ucon_ks %g %g %g %g\n", ut, ur, uth, uph);
-        //fprintf(stderr, "uprim_ks %g %g %g\n", uur, uuth, uuph);
-        // so this should be good ...
-        //std::exit(4);
 
         // Calculate magnetic 4-vector in modified coordinate frame
         double b0 = u_1 * bb1 + u_2 * bb2 + u_3 * bb3;
@@ -392,15 +375,6 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
         double bbr = br * ut - bt * ur;
         double bbth = bth * ut - bt * uth;
         double bbph = bph * ut - bt * uph;
-
-        // TODO remove
-        /*
-        fprintf(stderr, "fmks Bi bcon %g %g %g %g %g %g %g\n", bb1, bb2, bb3, b0, b1, b2, b3);
-        fprintf(stderr, "bcon_ks %g %g %g %g\n", bt, br, bth, bph);
-        fprintf(stderr, "bprim_ks %g %g %g\n", bbr, bbth, bbph);
-        // these values also agree
-        std::exit(4);
-         */
 
         // Save results
         primitives(ind_uu1,0,k,j,i) = static_cast<float>(uur);

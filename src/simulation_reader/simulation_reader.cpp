@@ -338,8 +338,10 @@ double SimulationReader::Read(int snapshot)
         if (metric == "MMKS" or metric == "FMKS") {
           Array<double> poly_xt_temp, poly_alpha_temp, mks_smooth_temp, rin_temp;
           ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_xt").c_str(), poly_xt_temp);
-          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_alpha").c_str(), poly_alpha_temp);
-          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/mks_smooth").c_str(), mks_smooth_temp);
+          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_alpha").c_str(),
+              poly_alpha_temp);
+          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/mks_smooth").c_str(),
+              mks_smooth_temp);
           try
           {
             ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/r_in").c_str(), rin_temp);
@@ -351,14 +353,16 @@ double SimulationReader::Read(int snapshot)
               ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/Rin").c_str(), rin_temp);
             }
             catch (...) {
-              throw BlacklightException("Unable to identify r_in parameter for iharm3d-format file.");
+              throw BlacklightException(
+                  "Unable to identify r_in parameter for iharm3d-format file.");
             }
           }
           metric_rin = rin_temp(0);
           metric_poly_xt = poly_xt_temp(0);
           metric_poly_alpha = poly_alpha_temp(0);
           metric_mks_smooth = mks_smooth_temp(0);
-          metric_derived_poly_norm = 1.0 / (1.0 + 1.0/(metric_poly_alpha+1.0)/std::pow(metric_poly_xt, metric_poly_alpha));
+          metric_derived_poly_norm = 1.0 / (1.0
+              + 1.0 / (metric_poly_alpha + 1.0) / std::pow(metric_poly_xt, metric_poly_alpha));
           metric_derived_poly_norm *= 0.5 * Math::pi;
           //native_x1in = std::log(metric_rin);
           //native_deltax1 =
