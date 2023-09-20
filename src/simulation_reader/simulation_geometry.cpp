@@ -41,12 +41,12 @@ void SimulationReader::ConvertCoordinates()
     simulation_bounds.Allocate(6);
 
     double rval, thetaval, phival;
-    GetSKSCoordinate(x1f(0, 0), 0.0, 0.0, rval, thetaval, phival);
+    GetSKSCoordinates(x1f(0, 0), 0.0, 0.0, rval, thetaval, phival);
     simulation_bounds(0) = rval;
     simulation_bounds(2) = thetaval;
     simulation_bounds(4) = phival;
 
-    GetSKSCoordinate(x1f(0, n1), 1.0, 2.0*Math::pi, rval, thetaval, phival);
+    GetSKSCoordinates(x1f(0, n1), 1.0, 2.0*Math::pi, rval, thetaval, phival);
     simulation_bounds(1) = rval;
     simulation_bounds(3) = thetaval;
     simulation_bounds(5) = phival;
@@ -72,171 +72,6 @@ void SimulationReader::ConvertCoordinates()
   }
 
   return;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// Function to return spatial SKS (r, theta, phi) coordinates given input coordiantes in
-// native coordinate system.
-// Inputs:
-//   x1, x2, x3: coordinate point in simulation coordinates
-// Outputs:
-//   r, theta, phi: spherical Kerr-Schild coordinates for (x1, x2, x3)
-void SimulationReader::GetSKSCoordinate(double x1, double x2, double x3, double &r, double &theta,
-    double &phi)
-{
-  double h = metric_h;
-  double poly_xt = metric_poly_xt;
-  double poly_alpha = metric_poly_alpha;
-  double mks_smooth = metric_mks_smooth;
-  double rin = metric_rin;
-  double poly_norm = metric_derived_poly_norm;
-
-  if (simulation_coord == Coordinates::fmks) {
-    r = exp(x1);
-    phi = x3;
-    double y = 2.0 * x2 - 1.0;
-    double theta_G = Math::pi*x2 + ((1.0 - h) / 2.0) * std::sin(2.0 * Math::pi * x2);
-    double theta_J = poly_norm * y * (1.0 + std::pow(y / poly_xt, poly_alpha) / (poly_alpha + 1.0));
-    theta_J += 0.5 * Math::pi;
-    theta = theta_G + std::exp(mks_smooth * (std::log(rin) - x1)) * (theta_J - theta_G);
-  }
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// Function to generate the map between SKS (r, theta) coordinates and alternative
-// spherically based coordinate systems like FMKS. Currently written for FMKS.
-// Inputs:
-//   r_in: radial SKS coordinate for "inner edge" of coordinate map
-//   r_out: radial SKS coordinate for "outer edge" of coordinate map
-//   n1: number of SKS grid points (in radial direction) to sample over
-//   n2: number of SKS grid points (in elevation/theta direction) to sample over
-// Outputs: (none)
-// Notes:
-//   Assumes all metric parameters have been loaded.
-//   Allocates and sets sks_map to save mapping.
-//   Operates in serial since it only needs to run once and is 2D.
-void SimulationReader::GenerateSKSMap(double r_in, double r_out, int n1, int n2)
-{
-  // TODO: these are not deallocated and will not work if the mesh coordinates change with time
-  sks_map.Allocate(2, n2, n1);
-
-  double dr = (r_out - r_in) / (n1 - 1);
-  double dtheta = Math::pi / (n2 - 1);
-
-  sks_map_rin = r_in;
-  sks_map_rout = r_out;
-  sks_map_dr = dr;
-  sks_map_dtheta = dtheta;
-
-  // TODO: this is a reasonable value, but maybe it should be set somewhere else
-  double TOLERANCE = 1.e-8;
-
-  for (int i = 0; i < n1; ++i)
-  {
-    double r = r_in + i * dr;
-    double x1 = log(r);
-    for (int j = 0; j < n2; ++j)
-    {
-      double theta = std::min(j * dtheta, Math::pi);
-      double x2 = 0.5;
-
-      if (theta > TOLERANCE && fabs(Math::pi - theta) > TOLERANCE)
-      {
-        // bisect down to correct value for x2
-        double x2a = 0.0;
-        double x2b = 1.0;
-        x2 = (x2b + x2a) / 2.0;
-
-        double tr, tphi;
-        double theta_a = 0.0;
-        double theta_b = Math::pi;
-        double theta_c = Math::pi/2.0;
-        GetSKSCoordinate(x1, x2a, 0.0, tr, theta_a, tphi);
-        GetSKSCoordinate(x1, x2b, 0.0, tr, theta_b, tphi);
-
-        for (int k = 0; k < 1000; ++k) {
-          GetSKSCoordinate(x1, x2, 0.0, tr, theta_c, tphi);
-          if ((theta_c - theta) * (theta_b - theta) < 0.0) {
-            theta_a = theta_c;
-            x2a = x2;
-          } else {
-            theta_b = theta_c;
-            x2b = x2;
-          }
-          x2 = (x2a + x2b) / 2.0;
-          if (fabs(theta - theta_c) < TOLERANCE) {
-            break;
-          }
-        }
-      }
-
-      else if (theta < TOLERANCE)
-      {
-        x2 = 0.0;
-      }
-
-      else if (fabs(Math::pi - theta) < TOLERANCE)
-      {
-        x2 = 1.0;
-      }
-
-      // set coordinates in mesh
-      sks_map(0, j, i) = x1;
-      sks_map(1, j, i) = x2;
-    }
-  }
-
-  return;
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// Function to set transformation factors from native (simulation) coordinates to SKS
-// Inputs:
-//   x1, x2 simulation coordinates for where to compute the transformation
-// Outputs:
-//   dr_dx1, dth_dx1, dth_dx2: Jacobian factors
-void SimulationReader::SetJacobianFactors(double x1, double x2, double &dr_dx1, double &dth_dx1,
-    double &dth_dx2)
-{
-  double h = metric_h;
-  double poly_xt = metric_poly_xt;
-  double poly_alpha = metric_poly_alpha;
-  double mks_smooth = metric_mks_smooth;
-  double rin = metric_rin;
-  double poly_norm = metric_derived_poly_norm;
-
-  // regular MKS
-  dr_dx1 = std::exp(x1);
-  dth_dx1 = 0.0;
-  dth_dx2 = Math::pi + (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2);
-
-  // FMKS
-  if (simulation_coord == Coordinates::fmks)
-  {
-    dth_dx1 = - std::exp(mks_smooth * (std::log(rin) - x1)) * mks_smooth
-            * (
-            Math::pi / 2.0 -
-            Math::pi * x2
-                + poly_norm * (2.0 * x2 - 1.0)
-                    * (1.0
-                        + (std::pow((-1.0 + 2.0*x2) / poly_xt, poly_alpha))
-                            / (1.0 + poly_alpha))
-                - 1.0 / 2.0 * (1.0 - h) * std::sin(2.0 * Math::pi * x2));
-    dth_dx2 = Math::pi + (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2)
-            + std::exp(mks_smooth * (std::log(rin) - x1))
-                * (-Math::pi
-                    + 2.0 * poly_norm
-                        * (1.0
-                            + std::pow((2.0*x2 - 1.0) / poly_xt, poly_alpha)
-                                / (poly_alpha + 1.0))
-                    + (2.0 * poly_alpha * poly_norm * (2.0*x2 - 1.0)
-                        * std::pow((2.0*x2 - 1.0) / poly_xt, poly_alpha - 1.0))
-                        / ((1.0 + poly_alpha) * poly_xt)
-                    - (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2));
-  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -278,7 +113,7 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
           double phi;
           x1 = x1v(0,i);
           x2 = x2v(0,j);
-          GetSKSCoordinate(x1, x2, x3v(0,k), r, th, phi);
+          GetSKSCoordinates(x1, x2, x3v(0,k), r, th, phi);
         }
         else
         {
@@ -477,4 +312,169 @@ void SimulationReader::ConvertPrimitives4(Array<float> &primitives)
         primitives(ind_bb3,0,k,j,i) = static_cast<float>(bbph);
       }
   return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to generate the map between SKS (r, theta) coordinates and alternative
+// spherically based coordinate systems like FMKS. Currently written for FMKS.
+// Inputs:
+//   r_in: radial SKS coordinate for "inner edge" of coordinate map
+//   r_out: radial SKS coordinate for "outer edge" of coordinate map
+//   n1: number of SKS grid points (in radial direction) to sample over
+//   n2: number of SKS grid points (in elevation/theta direction) to sample over
+// Outputs: (none)
+// Notes:
+//   Assumes all metric parameters have been loaded.
+//   Allocates and sets sks_map to save mapping.
+//   Operates in serial since it only needs to run once and is 2D.
+void SimulationReader::GenerateSKSMap(double r_in, double r_out, int n1, int n2)
+{
+  // TODO: these are not deallocated and will not work if the mesh coordinates change with time
+  sks_map.Allocate(2, n2, n1);
+
+  double dr = (r_out - r_in) / (n1 - 1);
+  double dtheta = Math::pi / (n2 - 1);
+
+  sks_map_rin = r_in;
+  sks_map_rout = r_out;
+  sks_map_dr = dr;
+  sks_map_dtheta = dtheta;
+
+  // TODO: this is a reasonable value, but maybe it should be set somewhere else
+  double TOLERANCE = 1.e-8;
+
+  for (int i = 0; i < n1; ++i)
+  {
+    double r = r_in + i * dr;
+    double x1 = log(r);
+    for (int j = 0; j < n2; ++j)
+    {
+      double theta = std::min(j * dtheta, Math::pi);
+      double x2 = 0.5;
+
+      if (theta > TOLERANCE && fabs(Math::pi - theta) > TOLERANCE)
+      {
+        // bisect down to correct value for x2
+        double x2a = 0.0;
+        double x2b = 1.0;
+        x2 = (x2b + x2a) / 2.0;
+
+        double tr, tphi;
+        double theta_a = 0.0;
+        double theta_b = Math::pi;
+        double theta_c = Math::pi/2.0;
+        GetSKSCoordinates(x1, x2a, 0.0, tr, theta_a, tphi);
+        GetSKSCoordinates(x1, x2b, 0.0, tr, theta_b, tphi);
+
+        for (int k = 0; k < 1000; ++k) {
+          GetSKSCoordinates(x1, x2, 0.0, tr, theta_c, tphi);
+          if ((theta_c - theta) * (theta_b - theta) < 0.0) {
+            theta_a = theta_c;
+            x2a = x2;
+          } else {
+            theta_b = theta_c;
+            x2b = x2;
+          }
+          x2 = (x2a + x2b) / 2.0;
+          if (fabs(theta - theta_c) < TOLERANCE) {
+            break;
+          }
+        }
+      }
+
+      else if (theta < TOLERANCE)
+      {
+        x2 = 0.0;
+      }
+
+      else if (fabs(Math::pi - theta) < TOLERANCE)
+      {
+        x2 = 1.0;
+      }
+
+      // set coordinates in mesh
+      sks_map(0, j, i) = x1;
+      sks_map(1, j, i) = x2;
+    }
+  }
+
+  return;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to return spatial SKS (r, theta, phi) coordinates given input coordiantes in
+// native coordinate system.
+// Inputs:
+//   x1, x2, x3: coordinate point in simulation coordinates
+// Outputs:
+//   r, theta, phi: spherical Kerr-Schild coordinates for (x1, x2, x3)
+void SimulationReader::GetSKSCoordinates(double x1, double x2, double x3, double &r, double &theta,
+    double &phi)
+{
+  double h = metric_h;
+  double poly_xt = metric_poly_xt;
+  double poly_alpha = metric_poly_alpha;
+  double mks_smooth = metric_mks_smooth;
+  double rin = metric_rin;
+  double poly_norm = metric_derived_poly_norm;
+
+  if (simulation_coord == Coordinates::fmks) {
+    r = exp(x1);
+    phi = x3;
+    double y = 2.0 * x2 - 1.0;
+    double theta_G = Math::pi*x2 + ((1.0 - h) / 2.0) * std::sin(2.0 * Math::pi * x2);
+    double theta_J = poly_norm * y * (1.0 + std::pow(y / poly_xt, poly_alpha) / (poly_alpha + 1.0));
+    theta_J += 0.5 * Math::pi;
+    theta = theta_G + std::exp(mks_smooth * (std::log(rin) - x1)) * (theta_J - theta_G);
+  }
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// Function to set transformation factors from native (simulation) coordinates to SKS
+// Inputs:
+//   x1, x2 simulation coordinates for where to compute the transformation
+// Outputs:
+//   dr_dx1, dth_dx1, dth_dx2: Jacobian factors
+void SimulationReader::SetJacobianFactors(double x1, double x2, double &dr_dx1, double &dth_dx1,
+    double &dth_dx2)
+{
+  double h = metric_h;
+  double poly_xt = metric_poly_xt;
+  double poly_alpha = metric_poly_alpha;
+  double mks_smooth = metric_mks_smooth;
+  double rin = metric_rin;
+  double poly_norm = metric_derived_poly_norm;
+
+  // regular MKS
+  dr_dx1 = std::exp(x1);
+  dth_dx1 = 0.0;
+  dth_dx2 = Math::pi + (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2);
+
+  // FMKS
+  if (simulation_coord == Coordinates::fmks)
+  {
+    dth_dx1 = - std::exp(mks_smooth * (std::log(rin) - x1)) * mks_smooth
+            * (
+            Math::pi / 2.0 -
+            Math::pi * x2
+                + poly_norm * (2.0 * x2 - 1.0)
+                    * (1.0
+                        + (std::pow((-1.0 + 2.0*x2) / poly_xt, poly_alpha))
+                            / (1.0 + poly_alpha))
+                - 1.0 / 2.0 * (1.0 - h) * std::sin(2.0 * Math::pi * x2));
+    dth_dx2 = Math::pi + (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2)
+            + std::exp(mks_smooth * (std::log(rin) - x1))
+                * (-Math::pi
+                    + 2.0 * poly_norm
+                        * (1.0
+                            + std::pow((2.0*x2 - 1.0) / poly_xt, poly_alpha)
+                                / (poly_alpha + 1.0))
+                    + (2.0 * poly_alpha * poly_norm * (2.0*x2 - 1.0)
+                        * std::pow((2.0*x2 - 1.0) / poly_xt, poly_alpha - 1.0))
+                        / ((1.0 + poly_alpha) * poly_xt)
+                    - (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2));
+  }
 }

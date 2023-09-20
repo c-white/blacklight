@@ -125,11 +125,11 @@ struct SimulationReader
 
   // Internal functions - simulation_geometry.cpp
   void ConvertCoordinates();
-  void GenerateSKSMap(double r_in, double r_out, int n1, int n2);
-  void GetSKSCoordinate(double x1, double x2, double x3, double &r, double &theta, double &phi);
-  void SetJacobianFactors(double x1, double x2, double &dr_dx1, double &dth_dx1, double &dth_dx2);
   void ConvertPrimitives3(Array<float> &primitives);
   void ConvertPrimitives4(Array<float> &primitives);
+  void GenerateSKSMap(double r_in, double r_out, int n1, int n2);
+  void GetSKSCoordinates(double x1, double x2, double x3, double &r, double &theta, double &phi);
+  void SetJacobianFactors(double x1, double x2, double &dr_dx1, double &dth_dx1, double &dth_dx2);
 
   // Internal functions - hdf5_format_structure.cpp
   void ReadHDF5Superblock();
