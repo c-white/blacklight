@@ -41,12 +41,12 @@ void SimulationReader::ConvertCoordinates()
     simulation_bounds.Allocate(6);
 
     double rval, thetaval, phival;
-    GetSKSCoordinates(x1f(0, 0), 0.0, 0.0, rval, thetaval, phival);
+    GetSKSCoordinates(x1f(0, 0), 0.0, 0.0, &rval, &thetaval, &phival);
     simulation_bounds(0) = rval;
     simulation_bounds(2) = thetaval;
     simulation_bounds(4) = phival;
 
-    GetSKSCoordinates(x1f(0, n1), 1.0, 2.0*Math::pi, rval, thetaval, phival);
+    GetSKSCoordinates(x1f(0, n1), 1.0, 2.0*Math::pi, &rval, &thetaval, &phival);
     simulation_bounds(1) = rval;
     simulation_bounds(3) = thetaval;
     simulation_bounds(5) = phival;
@@ -113,7 +113,7 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
           double phi;
           x1 = x1v(0,i);
           x2 = x2v(0,j);
-          GetSKSCoordinates(x1, x2, x3v(0,k), r, th, phi);
+          GetSKSCoordinates(x1, x2, x3v(0,k), &r, &th, &phi);
         }
         else
         {
@@ -133,7 +133,7 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
 
         // Calculate Jacobian of transformation
         double dr_dx1, dth_dx1, dth_dx2;
-        SetJacobianFactors(x1, x2, dr_dx1, dth_dx1, dth_dx2);
+        SetJacobianFactors(x1, x2, &dr_dx1, &dth_dx1, &dth_dx2);
 
         // Calculate standard metric
         double sigma = r * r + a * a * cth * cth;
@@ -364,11 +364,11 @@ void SimulationReader::GenerateSKSMap(double r_in, double r_out, int n1, int n2)
         double theta_a = 0.0;
         double theta_b = Math::pi;
         double theta_c = Math::pi/2.0;
-        GetSKSCoordinates(x1, x2a, 0.0, tr, theta_a, tphi);
-        GetSKSCoordinates(x1, x2b, 0.0, tr, theta_b, tphi);
+        GetSKSCoordinates(x1, x2a, 0.0, &tr, &theta_a, &tphi);
+        GetSKSCoordinates(x1, x2b, 0.0, &tr, &theta_b, &tphi);
 
         for (int k = 0; k < 1000; ++k) {
-          GetSKSCoordinates(x1, x2, 0.0, tr, theta_c, tphi);
+          GetSKSCoordinates(x1, x2, 0.0, &tr, &theta_c, &tphi);
           if ((theta_c - theta) * (theta_b - theta) < 0.0) {
             theta_a = theta_c;
             x2a = x2;
@@ -409,9 +409,9 @@ void SimulationReader::GenerateSKSMap(double r_in, double r_out, int n1, int n2)
 // Inputs:
 //   x1, x2, x3: coordinate point in simulation coordinates
 // Outputs:
-//   r, theta, phi: spherical Kerr-Schild coordinates for (x1, x2, x3)
-void SimulationReader::GetSKSCoordinates(double x1, double x2, double x3, double &r, double &theta,
-    double &phi)
+//   *p_r, *p_theta, *p_phi: spherical Kerr-Schild coordinates for (x1, x2, x3)
+void SimulationReader::GetSKSCoordinates(double x1, double x2, double x3, double *p_r,
+    double *p_theta, double *p_phi)
 {
   double h = metric_h;
   double poly_xt = metric_poly_xt;
@@ -421,13 +421,13 @@ void SimulationReader::GetSKSCoordinates(double x1, double x2, double x3, double
   double poly_norm = metric_derived_poly_norm;
 
   if (simulation_coord == Coordinates::fmks) {
-    r = exp(x1);
-    phi = x3;
+    *p_r = exp(x1);
+    *p_phi = x3;
     double y = 2.0 * x2 - 1.0;
     double theta_G = Math::pi*x2 + ((1.0 - h) / 2.0) * std::sin(2.0 * Math::pi * x2);
     double theta_J = poly_norm * y * (1.0 + std::pow(y / poly_xt, poly_alpha) / (poly_alpha + 1.0));
     theta_J += 0.5 * Math::pi;
-    theta = theta_G + std::exp(mks_smooth * (std::log(rin) - x1)) * (theta_J - theta_G);
+    *p_theta = theta_G + std::exp(mks_smooth * (std::log(rin) - x1)) * (theta_J - theta_G);
   }
 }
 
@@ -437,9 +437,9 @@ void SimulationReader::GetSKSCoordinates(double x1, double x2, double x3, double
 // Inputs:
 //   x1, x2 simulation coordinates for where to compute the transformation
 // Outputs:
-//   dr_dx1, dth_dx1, dth_dx2: Jacobian factors
-void SimulationReader::SetJacobianFactors(double x1, double x2, double &dr_dx1, double &dth_dx1,
-    double &dth_dx2)
+//   *p_dr_dx1, *p_dth_dx1, *p_dth_dx2: Jacobian factors
+void SimulationReader::SetJacobianFactors(double x1, double x2, double *p_dr_dx1, double *p_dth_dx1,
+    double *p_dth_dx2)
 {
   double h = metric_h;
   double poly_xt = metric_poly_xt;
@@ -449,14 +449,14 @@ void SimulationReader::SetJacobianFactors(double x1, double x2, double &dr_dx1, 
   double poly_norm = metric_derived_poly_norm;
 
   // regular MKS
-  dr_dx1 = std::exp(x1);
-  dth_dx1 = 0.0;
-  dth_dx2 = Math::pi + (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2);
+  *p_dr_dx1 = std::exp(x1);
+  *p_dth_dx1 = 0.0;
+  *p_dth_dx2 = Math::pi + (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2);
 
   // FMKS
   if (simulation_coord == Coordinates::fmks)
   {
-    dth_dx1 = - std::exp(mks_smooth * (std::log(rin) - x1)) * mks_smooth
+    *p_dth_dx1 = - std::exp(mks_smooth * (std::log(rin) - x1)) * mks_smooth
             * (
             Math::pi / 2.0 -
             Math::pi * x2
@@ -465,7 +465,7 @@ void SimulationReader::SetJacobianFactors(double x1, double x2, double &dr_dx1, 
                         + (std::pow((-1.0 + 2.0*x2) / poly_xt, poly_alpha))
                             / (1.0 + poly_alpha))
                 - 1.0 / 2.0 * (1.0 - h) * std::sin(2.0 * Math::pi * x2));
-    dth_dx2 = Math::pi + (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2)
+    *p_dth_dx2 = Math::pi + (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2)
             + std::exp(mks_smooth * (std::log(rin) - x1))
                 * (-Math::pi
                     + 2.0 * poly_norm
