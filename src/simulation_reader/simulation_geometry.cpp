@@ -37,7 +37,7 @@ void SimulationReader::ConvertCoordinates()
     double r_in = std::exp(x1f(0, 0));
     double r_out = std::exp(x1f(0, n1));
     GenerateSKSMap(r_in, r_out, 2048, 2048);
-    
+
     simulation_bounds.Allocate(6);
 
     double rval, thetaval, phival;
@@ -60,7 +60,7 @@ void SimulationReader::ConvertCoordinates()
     x2v_alt.Allocate(n2);
     for (int j = 0; j < n2; j++)
       x2v_alt(j) = x2v(0,j);
-    
+
     // Transform x^1 to r
     for (int i = 0; i <= n1; i++)
       x1f(0,i) = std::exp(x1f(0,i));
@@ -109,7 +109,7 @@ void SimulationReader::GetSKSCoordinate(double x1, double x2, double x3, double 
 
 // Function to generate the map between SKS (r, theta) coordinates and alternative
 // spherically based coordinate systems like FMKS. Currently written for FMKS.
-// Inputs: 
+// Inputs:
 //   r_in: radial SKS coordinate for "inner edge" of coordinate map
 //   r_out: radial SKS coordinate for "outer edge" of coordinate map
 //   n1: number of SKS grid points (in radial direction) to sample over
@@ -172,14 +172,14 @@ void SimulationReader::GenerateSKSMap(double r_in, double r_out, int n1, int n2)
             break;
           }
         }
-      } 
-      
-      else if (theta < TOLERANCE) 
+      }
+
+      else if (theta < TOLERANCE)
       {
         x2 = 0.0;
-      } 
-      
-      else if (fabs(Math::pi - theta) < TOLERANCE) 
+      }
+
+      else if (fabs(Math::pi - theta) < TOLERANCE)
       {
         x2 = 1.0;
       }
@@ -213,7 +213,7 @@ void SimulationReader::SetJacobianFactors(double x1, double x2, double &dr_dx1, 
   dr_dx1 = std::exp(x1);
   dth_dx1 = 0.0;
   dth_dx2 = Math::pi + (1.0 - h) * Math::pi * std::cos(2.0 * Math::pi * x2);
-  
+
   // FMKS
   if (simulation_coord == Coordinates::fmks)
   {
@@ -335,7 +335,7 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
         double alpha_mod = 1.0 / std::sqrt(-g00);
 
         // Transform velocity from modified normal frame to modified coordinate frame
-        // TODO check for missing terms .. does anything need g_00? 
+        // TODO check for missing terms .. does anything need g_00?
         double uu0 = std::sqrt(1.0 + g_11 * uu1 * uu1 + 2.0 * g_12 * uu1 * uu2
             + 2.0 * g_13 * uu1 * uu3 + g_22 * uu2 * uu2 + 2.0 * g_23 * uu2 * uu3
             + g_33 * uu3 * uu3);
@@ -401,7 +401,7 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
         // these values also agree
         std::exit(4);
          */
-        
+
         // Save results
         primitives(ind_uu1,0,k,j,i) = static_cast<float>(uur);
         primitives(ind_uu2,0,k,j,i) = static_cast<float>(uuth);
@@ -409,7 +409,7 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
         primitives(ind_bb1,0,k,j,i) = static_cast<float>(bbr);
         primitives(ind_bb2,0,k,j,i) = static_cast<float>(bbth);
         primitives(ind_bb3,0,k,j,i) = static_cast<float>(bbph);
-        
+
       }
   return;
 }

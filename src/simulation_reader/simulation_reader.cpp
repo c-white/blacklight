@@ -340,7 +340,7 @@ double SimulationReader::Read(int snapshot)
           ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_xt").c_str(), poly_xt_temp);
           ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_alpha").c_str(), poly_alpha_temp);
           ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/mks_smooth").c_str(), mks_smooth_temp);
-          try 
+          try
           {
             ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/r_in").c_str(), rin_temp);
           }
@@ -361,7 +361,7 @@ double SimulationReader::Read(int snapshot)
           metric_derived_poly_norm = 1.0 / (1.0 + 1.0/(metric_poly_alpha+1.0)/std::pow(metric_poly_xt, metric_poly_alpha));
           metric_derived_poly_norm *= 0.5 * Math::pi;
           //native_x1in = std::log(metric_rin);
-          //native_deltax1 = 
+          //native_deltax1 =
           //native_deltax2 = 1.0 / n2;
         }
       }
@@ -558,7 +558,7 @@ double SimulationReader::Read(int snapshot)
       }
       else if (simulation_format == SimulationFormat::iharm3d)
       {
-        // TODO check that this makes sense. 
+        // TODO check that this makes sense.
         Array<int> num_cells;
         Array<double> x_start, dx;
         ReadHDF5IntArray("header/n1", num_cells);

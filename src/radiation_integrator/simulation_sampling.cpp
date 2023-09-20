@@ -202,7 +202,7 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
 
       // Set NaN fallback values if geodesic poorly terminated
       if (fallback_nan and sample_flags[adaptive_level](m))
-      { 
+      {
         for (int n = 0; n < num_steps; n++)
           sample_nan[adaptive_level](m,n) = true;
         continue;
