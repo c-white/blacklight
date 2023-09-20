@@ -1041,8 +1041,8 @@ void RadiationIntegrator::SampleSimulation()
 //   If the requested cell is not on the grid, values are copied from the unique cell on the grid
 //       closest to the appropriate ghost cell, effectively resulting in constant (rather than
 //       linear) extrapolation near the edges of the grid.
-//   In the case of simulation_coord == Coordinates::sks or Coordinates::fmks, neighboring blocks 
-//       are understood to cross the periodic boundary in x^3 (phi), but the domain is not stitched 
+//   In the case of simulation_coord being Coordinates::sks or Coordinates::fmks, neighboring blocks
+//       are understood to cross the periodic boundary in x^3 (phi), but the domain is not stitched
 //       together at the poles.
 void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, int j_c, int i_c,
     double x3, double x2, double x1, int inds[4])

@@ -310,7 +310,7 @@ double SimulationReader::Read(int snapshot)
       ReadHDF5StringArray("header/metric", true, &p_temp_metric, &temp_count);
       metric = *p_temp_metric;
       delete[] p_temp_metric;
-      if (simulation_coord == Coordinates::sks || simulation_coord == Coordinates::fmks)
+      if (simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks)
       {
         std::string metric_lower = metric;
         std::transform(metric_lower.begin(), metric_lower.end(), metric_lower.begin(),
@@ -647,7 +647,8 @@ double SimulationReader::Read(int snapshot)
     if (first_time)
     {
       // TODO: I wantonly added fmks in here and below. Check for correctness?
-      if ((simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks) and x2f.n2 == 1)
+      if ((simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks)
+          and x2f.n2 == 1)
       {
         bool error_low = std::abs(x2f(0,0)) > (x2f(0,1) - x2f(0,0)) * angular_domain_tolerance;
         bool error_high = std::abs(x2f(0,x2f.n1-1) - Math::pi)
@@ -664,7 +665,8 @@ double SimulationReader::Read(int snapshot)
           x2f(0,x2f.n1-1) = Math::pi;
         }
       }
-      if ((simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks) and x3f.n2 == 1)
+      if ((simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks)
+          and x3f.n2 == 1)
       {
         bool error_low = std::abs(x3f(0,0)) > (x3f(0,1) - x3f(0,0)) * angular_domain_tolerance;
         bool error_high = std::abs(x3f(0,x3f.n1-1) - 2.0 * Math::pi)
