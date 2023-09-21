@@ -181,7 +181,8 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
     double x3_min_block = x3f(b,0);
     double x3_max_block = x3f(b,n_k);
 
-    if (simulation_coord == Coordinates::fmks) {
+    if (simulation_coord == Coordinates::fmks)
+    {
       x1_min_block = simulation_bounds(0);
       x1_max_block = simulation_bounds(1);
       x2_min_block = simulation_bounds(2);
@@ -1086,7 +1087,8 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
     int location_k_alt = locations(b_alt,2);
 
     // Check x^1-direction
-    if (x1_off_grid and i != i_safe) {
+    if (x1_off_grid and i != i_safe)
+    {
       bool same_level_exists = level_alt == level;
       same_level_exists =
           same_level_exists and location_i_alt == (i == -1 ? location_i - 1 : location_i + 1);
@@ -1109,7 +1111,8 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
     }
 
     // Check x^2-direction
-    if (x2_off_grid and j != j_safe) {
+    if (x2_off_grid and j != j_safe)
+    {
       bool same_level_exists = level_alt == level;
       same_level_exists = same_level_exists and location_i_alt == location_i;
       same_level_exists =
@@ -1132,7 +1135,8 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
     }
 
     // Check x^3-direction
-    if (x3_off_grid and k != k_safe) {
+    if (x3_off_grid and k != k_safe)
+    {
       bool same_level_exists = level_alt == level;
       same_level_exists = same_level_exists and location_i_alt == location_i;
       same_level_exists = same_level_exists and location_j_alt == location_j;
@@ -1155,7 +1159,8 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
     }
 
     // Check x^3-direction across periodic boundary
-    if (x3_off_grid and simulation_coord == Coordinates::sks and k == -1 and location_k == 0) {
+    if (x3_off_grid and simulation_coord == Coordinates::sks and k == -1 and location_k == 0)
+    {
       bool same_level_exists = level_alt == level;
       same_level_exists = same_level_exists and location_i_alt == location_i;
       same_level_exists = same_level_exists and location_j_alt == location_j;
@@ -1174,7 +1179,8 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
         x3_off_grid = false;
     }
     if (x3_off_grid and simulation_coord == Coordinates::sks and k == n_k
-        and location_k == n_3_level(level) - 1) {
+        and location_k == n_3_level(level) - 1)
+    {
       bool same_level_exists = level_alt == level;
       same_level_exists = same_level_exists and location_i_alt == location_i;
       same_level_exists = same_level_exists and location_j_alt == location_j;

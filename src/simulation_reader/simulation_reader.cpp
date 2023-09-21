@@ -335,7 +335,8 @@ double SimulationReader::Read(int snapshot)
           BlacklightWarning(message.str().c_str());
         }
         metric_h = h_temp(0);
-        if (metric == "MMKS" or metric == "FMKS") {
+        if (metric == "MMKS" or metric == "FMKS")
+        {
           Array<double> poly_xt_temp, poly_alpha_temp, mks_smooth_temp, rin_temp;
           ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_xt").c_str(), poly_xt_temp);
           ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_alpha").c_str(),
@@ -352,7 +353,8 @@ double SimulationReader::Read(int snapshot)
             {
               ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/Rin").c_str(), rin_temp);
             }
-            catch (...) {
+            catch (...)
+            {
               throw BlacklightException(
                   "Unable to identify r_in parameter for iharm3d-format file.");
             }

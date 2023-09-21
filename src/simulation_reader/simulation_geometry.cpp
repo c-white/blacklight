@@ -367,31 +367,30 @@ void SimulationReader::GenerateSKSMap(double r_in, double r_out, int n1, int n2)
         GetSKSCoordinates(x1, x2a, 0.0, &tr, &theta_a, &tphi);
         GetSKSCoordinates(x1, x2b, 0.0, &tr, &theta_b, &tphi);
 
-        for (int k = 0; k < 1000; ++k) {
+        for (int k = 0; k < 1000; ++k)
+        {
           GetSKSCoordinates(x1, x2, 0.0, &tr, &theta_c, &tphi);
-          if ((theta_c - theta) * (theta_b - theta) < 0.0) {
+          if ((theta_c - theta) * (theta_b - theta) < 0.0)
+          {
             theta_a = theta_c;
             x2a = x2;
-          } else {
+          }
+          else
+          {
             theta_b = theta_c;
             x2b = x2;
           }
           x2 = (x2a + x2b) / 2.0;
-          if (fabs(theta - theta_c) < TOLERANCE) {
+          if (fabs(theta - theta_c) < TOLERANCE)
             break;
-          }
         }
       }
 
       else if (theta < TOLERANCE)
-      {
         x2 = 0.0;
-      }
 
       else if (fabs(Math::pi - theta) < TOLERANCE)
-      {
         x2 = 1.0;
-      }
 
       // set coordinates in mesh
       sks_map(0, j, i) = x1;
@@ -419,7 +418,8 @@ void SimulationReader::GetSKSCoordinates(double x1, double x2, double x3, double
   double rin = metric_rin;
   double poly_norm = metric_derived_poly_norm;
 
-  if (simulation_coord == Coordinates::fmks) {
+  if (simulation_coord == Coordinates::fmks)
+  {
     *p_r = exp(x1);
     *p_phi = x3;
     double y = 2.0 * x2 - 1.0;
