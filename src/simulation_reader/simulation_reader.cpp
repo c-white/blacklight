@@ -2,7 +2,8 @@
 
 // C++ headers
 #include <algorithm>  // remove
-#include <cmath>      // abs
+#include <cctype>     // tolower
+#include <cmath>      // abs, pow
 #include <cstdint>    // int32_t
 #include <cstdio>     // snprintf
 #include <cstring>    // strncmp, strtok
@@ -313,9 +314,8 @@ double SimulationReader::Read(int snapshot)
       if (simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks)
       {
         std::string metric_lower = metric;
-        std::transform(metric_lower.begin(), metric_lower.end(), metric_lower.begin(),
-                       [](unsigned char c){ return std::tolower(c); });
-
+        for (int c = 0; c < metric_lower.size; c++)
+          metric_lower[c] = std::tolower(metric_lower[c]);
         if (metric != "MKS" and metric != "MMKS" and metric != "FMKS")
         {
           std::ostringstream message;
@@ -337,12 +337,7 @@ double SimulationReader::Read(int snapshot)
         metric_h = h_temp(0);
         if (metric == "MMKS" or metric == "FMKS")
         {
-          Array<double> poly_xt_temp, poly_alpha_temp, mks_smooth_temp, rin_temp;
-          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_xt").c_str(), poly_xt_temp);
-          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_alpha").c_str(),
-              poly_alpha_temp);
-          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/mks_smooth").c_str(),
-              mks_smooth_temp);
+          Array<double> rin_temp, poly_xt_temp, poly_alpha_temp, mks_smooth_temp;
           try
           {
             ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/r_in").c_str(), rin_temp);
@@ -359,16 +354,19 @@ double SimulationReader::Read(int snapshot)
                   "Unable to identify r_in parameter for iharm3d-format file.");
             }
           }
-          metric_rin = rin_temp(0);
+          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_xt").c_str(), poly_xt_temp);
+          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/poly_alpha").c_str(),
+              poly_alpha_temp);
+          ReadHDF5DoubleArray(("header/geom/" + metric_lower + "/mks_smooth").c_str(),
+              mks_smooth_temp);
+          metric_r_in = rin_temp(0);
           metric_poly_xt = poly_xt_temp(0);
           metric_poly_alpha = poly_alpha_temp(0);
           metric_mks_smooth = mks_smooth_temp(0);
-          metric_derived_poly_norm = 1.0 / (1.0
-              + 1.0 / (metric_poly_alpha + 1.0) / std::pow(metric_poly_xt, metric_poly_alpha));
-          metric_derived_poly_norm *= 0.5 * Math::pi;
-          //native_x1in = std::log(metric_rin);
-          //native_deltax1 =
-          //native_deltax2 = 1.0 / n2;
+          metric_derived_poly_norm =
+              (metric_poly_alpha + 1.0) * std::pow(metric_poly_xt, metric_poly_alpha);
+          metric_derived_poly_norm =
+              0.5 * Math::pi * metric_derived_poly_norm / (metric_derived_poly_norm + 1.0);
         }
       }
       else
@@ -564,7 +562,6 @@ double SimulationReader::Read(int snapshot)
       }
       else if (simulation_format == SimulationFormat::iharm3d)
       {
-        // TODO check that this makes sense.
         Array<int> num_cells;
         Array<double> x_start, dx;
         ReadHDF5IntArray("header/n1", num_cells);
@@ -575,7 +572,6 @@ double SimulationReader::Read(int snapshot)
         x1f(0,0) = x_start(0);
         for (int i = 0; i < num_cells(0); i++)
         {
-          // TODO: note the legacy code here assumed x1f started with 0, which is not always true!
           x1f(0,i+1) = x_start(0) + (i + 1) * dx(0);
           x1v(0,i) = 0.5 * (x1f(0,i) + x1f(0,i+1));
         }
@@ -584,6 +580,7 @@ double SimulationReader::Read(int snapshot)
         ReadHDF5DoubleArray("header/geom/dx2", dx);
         x2f.Allocate(1, num_cells(0) + 1);
         x2v.Allocate(1, num_cells(0));
+        x2f(0,0) = x_start(0);
         for (int j = 0; j < num_cells(0); j++)
         {
           x2f(0,j+1) = x_start(0) + (j + 1) * dx(0);
@@ -594,6 +591,7 @@ double SimulationReader::Read(int snapshot)
         ReadHDF5DoubleArray("header/geom/dx3", dx);
         x3f.Allocate(1, num_cells(0) + 1);
         x3v.Allocate(1, num_cells(0));
+        x3f(0,0) = x_start(0);
         for (int k = 0; k < num_cells(0); k++)
         {
           x3f(0,k+1) = x_start(0) + (k + 1) * dx(0);
@@ -611,6 +609,7 @@ double SimulationReader::Read(int snapshot)
         data_stream >> dx1 >> dx2 >> dx3;
         x1f.Allocate(1, num_cells_1 + 1);
         x1v.Allocate(1, num_cells_1);
+        x1f(0,0) = x_start(0);
         for (int i = 0; i < num_cells_1; i++)
         {
           x1f(0,i+1) = x1_start + (i + 1) * dx1;
@@ -618,6 +617,7 @@ double SimulationReader::Read(int snapshot)
         }
         x2f.Allocate(1, num_cells_2 + 1);
         x2v.Allocate(1, num_cells_2);
+        x2f(0,0) = x_start(0);
         for (int j = 0; j < num_cells_2; j++)
         {
           x2f(0,j+1) = x2_start + (j + 1) * dx2;
@@ -625,6 +625,7 @@ double SimulationReader::Read(int snapshot)
         }
         x3f.Allocate(1, num_cells_3 + 1);
         x3v.Allocate(1, num_cells_3);
+        x3f(0,0) = x_start(0);
         for (int k = 0; k < num_cells_3; k++)
         {
           x3f(0,k+1) = x3_start + (k + 1) * dx3;

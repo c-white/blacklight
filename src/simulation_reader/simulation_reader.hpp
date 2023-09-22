@@ -77,8 +77,8 @@ struct SimulationReader
   double athenak_time;
   double *athenak_cell_data_double;
   std::string metric;
-  double metric_a, metric_h, metric_poly_xt, metric_poly_alpha, metric_mks_smooth, metric_rin;
-  double metric_derived_poly_norm;
+  double metric_a, metric_h, metric_r_in;
+  double metric_poly_xt, metric_poly_alpha, metric_mks_smooth, metric_derived_poly_norm;
   std::ifstream::pos_type cell_data_address;
   std::string *dataset_names;
   int num_dataset_names = 0;
@@ -97,9 +97,13 @@ struct SimulationReader
   const double angular_domain_tolerance = 0.1;
 
   // Coordinate interpolation data
-  double sks_map_rin, sks_map_rout, sks_map_dr, sks_map_dtheta;
+  double sks_map_r_in, sks_map_r_out, sks_map_dr, sks_map_dtheta;
   Array<double> simulation_bounds;
   Array<double> sks_map;
+  const int sks_map_n1 = 2048;
+  const int sks_map_n2 = 2048;
+  const int sks_map_max_iter = 1000;
+  const double sks_map_tol = 1.0e-8;
 
   // Data
   int n_3_root;
