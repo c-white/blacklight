@@ -131,7 +131,7 @@ struct SimulationReader
   void ConvertCoordinates();
   void ConvertPrimitives3(Array<float> &primitives);
   void ConvertPrimitives4(Array<float> &primitives);
-  void GenerateSKSMap(double r_in, double r_out, int n1, int n2);
+  void GenerateSKSMap(double r_in, double r_out);
   void GetSKSCoordinates(double x1, double x2, double x3, double *p_r, double *p_theta,
       double *p_phi);
   void SetJacobianFactors(double x1, double x2, double *p_dr_dx1, double *p_dth_dx1,

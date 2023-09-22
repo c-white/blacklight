@@ -45,7 +45,9 @@ void SimulationReader::ConvertCoordinates()
 
     // Calculate grid bounds
     simulation_bounds.Allocate(6);
-    double r_val, theta_val, phival;
+    double r_val = 0.0;
+    double theta_val = 0.0;
+    double phi_val = 0.0;
     GetSKSCoordinates(x1f(0,0), 0.0, 0.0, &r_val, &theta_val, &phi_val);
     simulation_bounds(0) = r_val;
     simulation_bounds(2) = theta_val;
@@ -105,19 +107,19 @@ void SimulationReader::ConvertPrimitives3(Array<float> &primitives)
       for (int i = 0; i < n1; i++)
       {
         // Extract coordinates
-        double r, th, x1, x2;
+        double r = x1v(0,i);
+        double th = x2v(0,j);
+        double x1, x2;
         if (simulation_coord == Coordinates::sks)
         {
-          r = x1v(0,i);
-          th = x2v(0,j);
           x1 = std::log(r);
           x2 = x2v_alt(j);
         }
         else if (simulation_coord == Coordinates::fmks)
         {
           double phi;
-          x1 = x1v(0,i);
-          x2 = x2v(0,j);
+          x1 = r;
+          x2 = th;
           GetSKSCoordinates(x1, x2, x3v(0,k), &r, &th, &phi);
         }
         else
@@ -363,7 +365,9 @@ void SimulationReader::GenerateSKSMap(double r_in, double r_out)
         double x2_b = 1.0;
         x2 = (x2_b + x2_a) / 2.0;
         double temp_r, temp_phi;
-        double theta_a, theta_b, theta_c;
+        double theta_a = 0.0;
+        double theta_b = Math::pi;
+        double theta_c = Math::pi / 2.0;
         GetSKSCoordinates(x1, x2_a, 0.0, &temp_r, &theta_a, &temp_phi);
         GetSKSCoordinates(x1, x2_b, 0.0, &temp_r, &theta_b, &temp_phi);
 
@@ -454,7 +458,7 @@ void SimulationReader::SetJacobianFactors(double x1, double x2, double *p_dr_dx1
     double var_h = Math::pi + (1.0 - metric_h) * Math::pi * std::cos(2.0 * Math::pi * x2);
     double var_i = -Math::pi + 2.0 * var_e;
     double var_j = 2.0 * metric_derived_poly_norm * metric_poly_alpha * var_c / var_d;
-    double var_k = -(1.0 - metric_h) * Math::pi * std::cos(2.0 * Math::pi * x2)
+    double var_k = -(1.0 - metric_h) * Math::pi * std::cos(2.0 * Math::pi * x2);
     *p_dth_dx2 = var_h + var_a * (var_i + var_j + var_k);
   }
 

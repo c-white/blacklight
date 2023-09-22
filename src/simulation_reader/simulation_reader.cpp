@@ -314,8 +314,8 @@ double SimulationReader::Read(int snapshot)
       if (simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks)
       {
         std::string metric_lower = metric;
-        for (int c = 0; c < metric_lower.size; c++)
-          metric_lower[c] = std::tolower(metric_lower[c]);
+        for (unsigned int c = 0; c < metric_lower.size(); c++)
+          metric_lower[c] = static_cast<char>(std::tolower(metric_lower[c]));
         if (metric != "MKS" and metric != "MMKS" and metric != "FMKS")
         {
           std::ostringstream message;
@@ -609,7 +609,7 @@ double SimulationReader::Read(int snapshot)
         data_stream >> dx1 >> dx2 >> dx3;
         x1f.Allocate(1, num_cells_1 + 1);
         x1v.Allocate(1, num_cells_1);
-        x1f(0,0) = x_start(0);
+        x1f(0,0) = x1_start;
         for (int i = 0; i < num_cells_1; i++)
         {
           x1f(0,i+1) = x1_start + (i + 1) * dx1;
@@ -617,7 +617,7 @@ double SimulationReader::Read(int snapshot)
         }
         x2f.Allocate(1, num_cells_2 + 1);
         x2v.Allocate(1, num_cells_2);
-        x2f(0,0) = x_start(0);
+        x2f(0,0) = x2_start;
         for (int j = 0; j < num_cells_2; j++)
         {
           x2f(0,j+1) = x2_start + (j + 1) * dx2;
@@ -625,7 +625,7 @@ double SimulationReader::Read(int snapshot)
         }
         x3f.Allocate(1, num_cells_3 + 1);
         x3v.Allocate(1, num_cells_3);
-        x3f(0,0) = x_start(0);
+        x3f(0,0) = x3_start;
         for (int k = 0; k < num_cells_3; k++)
         {
           x3f(0,k+1) = x3_start + (k + 1) * dx3;
