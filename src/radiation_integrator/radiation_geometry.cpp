@@ -90,7 +90,6 @@ void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, doubl
     jacobian[3][3] = 1.0;
   }
 
-  // TODO: maybe change this? figure out how it is used.
   // Calculate Jacobian for spherical Kerr-Schild simulation
   else if (simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks)
   {

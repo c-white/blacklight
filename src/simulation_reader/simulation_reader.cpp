@@ -92,6 +92,32 @@ SimulationReader::SimulationReader(const InputReader *p_input_reader_)
     if (plasma_model == PlasmaModel::code_kappa)
       simulation_kappa_name = p_input_reader->simulation_kappa_name.value();
   }
+  
+  // Set adiabatic indices
+  if (model_type == ModelType::simulation)
+  {
+    if (p_input_reader->adiabatic_gamma_elec.has_value())
+    {
+      adiabatic_gamma_elec = p_input_reader->adiabatic_gamma_elec.value();
+      adiabatic_gamma_elec_set = true;
+    }
+    else
+    {
+      adiabatic_gamma_elec = 4.0/3.0;
+      adiabatic_gamma_elec_set = false;
+    }
+
+    if (p_input_reader->adiabatic_gamma_ion.has_value())
+    {
+      adiabatic_gamma_ion = p_input_reader->adiabatic_gamma_ion.value();
+      adiabatic_gamma_ion_set = true;
+    }
+    else
+    {
+      adiabatic_gamma_ion = 5.0/3.0;
+      adiabatic_gamma_ion_set = false;
+    }
+  }
 
   // Determine how many files will be held in memory simultaneously
   num_arrays = 0;
@@ -1294,5 +1320,32 @@ void SimulationReader::VerifyVariablesHarm()
   Array<double> gamma;
   ReadHDF5DoubleArray("header/gam", gamma);
   adiabatic_gamma = gamma(0);
+
+  try
+  {
+    Array<double> gamma_temp;
+    ReadHDF5DoubleArray("header/gam_e", gamma_temp);
+    if (fabs(adiabatic_gamma_elec - gamma_temp(0)) > 0.01 and adiabatic_gamma_elec_set)
+    {
+      std::ostringstream message;
+      message << "Given electron adiabatic index " << adiabatic_gamma_elec;
+      message << " does not match file value of " << gamma_temp(0);
+      message << "; ignoring the latter.";
+      BlacklightWarning(message.str().c_str());
+    }
+    ReadHDF5DoubleArray("header/gam_p", gamma_temp);
+    if (fabs(adiabatic_gamma_ion - gamma_temp(0)) > 0.01 and adiabatic_gamma_ion_set)
+    {
+      std::ostringstream message;
+      message << "Given ion adiabatic index " << adiabatic_gamma_ion;
+      message << " does not match file value of " << gamma_temp(0);
+      message << "; ignoring the latter.";
+      BlacklightWarning(message.str().c_str());
+    }
+  }
+  catch (...)
+  {
+  }
+
   return;
 }

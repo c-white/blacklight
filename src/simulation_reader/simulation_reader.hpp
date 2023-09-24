@@ -90,11 +90,12 @@ struct SimulationReader
   int ind_rho, ind_pgas, ind_kappa;
   int ind_u0, ind_uu1, ind_uu2, ind_uu3;
   int ind_b0, ind_bb1, ind_bb2, ind_bb3;
-  double adiabatic_gamma;
   int num_arrays;
   int latest_file_number;
   const double extrapolation_tolerance = 1.0;
   const double angular_domain_tolerance = 0.1;
+  bool adiabatic_gamma_elec_set, adiabatic_gamma_ion_set;
+  double adiabatic_gamma, adiabatic_gamma_elec, adiabatic_gamma_ion;
 
   // Coordinate interpolation data
   double sks_map_r_in, sks_map_r_out, sks_map_dr, sks_map_dtheta;

@@ -329,7 +329,6 @@ void SimulationReader::ConvertPrimitives4(Array<float> &primitives)
 //   Operates in serial since it only needs to run once and is 2D.
 void SimulationReader::GenerateSKSMap(double r_in, double r_out)
 {
-  // TODO: these are not deallocated and will not work if the mesh coordinates change with time
   // Allocate map
   sks_map.Allocate(2, sks_map_n2, sks_map_n1);
 

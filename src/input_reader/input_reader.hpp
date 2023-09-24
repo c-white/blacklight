@@ -172,6 +172,8 @@ struct InputReader
   std::optional<double> plasma_kappa_frac;
   std::optional<double> plasma_kappa;
   std::optional<double> plasma_w;
+  std::optional<double> adiabatic_gamma_elec;
+  std::optional<double> adiabatic_gamma_ion;
 
   // Data - cut parameters
   std::optional<double> cut_rho_min;

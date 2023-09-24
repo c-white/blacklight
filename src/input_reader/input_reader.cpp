@@ -339,6 +339,10 @@ int InputReader::Read()
       plasma_kappa = std::stod(val);
     else if (key == "plasma_w")
       plasma_w = std::stod(val);
+    else if (key == "adiabatic_gamma_elec")
+      adiabatic_gamma_elec = std::stod(val);
+    else if (key == "adiabatic_gamma_ion")
+      adiabatic_gamma_ion = std::stod(val);
 
     // Store cut parameters
     else if (key == "cut_rho_min")
