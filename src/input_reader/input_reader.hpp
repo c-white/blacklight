@@ -174,6 +174,7 @@ struct InputReader
   std::optional<double> plasma_w;
   std::optional<double> adiabatic_gamma_elec;
   std::optional<double> adiabatic_gamma_ion;
+  std::optional<bool> use_ipole_tpte;
 
   // Data - cut parameters
   std::optional<double> cut_rho_min;

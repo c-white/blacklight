@@ -72,6 +72,11 @@ void RadiationIntegrator::ObtainGridData()
   simulation_bounds = p_simulation_reader->simulation_bounds;
   sks_map = p_simulation_reader->sks_map;
 
+  // Copy thermodynamic variables
+  adiabatic_gamma = p_simulation_reader->adiabatic_gamma;
+  adiabatic_gamma_elec = p_simulation_reader->adiabatic_gamma_elec;
+  adiabatic_gamma_ion = p_simulation_reader->adiabatic_gamma_ion;
+
   // Calculate maximum refinement level and number of blocks in x^3-direction at each level
   if (simulation_format == SimulationFormat::athena and simulation_coord == Coordinates::sks
       and simulation_interp and simulation_block_interp)

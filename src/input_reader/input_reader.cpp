@@ -343,6 +343,8 @@ int InputReader::Read()
       adiabatic_gamma_elec = std::stod(val);
     else if (key == "adiabatic_gamma_ion")
       adiabatic_gamma_ion = std::stod(val);
+    else if (key == "use_ipole_tpte")
+      use_ipole_tpte = ReadBool(val);
 
     // Store cut parameters
     else if (key == "cut_rho_min")

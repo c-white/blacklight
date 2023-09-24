@@ -135,6 +135,12 @@ struct RadiationIntegrator
   double plasma_kappa;
   double plasma_w;
 
+  // Input data - thermodynamics model
+  bool use_ipole_tpte;
+  double adiabatic_gamma;
+  double adiabatic_gamma_elec;
+  double adiabatic_gamma_ion;
+
   // Input data - cut parameters
   double cut_rho_min;
   double cut_rho_max;
