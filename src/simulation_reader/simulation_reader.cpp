@@ -89,33 +89,61 @@ SimulationReader::SimulationReader(const InputReader *p_input_reader_)
   {
     plasma_mu = p_input_reader->plasma_mu.value();
     plasma_model = p_input_reader->plasma_model.value();
+    if (plasma_model == PlasmaModel::ti_te_beta)
+    {
+      plasma_use_p = p_input_reader->plasma_use_p.value();
+      if (plasma_use_p)
+      {
+        if (p_input_reader->plasma_gamma.has_value())
+        {
+          plasma_gamma = p_input_reader->plasma_gamma.value();
+          gamma_set = true;
+        }
+        if (p_input_reader->plasma_gamma_i.has_value())
+          BlacklightWarning("Ignoring plasma_gamma_i selection.");
+        if (p_input_reader->plasma_gamma_e.has_value())
+          BlacklightWarning("Ignoring plasma_gamma_e selection.");
+      }
+      else
+      {
+        if (simulation_format == SimulationFormat::athena
+            or p_input_reader->plasma_gamma.has_value())
+        {
+          plasma_gamma = p_input_reader->plasma_gamma.value();
+          gamma_set = true;
+        }
+        if (simulation_format == SimulationFormat::iharm3d)
+        {
+          if (p_input_reader->plasma_gamma_i.has_value())
+          {
+            plasma_gamma_i = p_input_reader->plasma_gamma_i.value();
+            gamma_i_set = true;
+          }
+          if (p_input_reader->plasma_gamma_e.has_value())
+          {
+            plasma_gamma_e = p_input_reader->plasma_gamma_e.value();
+            gamma_e_set = true;
+          }
+        }
+        else
+        {
+          plasma_gamma_i = p_input_reader->plasma_gamma_i.value();
+          plasma_gamma_e = p_input_reader->plasma_gamma_e.value();
+        }
+      }
+    }
     if (plasma_model == PlasmaModel::code_kappa)
+    {
       simulation_kappa_name = p_input_reader->simulation_kappa_name.value();
-  }
-  
-  // Set adiabatic indices
-  if (model_type == ModelType::simulation)
-  {
-    if (p_input_reader->adiabatic_gamma_elec.has_value())
-    {
-      adiabatic_gamma_elec = p_input_reader->adiabatic_gamma_elec.value();
-      adiabatic_gamma_elec_set = true;
-    }
-    else
-    {
-      adiabatic_gamma_elec = 4.0/3.0;
-      adiabatic_gamma_elec_set = false;
-    }
-
-    if (p_input_reader->adiabatic_gamma_ion.has_value())
-    {
-      adiabatic_gamma_ion = p_input_reader->adiabatic_gamma_ion.value();
-      adiabatic_gamma_ion_set = true;
-    }
-    else
-    {
-      adiabatic_gamma_ion = 5.0/3.0;
-      adiabatic_gamma_ion_set = false;
+      if (p_input_reader->plasma_gamma.has_value())
+      {
+        plasma_gamma = p_input_reader->plasma_gamma.value();
+        gamma_set = true;
+      }
+      if (p_input_reader->plasma_gamma_i.has_value())
+        BlacklightWarning("Ignoring plasma_gamma_i selection.");
+      if (p_input_reader->plasma_gamma_e.has_value())
+        BlacklightWarning("Ignoring plasma_gamma_e selection.");
     }
   }
 
@@ -551,7 +579,7 @@ double SimulationReader::Read(int snapshot)
         for (int k = 0; k < athenak_block_nz; k++)
           for (int j = 0; j < athenak_block_ny; j++)
             for (int i = 0; i < athenak_block_nx; i++)
-              prim[n](ind_pgas,block,k,j,i) *= static_cast<float>(adiabatic_gamma - 1.0);
+              prim[n](ind_pgas,block,k,j,i) *= static_cast<float>(plasma_gamma - 1.0);
     }
 
     // Read block layout
@@ -665,8 +693,17 @@ double SimulationReader::Read(int snapshot)
           message << metric_a << "; ignoring the latter.";
           BlacklightWarning(message.str().c_str());
         }
-        data_stream >> adiabatic_gamma;
         double temp_val;
+        data_stream >> temp_val;
+        if (not gamma_set)
+          plasma_gamma = temp_val;
+        else if (plasma_gamma != temp_val)
+        {
+          std::ostringstream message;
+          message << "Given total adiabatic index of " << plasma_gamma;
+          message << " does not match file value of " << temp_val << "; ignoring the latter.";
+          BlacklightWarning(message.str().c_str());
+        }
         data_stream >> temp_val;
         data_stream >> metric_h;
         data_stream >> temp_val;
@@ -763,7 +800,7 @@ double SimulationReader::Read(int snapshot)
       for (int k = 0; k < x3v.n1; k++)
         for (int j = 0; j < x2v.n1; j++)
           for (int i = 0; i < x1v.n1; i++)
-            prim[n](ind_pgas,0,k,j,i) *= static_cast<float>(adiabatic_gamma - 1.0);
+            prim[n](ind_pgas,0,k,j,i) *= static_cast<float>(plasma_gamma - 1.0);
       ConvertPrimitives3(prim[n]);
     }
     else if (simulation_format == SimulationFormat::harm3d)
@@ -805,7 +842,7 @@ double SimulationReader::Read(int snapshot)
         for (int k = 0; k < x3v.n1; k++)
           for (int j = 0; j < x2v.n1; j++)
             for (int i = 0; i < x1v.n1; i++)
-              prim[n](ind_pgas,0,k,j,i) *= static_cast<float>(adiabatic_gamma - 1.0);
+              prim[n](ind_pgas,0,k,j,i) *= static_cast<float>(plasma_gamma - 1.0);
       }
       ConvertPrimitives4(prim[n]);
     }
@@ -982,7 +1019,7 @@ void SimulationReader::ReadAthenaKHeader()
 // Notes:
 //   Checks simulation_a, simulation_m_msun, simulation_rho_cgs, and plasma_mu for consistency with
 //       user input.
-//   Sets adiabatic_gamma.
+//   Sets plasma_gamma.
 //   Assumes stream pointer points to beginning of input parameter section.
 //   Changes stream pointer.
 void SimulationReader::ReadAthenaKInputs()
@@ -1071,7 +1108,16 @@ void SimulationReader::ReadAthenaKInputs()
     // Extract adiabatic index
     if (section_name == "mhd" and variable_name == "gamma")
     {
-      adiabatic_gamma = std::stod(buffer.substr(location + 1));
+      double temp_val = std::stod(buffer.substr(location + 1));
+      if (not gamma_set)
+        plasma_gamma = temp_val;
+      else if (plasma_gamma != temp_val)
+      {
+        std::ostringstream message;
+        message << "Given total adiabatic index of " << plasma_gamma;
+        message << " does not match file value of " << temp_val << "; ignoring the latter.";
+        BlacklightWarning(message.str().c_str());
+      }
       gamma_found = true;
     }
   }
@@ -1249,7 +1295,7 @@ void SimulationReader::VerifyVariablesAthenaK()
 // Outputs: (none)
 // Notes:
 //   Sets indices locating specific variables among primitives.
-//   Sets adiabatic_gamma.
+//   Sets plasma_gamma.
 //   Assumes metadata set.
 void SimulationReader::VerifyVariablesHarm()
 {
@@ -1270,7 +1316,6 @@ void SimulationReader::VerifyVariablesHarm()
       break;
   if (ind_rho == num_variable_names)
     throw BlacklightException("Unable to locate \"RHO\" slice of \"prims\" in data file.");
-
   for (ind_pgas = 0; ind_pgas < num_variable_names; ind_pgas++)
     if (variable_names[ind_pgas] == "UU")
       break;
@@ -1316,36 +1361,64 @@ void SimulationReader::VerifyVariablesHarm()
   if (ind_bb3 == num_variable_names)
     throw BlacklightException("Unable to locate \"B3\" slice of \"prims\" in data file.");
 
-  // Read adiabatic index
+  // Check adiabatic indices
   Array<double> gamma;
-  ReadHDF5DoubleArray("header/gam", gamma);
-  adiabatic_gamma = gamma(0);
-
   try
   {
-    Array<double> gamma_temp;
-    ReadHDF5DoubleArray("header/gam_e", gamma_temp);
-    if (fabs(adiabatic_gamma_elec - gamma_temp(0)) > 0.01 and adiabatic_gamma_elec_set)
+    ReadHDF5DoubleArray("header/gam", gamma);
+    if (not gamma_set)
+      plasma_gamma = gamma(0);
+    else if (plasma_gamma != temp_val)
     {
       std::ostringstream message;
-      message << "Given electron adiabatic index " << adiabatic_gamma_elec;
-      message << " does not match file value of " << gamma_temp(0);
-      message << "; ignoring the latter.";
-      BlacklightWarning(message.str().c_str());
-    }
-    ReadHDF5DoubleArray("header/gam_p", gamma_temp);
-    if (fabs(adiabatic_gamma_ion - gamma_temp(0)) > 0.01 and adiabatic_gamma_ion_set)
-    {
-      std::ostringstream message;
-      message << "Given ion adiabatic index " << adiabatic_gamma_ion;
-      message << " does not match file value of " << gamma_temp(0);
-      message << "; ignoring the latter.";
+      message << "Given total adiabatic index of " << plasma_gamma;
+      message << " does not match file value of " << gamma(0) << "; ignoring the latter.";
       BlacklightWarning(message.str().c_str());
     }
   }
   catch (...)
   {
+    if (not gamma_set)
+      throw BlacklightException("Could not find total adiabatic index in input or data file.");
   }
-
+  if (plasma_model == PlasmaModel::ti_te_beta and not plasma_use_p)
+  {
+    try
+    {
+      ReadHDF5DoubleArray("header/gam_p", gamma);
+      if (not gamma_i_set)
+        plasma_gamma_i = gamma(0);
+      else if (plasma_gamma_i != temp_val)
+      {
+        std::ostringstream message;
+        message << "Given ion adiabatic index of " << plasma_gamma_i;
+        message << " does not match file value of " << gamma(0) << "; ignoring the latter.";
+        BlacklightWarning(message.str().c_str());
+      }
+    }
+    catch (...)
+    {
+      if (not gamma_i_set)
+        throw BlacklightException("Could not find ion adiabatic index in input or data file.");
+    }
+    try
+    {
+      ReadHDF5DoubleArray("header/gam_e", gamma);
+      if (not gamma_e_set)
+        plasma_gamma_e = gamma(0);
+      else if (plasma_gamma_e != temp_val)
+      {
+        std::ostringstream message;
+        message << "Given electron adiabatic index of " << plasma_gamma_e;
+        message << " does not match file value of " << gamma(0) << "; ignoring the latter.";
+        BlacklightWarning(message.str().c_str());
+      }
+    }
+    catch (...)
+    {
+      if (not gamma_e_set)
+        throw BlacklightException("Could not find electron adiabatic index in input or data file.");
+    }
+  }
   return;
 }

@@ -334,22 +334,17 @@ void RadiationIntegrator::CalculateSimulationCoefficients()
         double theta_e = std::numeric_limits<double>::quiet_NaN();
         if (plasma_thermal_frac != 0.0 and plasma_model == PlasmaModel::ti_te_beta)
         {
-          double tt_rat = (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv)
+          double tti_tte = (plasma_rat_high + plasma_rat_low * beta_inv * beta_inv)
               / (1.0 + beta_inv * beta_inv);
-          if (use_ipole_tpte)
-          {
-            double theta_e_unit = (adiabatic_gamma_elec - 1.0) * (adiabatic_gamma_ion - 1.0);
-            theta_e_unit /= (adiabatic_gamma_ion - 1.0) + (adiabatic_gamma_elec - 1.0) * tt_rat;
-            theta_e_unit *= Physics::m_p / Physics::m_e;
-            theta_e = theta_e_unit * pgas / rho / (adiabatic_gamma - 1.0);
-            kb_tt_e_cgs = theta_e * Physics::m_e * Physics::c * Physics::c;
-          }
+          double kb_tt_tot_cgs = plasma_mu * Physics::m_p * pgas_cgs / rho_cgs;
+          if (plasma_use_p)
+            kb_tt_e_cgs = (1.0 + plasma_ne_ni) / (tti_tte + plasma_ne_ni) * kb_tt_tot_cgs;
           else
           {
-            double kb_tt_tot_cgs = plasma_mu * Physics::m_p * pgas_cgs / rho_cgs;
-            kb_tt_e_cgs = (plasma_ne_ni + 1.0) / (plasma_ne_ni + tt_rat) * kb_tt_tot_cgs;
-            theta_e = kb_tt_e_cgs / (Physics::m_e * Physics::c * Physics::c);
+            kb_tt_e_cgs = (1.0 + plasma_ne_ni) * kb_tt_tot_cgs / (plasma_gamma - 1.0);
+            kb_tt_e_cgs /= tti_tte / (plasma_gamma_i - 1.0) + plasma_ne_ni / (plasma_gamma_e - 1.0);
           }
+          theta_e = kb_tt_e_cgs / (Physics::m_e * Physics::c * Physics::c);
         }
 
         // Calculate electron temperature for given electron entropy (E2 13)

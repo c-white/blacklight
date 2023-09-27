@@ -125,6 +125,10 @@ struct RadiationIntegrator
   double plasma_ne_ni;
   double plasma_thermal_frac;
   PlasmaModel plasma_model;
+  bool plasma_use_p;
+  double plasma_gamma;
+  double plasma_gamma_i;
+  double plasma_gamma_e;
   double plasma_rat_low;
   double plasma_rat_high;
   double plasma_power_frac;
@@ -134,12 +138,6 @@ struct RadiationIntegrator
   double plasma_kappa_frac;
   double plasma_kappa;
   double plasma_w;
-
-  // Input data - thermodynamics model
-  bool use_ipole_tpte;
-  double adiabatic_gamma;
-  double adiabatic_gamma_elec;
-  double adiabatic_gamma_ion;
 
   // Input data - cut parameters
   double cut_rho_min;

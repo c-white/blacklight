@@ -321,6 +321,14 @@ int InputReader::Read()
       plasma_ne_ni = std::stod(val);
     else if (key == "plasma_model")
       plasma_model = ReadPlasmaModel(val);
+    else if (key == "plasma_use_p")
+      plasma_use_p = ReadBool(val);
+    else if (key == "plasma_gamma")
+      plasma_gamma = std::stod(val);
+    else if (key == "plasma_gamma_i")
+      plasma_gamma_i = std::stod(val);
+    else if (key == "plasma_gamma_e")
+      plasma_gamma_e = std::stod(val);
     else if (key == "plasma_rat_low")
       plasma_rat_low = std::stod(val);
     else if (key == "plasma_rat_high")
@@ -339,12 +347,6 @@ int InputReader::Read()
       plasma_kappa = std::stod(val);
     else if (key == "plasma_w")
       plasma_w = std::stod(val);
-    else if (key == "adiabatic_gamma_elec")
-      adiabatic_gamma_elec = std::stod(val);
-    else if (key == "adiabatic_gamma_ion")
-      adiabatic_gamma_ion = std::stod(val);
-    else if (key == "use_ipole_tpte")
-      use_ipole_tpte = ReadBool(val);
 
     // Store cut parameters
     else if (key == "cut_rho_min")

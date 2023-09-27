@@ -51,6 +51,10 @@ struct SimulationReader
   // Input data - plasma parameters
   double plasma_mu;
   PlasmaModel plasma_model;
+  bool plasma_use_p;
+  double plasma_gamma;
+  double plasma_gamma_i;
+  double plasma_gamma_e;
 
   // Flags for tracking function calls
   bool first_time = true;
@@ -94,8 +98,9 @@ struct SimulationReader
   int latest_file_number;
   const double extrapolation_tolerance = 1.0;
   const double angular_domain_tolerance = 0.1;
-  bool adiabatic_gamma_elec_set, adiabatic_gamma_ion_set;
-  double adiabatic_gamma, adiabatic_gamma_elec, adiabatic_gamma_ion;
+  bool gamma_set = false;
+  bool gamma_i_set = false;
+  bool gamma_e_set = false;
 
   // Coordinate interpolation data
   double sks_map_r_in, sks_map_r_out, sks_map_dr, sks_map_dtheta;

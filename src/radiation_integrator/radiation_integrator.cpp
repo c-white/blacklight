@@ -277,13 +277,9 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     plasma_model = p_input_reader->plasma_model.value();
     if (plasma_model == PlasmaModel::ti_te_beta)
     {
+      plasma_use_p = p_input_reader->plasma_use_p.value();
       plasma_rat_low = p_input_reader->plasma_rat_low.value();
       plasma_rat_high = p_input_reader->plasma_rat_high.value();
-    }
-    use_ipole_tpte = false;
-    if (p_input_reader->use_ipole_tpte.has_value() && p_input_reader->use_ipole_tpte.value())
-    {
-      use_ipole_tpte = p_input_reader->use_ipole_tpte.value();
     }
     plasma_power_frac = p_input_reader->plasma_power_frac.value();
     if (plasma_power_frac < 0.0 or plasma_power_frac > 1.0)

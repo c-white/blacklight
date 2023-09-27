@@ -81,6 +81,7 @@ adaptive_max_level = 0  # maximum number of adaptive levels beyond root
 plasma_mu         = 0.5         # molecular weight of fluid in proton masses
 plasma_ne_ni      = 1.0         # electrons per ion
 plasma_model      = ti_te_beta  # thermal electron temperature model (ti_te_beta, code_kappa)
+plasma_use_p      = true        # flag indicating total p (rather than u) should match simulation
 plasma_rat_low    = 1.0         # ion-electron temperature ratio at zero plasma beta
 plasma_rat_high   = 10.0        # ion-electron temperature ratio at infinite plasma beta
 plasma_power_frac = 0.0         # fraction of electrons with power-law distribution
