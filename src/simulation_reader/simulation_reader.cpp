@@ -716,9 +716,7 @@ double SimulationReader::Read(int snapshot)
     // Check coordinates
     if (first_time)
     {
-      // TODO: I wantonly added fmks in here and below. Check for correctness?
-      if ((simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks)
-          and x2f.n2 == 1)
+      if (simulation_coord == Coordinates::sks and x2f.n2 == 1)
       {
         bool error_low = std::abs(x2f(0,0)) > (x2f(0,1) - x2f(0,0)) * angular_domain_tolerance;
         bool error_high = std::abs(x2f(0,x2f.n1-1) - Math::pi)
@@ -780,7 +778,6 @@ double SimulationReader::Read(int snapshot)
     {
       if (first_time)
       {
-        // TODO support num_variables and Thetae from electron thermodynamics
         VerifyVariablesHarm();
         int n5 = num_variables(0);
         int n4 = levels.n1;
@@ -1301,8 +1298,6 @@ void SimulationReader::VerifyVariablesHarm()
 {
   // Read number of primitives
   ReadHDF5IntArray("header/n_prim", num_variables);
-
-  // TODO make sure this is working correctly
 
   // Read names of primitives
   ReadHDF5StringArray("header/prim_names", num_variable_names == 0, &variable_names,

@@ -117,10 +117,8 @@ void RadiationIntegrator::ObtainGridData()
 //   If slow_light_on == true, chooses from multiple available time slices for each point.
 //   If slow_light_on == true and slow_interp == true, prepares interpolation between adjacent (or
 //       sometimes identical) time slices.
-//   TODO: understand below
-//   When the simulation uses Coordinates::fmks (or really any interpolated set of coordinates) we
-//       have to fall back on finding indices plus fractions the "old" way. This could be modified
-//       in the future to be more permissive.
+//   When the simulation uses Coordinates::fmks, indices and fractions are found via simple scaling
+//       for uniform grids with no bounds checking.
 void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
 {
   // Calculate time of snapshot
