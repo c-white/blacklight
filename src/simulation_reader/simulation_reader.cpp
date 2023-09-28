@@ -1363,7 +1363,7 @@ void SimulationReader::VerifyVariablesHarm()
     ReadHDF5DoubleArray("header/gam", gamma);
     if (not gamma_set)
       plasma_gamma = gamma(0);
-    else if (plasma_gamma != temp_val)
+    else if (plasma_gamma != gamma(0))
     {
       std::ostringstream message;
       message << "Given total adiabatic index of " << plasma_gamma;
@@ -1383,7 +1383,7 @@ void SimulationReader::VerifyVariablesHarm()
       ReadHDF5DoubleArray("header/gam_p", gamma);
       if (not gamma_i_set)
         plasma_gamma_i = gamma(0);
-      else if (plasma_gamma_i != temp_val)
+      else if (plasma_gamma_i != gamma(0))
       {
         std::ostringstream message;
         message << "Given ion adiabatic index of " << plasma_gamma_i;
@@ -1401,7 +1401,7 @@ void SimulationReader::VerifyVariablesHarm()
       ReadHDF5DoubleArray("header/gam_e", gamma);
       if (not gamma_e_set)
         plasma_gamma_e = gamma(0);
-      else if (plasma_gamma_e != temp_val)
+      else if (plasma_gamma_e != gamma(0))
       {
         std::ostringstream message;
         message << "Given electron adiabatic index of " << plasma_gamma_e;
