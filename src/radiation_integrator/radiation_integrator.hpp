@@ -125,6 +125,10 @@ struct RadiationIntegrator
   double plasma_ne_ni;
   double plasma_thermal_frac;
   PlasmaModel plasma_model;
+  bool plasma_use_p;
+  double plasma_gamma;
+  double plasma_gamma_i;
+  double plasma_gamma_e;
   double plasma_rat_low;
   double plasma_rat_high;
   double plasma_power_frac;
@@ -216,6 +220,11 @@ struct RadiationIntegrator
   int ind_rho, ind_pgas, ind_kappa;
   int ind_uu1, ind_uu2, ind_uu3;
   int ind_bb1, ind_bb2, ind_bb3;
+
+  // Interpolation grid data
+  double sks_map_r_in, sks_map_r_out, sks_map_dr, sks_map_dtheta;
+  Array<double> simulation_bounds;
+  Array<double> sks_map;
 
   // Sample data
   Array<int> *sample_inds = nullptr;

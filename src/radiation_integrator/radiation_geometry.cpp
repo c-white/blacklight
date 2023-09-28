@@ -31,9 +31,12 @@ double RadiationIntegrator::RadialGeodesicCoordinate(double x, double y, double 
 //   *p_x1, *p_x2, *p_x3: Cartesian Kerr-Schild coordinates
 // Outputs:
 //   *p_x1, *p_x2, *p_x3: simulation coordinates
+// Notes:
+//   When simulation_coord == Coordinates::fmks, this still translates from CKS into SKS rather than
+//       FMKS. Recall the interpolation grid takes as input SKS.
 void RadiationIntegrator::ConvertFromCKS(double *p_x1, double *p_x2, double *p_x3) const
 {
-  if (simulation_coord == Coordinates::sks)
+  if (simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks)
   {
     double x = *p_x1;
     double y = *p_x2;
@@ -66,8 +69,29 @@ void RadiationIntegrator::ConvertFromCKS(double *p_x1, double *p_x2, double *p_x
 void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, double jacobian[4][4])
     const
 {
+  // Calculate Jacobian for Cartesian Kerr-Schild simulation
+  if (simulation_coord == Coordinates::cks)
+  {
+    jacobian[0][0] = 1.0;
+    jacobian[0][1] = 0.0;
+    jacobian[0][2] = 0.0;
+    jacobian[0][3] = 0.0;
+    jacobian[1][0] = 0.0;
+    jacobian[1][1] = 1.0;
+    jacobian[1][2] = 0.0;
+    jacobian[1][3] = 0.0;
+    jacobian[2][0] = 0.0;
+    jacobian[2][1] = 0.0;
+    jacobian[2][2] = 1.0;
+    jacobian[2][3] = 0.0;
+    jacobian[3][0] = 0.0;
+    jacobian[3][1] = 0.0;
+    jacobian[3][2] = 0.0;
+    jacobian[3][3] = 1.0;
+  }
+
   // Calculate Jacobian for spherical Kerr-Schild simulation
-  if (simulation_coord == Coordinates::sks)
+  else if (simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks)
   {
     // Calculate spherical position
     double a2 = bh_a * bh_a;
@@ -97,27 +121,6 @@ void RadiationIntegrator::CoordinateJacobian(double x, double y, double z, doubl
     jacobian[3][1] = cth;
     jacobian[3][2] = -r * sth;
     jacobian[3][3] = 0.0;
-  }
-
-  // Calculate Jacobian for Cartesian Kerr-Schild simulation
-  else if (simulation_coord == Coordinates::cks)
-  {
-    jacobian[0][0] = 1.0;
-    jacobian[0][1] = 0.0;
-    jacobian[0][2] = 0.0;
-    jacobian[0][3] = 0.0;
-    jacobian[1][0] = 0.0;
-    jacobian[1][1] = 1.0;
-    jacobian[1][2] = 0.0;
-    jacobian[1][3] = 0.0;
-    jacobian[2][0] = 0.0;
-    jacobian[2][1] = 0.0;
-    jacobian[2][2] = 1.0;
-    jacobian[2][3] = 0.0;
-    jacobian[3][0] = 0.0;
-    jacobian[3][1] = 0.0;
-    jacobian[3][2] = 0.0;
-    jacobian[3][3] = 1.0;
   }
   return;
 }
@@ -418,40 +421,8 @@ void RadiationIntegrator::GeodesicConnection(double x, double y, double z,
 void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z, double gcov[4][4])
     const
 {
-  // Calculate spherical Kerr-Schild metric
-  if (simulation_coord == Coordinates::sks)
-  {
-    // Calculate useful quantities
-    double a2 = bh_a * bh_a;
-    double rr2 = x * x + y * y + z * z;
-    double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
-    double r = std::sqrt(r2);
-    double cth = z / r;
-    double cth2 = cth * cth;
-    double sth2 = 1.0 - cth2;
-    double sigma = r2 + a2 * cth2;
-
-    // Calculate metric components
-    gcov[0][0] = -(1.0 - 2.0 * bh_m * r / sigma);
-    gcov[0][1] = 2.0 * bh_m * r / sigma;
-    gcov[0][2] = 0.0;
-    gcov[0][3] = -2.0 * bh_m * bh_a * r * sth2 / sigma;
-    gcov[1][0] = 2.0 * bh_m * r / sigma;
-    gcov[1][1] = 1.0 + 2.0 * bh_m * r / sigma;
-    gcov[1][2] = 0.0;
-    gcov[1][3] = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth2;
-    gcov[2][0] = 0.0;
-    gcov[2][1] = 0.0;
-    gcov[2][2] = sigma;
-    gcov[2][3] = 0.0;
-    gcov[3][0] = -2.0 * bh_m * bh_a * r * sth2 / sigma;
-    gcov[3][1] = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth2;
-    gcov[3][2] = 0.0;
-    gcov[3][3] = (r2 + a2 + 2.0 * bh_m * a2 * r * sth2 / sigma) * sth2;
-  }
-
   // Calculate Cartesian Kerr-Schild metric
-  else if (simulation_coord == Coordinates::cks)
+  if (simulation_coord == Coordinates::cks)
   {
     // Calculate useful quantities
     double a2 = bh_a * bh_a;
@@ -484,6 +455,38 @@ void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z
     gcov[3][2] = f * l_3 * l_2;
     gcov[3][3] = f * l_3 * l_3 + 1.0;
   }
+
+  // Calculate spherical Kerr-Schild metric
+  else if (simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks)
+  {
+    // Calculate useful quantities
+    double a2 = bh_a * bh_a;
+    double rr2 = x * x + y * y + z * z;
+    double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
+    double r = std::sqrt(r2);
+    double cth = z / r;
+    double cth2 = cth * cth;
+    double sth2 = 1.0 - cth2;
+    double sigma = r2 + a2 * cth2;
+
+    // Calculate metric components
+    gcov[0][0] = -(1.0 - 2.0 * bh_m * r / sigma);
+    gcov[0][1] = 2.0 * bh_m * r / sigma;
+    gcov[0][2] = 0.0;
+    gcov[0][3] = -2.0 * bh_m * bh_a * r * sth2 / sigma;
+    gcov[1][0] = 2.0 * bh_m * r / sigma;
+    gcov[1][1] = 1.0 + 2.0 * bh_m * r / sigma;
+    gcov[1][2] = 0.0;
+    gcov[1][3] = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth2;
+    gcov[2][0] = 0.0;
+    gcov[2][1] = 0.0;
+    gcov[2][2] = sigma;
+    gcov[2][3] = 0.0;
+    gcov[3][0] = -2.0 * bh_m * bh_a * r * sth2 / sigma;
+    gcov[3][1] = -(1.0 + 2.0 * bh_m * r / sigma) * bh_a * sth2;
+    gcov[3][2] = 0.0;
+    gcov[3][3] = (r2 + a2 + 2.0 * bh_m * a2 * r * sth2 / sigma) * sth2;
+  }
   return;
 }
 
@@ -499,41 +502,8 @@ void RadiationIntegrator::CovariantSimulationMetric(double x, double y, double z
 void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, double z,
     double gcon[4][4]) const
 {
-  // Calculate spherical Kerr-Schild metric
-  if (simulation_coord == Coordinates::sks)
-  {
-    // Calculate useful quantities
-    double a2 = bh_a * bh_a;
-    double rr2 = x * x + y * y + z * z;
-    double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
-    double r = std::sqrt(r2);
-    double cth = z / r;
-    double cth2 = cth * cth;
-    double sth2 = 1.0 - cth2;
-    double delta = r2 - 2.0 * bh_m * r + a2;
-    double sigma = r2 + a2 * cth2;
-
-    // Calculate metric components
-    gcon[0][0] = -(1.0 + 2.0 * bh_m * r / sigma);
-    gcon[0][1] = 2.0 * bh_m * r / sigma;
-    gcon[0][2] = 0.0;
-    gcon[0][3] = 0.0;
-    gcon[1][0] = 2.0 * bh_m * r / sigma;
-    gcon[1][1] = delta / sigma;
-    gcon[1][2] = 0.0;
-    gcon[1][3] = bh_a / sigma;
-    gcon[2][0] = 0.0;
-    gcon[2][1] = 0.0;
-    gcon[2][2] = 1.0 / sigma;
-    gcon[2][3] = 0.0;
-    gcon[3][0] = 0.0;
-    gcon[3][1] = bh_a / sigma;
-    gcon[3][2] = 0.0;
-    gcon[3][3] = 1.0 / (sigma * sth2);
-  }
-
   // Calculate Cartesian Kerr-Schild metric
-  else if (simulation_coord == Coordinates::cks)
+  if (simulation_coord == Coordinates::cks)
   {
     // Calculate useful quantities
     double a2 = bh_a * bh_a;
@@ -565,6 +535,39 @@ void RadiationIntegrator::ContravariantSimulationMetric(double x, double y, doub
     gcon[3][1] = -f * l3 * l1;
     gcon[3][2] = -f * l3 * l2;
     gcon[3][3] = -f * l3 * l3 + 1.0;
+  }
+
+  // Calculate spherical Kerr-Schild metric
+  else if (simulation_coord == Coordinates::sks or simulation_coord == Coordinates::fmks)
+  {
+    // Calculate useful quantities
+    double a2 = bh_a * bh_a;
+    double rr2 = x * x + y * y + z * z;
+    double r2 = 0.5 * (rr2 - a2 + std::hypot(rr2 - a2, 2.0 * bh_a * z));
+    double r = std::sqrt(r2);
+    double cth = z / r;
+    double cth2 = cth * cth;
+    double sth2 = 1.0 - cth2;
+    double delta = r2 - 2.0 * bh_m * r + a2;
+    double sigma = r2 + a2 * cth2;
+
+    // Calculate metric components
+    gcon[0][0] = -(1.0 + 2.0 * bh_m * r / sigma);
+    gcon[0][1] = 2.0 * bh_m * r / sigma;
+    gcon[0][2] = 0.0;
+    gcon[0][3] = 0.0;
+    gcon[1][0] = 2.0 * bh_m * r / sigma;
+    gcon[1][1] = delta / sigma;
+    gcon[1][2] = 0.0;
+    gcon[1][3] = bh_a / sigma;
+    gcon[2][0] = 0.0;
+    gcon[2][1] = 0.0;
+    gcon[2][2] = 1.0 / sigma;
+    gcon[2][3] = 0.0;
+    gcon[3][0] = 0.0;
+    gcon[3][1] = bh_a / sigma;
+    gcon[3][2] = 0.0;
+    gcon[3][3] = 1.0 / (sigma * sth2);
   }
   return;
 }

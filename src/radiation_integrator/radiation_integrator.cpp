@@ -277,6 +277,7 @@ RadiationIntegrator::RadiationIntegrator(const InputReader *p_input_reader,
     plasma_model = p_input_reader->plasma_model.value();
     if (plasma_model == PlasmaModel::ti_te_beta)
     {
+      plasma_use_p = p_input_reader->plasma_use_p.value();
       plasma_rat_low = p_input_reader->plasma_rat_low.value();
       plasma_rat_high = p_input_reader->plasma_rat_high.value();
     }

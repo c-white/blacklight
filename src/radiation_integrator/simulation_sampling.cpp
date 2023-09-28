@@ -2,7 +2,7 @@
 
 // C++ headers
 #include <algorithm>  // max, min
-#include <cmath>      // abs, acos
+#include <cmath>      // abs, acos, modf
 #include <limits>     // numeric_limits
 #include <sstream>    // ostringstream
 
@@ -64,6 +64,19 @@ void RadiationIntegrator::ObtainGridData()
   ind_bb2 = p_simulation_reader->ind_bb2;
   ind_bb3 = p_simulation_reader->ind_bb3;
 
+  // Copy coordinate interpolation map
+  sks_map_r_in = p_simulation_reader->sks_map_r_in;
+  sks_map_r_out = p_simulation_reader->sks_map_r_out;
+  sks_map_dr = p_simulation_reader->sks_map_dr;
+  sks_map_dtheta = p_simulation_reader->sks_map_dtheta;
+  simulation_bounds = p_simulation_reader->simulation_bounds;
+  sks_map = p_simulation_reader->sks_map;
+
+  // Copy input plasma parameters (possibly modified after contructors called)
+  plasma_gamma = p_simulation_reader->plasma_gamma;
+  plasma_gamma_i = p_simulation_reader->plasma_gamma_i;
+  plasma_gamma_e = p_simulation_reader->plasma_gamma_e;
+
   // Calculate maximum refinement level and number of blocks in x^3-direction at each level
   if (simulation_format == SimulationFormat::athena and simulation_coord == Coordinates::sks
       and simulation_interp and simulation_block_interp)
@@ -104,6 +117,8 @@ void RadiationIntegrator::ObtainGridData()
 //   If slow_light_on == true, chooses from multiple available time slices for each point.
 //   If slow_light_on == true and slow_interp == true, prepares interpolation between adjacent (or
 //       sometimes identical) time slices.
+//   When the simulation uses Coordinates::fmks, indices and fractions are found via simple scaling
+//       for uniform grids with no bounds checking.
 void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
 {
   // Calculate time of snapshot
@@ -172,6 +187,15 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
     double x2_max_block = x2f(b,n_j);
     double x3_min_block = x3f(b,0);
     double x3_max_block = x3f(b,n_k);
+    if (simulation_coord == Coordinates::fmks)
+    {
+      x1_min_block = simulation_bounds(0);
+      x1_max_block = simulation_bounds(1);
+      x2_min_block = simulation_bounds(2);
+      x2_max_block = simulation_bounds(3);
+      x3_min_block = simulation_bounds(4);
+      x3_max_block = simulation_bounds(5);
+    }
 
     // Resample cell data onto geodesics
     #pragma omp for schedule(static) reduction(+: num_extrap_camera_small, \
@@ -369,99 +393,161 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
           x3_max_block = x3_max_temp;
         }
 
-        // Determine cell
-        for (i = 0; i < n_i; i++)
-          if (x1f(b,i+1) >= x1)
-            break;
-        for (j = 0; j < n_j; j++)
-          if (x2f(b,j+1) >= x2)
-            break;
-        for (k = 0; k < n_k; k++)
-          if (x3f(b,k+1) >= x3)
-            break;
-
-        // Prepare to sample values without interpolation
-        if (not simulation_interp)
+        // Prepare to sample values in FMKS case
+        if (simulation_coord == Coordinates::fmks)
         {
-          sample_inds[adaptive_level](m,n,0) = b;
-          sample_inds[adaptive_level](m,n,1) = k;
-          sample_inds[adaptive_level](m,n,2) = j;
-          sample_inds[adaptive_level](m,n,3) = i;
-          if (slow_light_on)
-            sample_inds[adaptive_level](m,n,4) = t_ind;
-          if (slow_light_on and slow_interp)
-            sample_fracs[adaptive_level](m,n,0) = t_frac;
-        }
+          // Calculate location of coordinate point in SKS map with fractional offset
+          double i_ind, j_ind;
+          double f_i = std::modf((x1 - sks_map_r_in) / sks_map_dr, &i_ind);
+          double f_j = std::modf(x2 / sks_map_dtheta, &j_ind);
+          i = static_cast<int>(i_ind);
+          j = static_cast<int>(j_ind);
+          double fmks_x1 = (1.0 - f_i) * sks_map(0,j,i) + f_i * sks_map(0,j,i+1);
+          double fmks_x2 = (1.0 - f_j) * sks_map(1,j+1,i) + f_j * sks_map(1,j+1,i);
 
-        // Prepare to sample values with intrablock interpolation
-        else if (not ((simulation_format == SimulationFormat::athena
-            or simulation_format == SimulationFormat::athenak) and simulation_block_interp))
-        {
-          int i_m = i == 0 or (i != n_i - 1 and x1 >= x1v(b,i)) ? i : i - 1;
-          int j_m = j == 0 or (j != n_j - 1 and x2 >= x2v(b,j)) ? j : j - 1;
+          // Calculate fractional zone within fluid file
+          double x1_0 = x1f(b,0);
+          double dx1 = x1f(b,1) - x1f(b,0);
+          double dx2 = x2f(b,1) - x2f(b,0);
+          f_i = std::modf((fmks_x1 - x1_0) / dx1, &i_ind);
+          f_j = std::modf(fmks_x2 / dx2, &j_ind);
+          int i_m = static_cast<int>(i_ind);
+          int j_m = static_cast<int>(j_ind);
+
+          // Calculate phi coordinate as usual
+          for (k = 0; k < n_k; k++)
+            if (x3f(b,k+1) >= x3)
+              break;
           int k_m = k == 0 or (k != n_k - 1 and x3 >= x3v(b,k)) ? k : k - 1;
-          double f_i = (x1 - x1v(b,i_m)) / (x1v(b,i_m+1) - x1v(b,i_m));
-          double f_j = (x2 - x2v(b,j_m)) / (x2v(b,j_m+1) - x2v(b,j_m));
           double f_k = (x3 - x3v(b,k_m)) / (x3v(b,k_m+1) - x3v(b,k_m));
-          sample_inds[adaptive_level](m,n,0) = b;
-          sample_inds[adaptive_level](m,n,1) = k_m;
-          sample_inds[adaptive_level](m,n,2) = j_m;
-          sample_inds[adaptive_level](m,n,3) = i_m;
-          if (slow_light_on)
-            sample_inds[adaptive_level](m,n,4) = t_ind;
-          sample_fracs[adaptive_level](m,n,0) = f_k;
-          sample_fracs[adaptive_level](m,n,1) = f_j;
-          sample_fracs[adaptive_level](m,n,2) = f_i;
-          if (slow_light_on and slow_interp)
-            sample_fracs[adaptive_level](m,n,3) = t_frac;
+
+          // Prepare to sample values without interpolation
+          if (not simulation_interp)
+          {
+            sample_inds[adaptive_level](m,n,0) = b;
+            sample_inds[adaptive_level](m,n,1) = k;
+            sample_inds[adaptive_level](m,n,2) = f_j >= 0.5 ? j_m + 1 : j_m;
+            sample_inds[adaptive_level](m,n,3) = f_i >= 0.5 ? i_m + 1 : i_m;
+            if (slow_light_on)
+              sample_inds[adaptive_level](m,n,4) = t_ind;
+            if (slow_light_on and slow_interp)
+              sample_fracs[adaptive_level](m,n,0) = t_frac;
+          }
+
+          // Prepare to sample values with interpolation
+          else
+          {
+            sample_inds[adaptive_level](m,n,0) = b;
+            sample_inds[adaptive_level](m,n,1) = k_m;
+            sample_inds[adaptive_level](m,n,2) = j_m;
+            sample_inds[adaptive_level](m,n,3) = i_m;
+            if (slow_light_on)
+              sample_inds[adaptive_level](m,n,4) = t_ind;
+            sample_fracs[adaptive_level](m,n,0) = f_k;
+            sample_fracs[adaptive_level](m,n,1) = f_j;
+            sample_fracs[adaptive_level](m,n,2) = f_i;
+            if (slow_light_on and slow_interp)
+              sample_fracs[adaptive_level](m,n,3) = t_frac;
+          }
         }
 
-        // Prepare to sample values with interblock interpolation
+        // Prepare to sample values in all other cases
         else
         {
-          // Determine indices to use for interpolation
-          int i_m = x1 >= x1v(b,i) ? i : i - 1;
-          int j_m = x2 >= x2v(b,j) ? j : j - 1;
-          int k_m = x3 >= x3v(b,k) ? k : k - 1;
-          int i_p = i_m + 1;
-          int j_p = j_m + 1;
-          int k_p = k_m + 1;
+          // Determine cell
+          for (i = 0; i < n_i; i++)
+            if (x1f(b,i+1) >= x1)
+              break;
+          for (j = 0; j < n_j; j++)
+            if (x2f(b,j+1) >= x2)
+              break;
+          for (k = 0; k < n_k; k++)
+            if (x3f(b,k+1) >= x3)
+              break;
 
-          // Calculate fractions to use in interpolation
-          double x1_m = i_m == -1 ? 2.0 * x1f(b,i) - x1v(b,i) : x1v(b,i_m);
-          double x2_m = j_m == -1 ? 2.0 * x2f(b,j) - x2v(b,j) : x2v(b,j_m);
-          double x3_m = k_m == -1 ? 2.0 * x3f(b,k) - x3v(b,k) : x3v(b,k_m);
-          double x1_p = i_p == n_i ? 2.0 * x1v(b,i+1) - x1v(b,i) : x1v(b,i_p);
-          double x2_p = j_p == n_j ? 2.0 * x2v(b,j+1) - x2v(b,j) : x2v(b,j_p);
-          double x3_p = k_p == n_k ? 2.0 * x3v(b,k+1) - x3v(b,k) : x3v(b,k_p);
-          double f_i = (x1 - x1_m) / (x1_p - x1_m);
-          double f_j = (x2 - x2_m) / (x2_p - x2_m);
-          double f_k = (x3 - x3_m) / (x3_p - x3_m);
-
-          // Find interpolation anchors
-          int inds[8][4];
-          FindNearbyInds(b, k_m, j_m, i_m, k, j, i, x3, x2, x1, inds[0]);
-          FindNearbyInds(b, k_m, j_m, i_p, k, j, i, x3, x2, x1, inds[1]);
-          FindNearbyInds(b, k_m, j_p, i_m, k, j, i, x3, x2, x1, inds[2]);
-          FindNearbyInds(b, k_m, j_p, i_p, k, j, i, x3, x2, x1, inds[3]);
-          FindNearbyInds(b, k_p, j_m, i_m, k, j, i, x3, x2, x1, inds[4]);
-          FindNearbyInds(b, k_p, j_m, i_p, k, j, i, x3, x2, x1, inds[5]);
-          FindNearbyInds(b, k_p, j_p, i_m, k, j, i, x3, x2, x1, inds[6]);
-          FindNearbyInds(b, k_p, j_p, i_p, k, j, i, x3, x2, x1, inds[7]);
-
-          // Store results
-          for (int p = 0; p < 8; p++)
+          // Prepare to sample values without interpolation
+          if (not simulation_interp)
           {
-            for (int q = 0; q < 4; q++)
-              sample_inds[adaptive_level](m,n,p,q) = inds[p][q];
+            sample_inds[adaptive_level](m,n,0) = b;
+            sample_inds[adaptive_level](m,n,1) = k;
+            sample_inds[adaptive_level](m,n,2) = j;
+            sample_inds[adaptive_level](m,n,3) = i;
             if (slow_light_on)
-              sample_inds[adaptive_level](m,n,p,4) = t_ind;
+              sample_inds[adaptive_level](m,n,4) = t_ind;
+            if (slow_light_on and slow_interp)
+              sample_fracs[adaptive_level](m,n,0) = t_frac;
           }
-          sample_fracs[adaptive_level](m,n,0) = f_k;
-          sample_fracs[adaptive_level](m,n,1) = f_j;
-          sample_fracs[adaptive_level](m,n,2) = f_i;
-          if (slow_light_on and slow_interp)
-            sample_fracs[adaptive_level](m,n,3) = t_frac;
+
+          // Prepare to sample values with intrablock interpolation
+          else if (not ((simulation_format == SimulationFormat::athena
+              or simulation_format == SimulationFormat::athenak) and simulation_block_interp))
+          {
+            int i_m = i == 0 or (i != n_i - 1 and x1 >= x1v(b,i)) ? i : i - 1;
+            int j_m = j == 0 or (j != n_j - 1 and x2 >= x2v(b,j)) ? j : j - 1;
+            int k_m = k == 0 or (k != n_k - 1 and x3 >= x3v(b,k)) ? k : k - 1;
+            double f_i = (x1 - x1v(b,i_m)) / (x1v(b,i_m+1) - x1v(b,i_m));
+            double f_j = (x2 - x2v(b,j_m)) / (x2v(b,j_m+1) - x2v(b,j_m));
+            double f_k = (x3 - x3v(b,k_m)) / (x3v(b,k_m+1) - x3v(b,k_m));
+            sample_inds[adaptive_level](m,n,0) = b;
+            sample_inds[adaptive_level](m,n,1) = k_m;
+            sample_inds[adaptive_level](m,n,2) = j_m;
+            sample_inds[adaptive_level](m,n,3) = i_m;
+            if (slow_light_on)
+              sample_inds[adaptive_level](m,n,4) = t_ind;
+            sample_fracs[adaptive_level](m,n,0) = f_k;
+            sample_fracs[adaptive_level](m,n,1) = f_j;
+            sample_fracs[adaptive_level](m,n,2) = f_i;
+            if (slow_light_on and slow_interp)
+              sample_fracs[adaptive_level](m,n,3) = t_frac;
+          }
+
+          // Prepare to sample values with interblock interpolation
+          else
+          {
+            // Determine indices to use for interpolation
+            int i_m = x1 >= x1v(b,i) ? i : i - 1;
+            int j_m = x2 >= x2v(b,j) ? j : j - 1;
+            int k_m = x3 >= x3v(b,k) ? k : k - 1;
+            int i_p = i_m + 1;
+            int j_p = j_m + 1;
+            int k_p = k_m + 1;
+
+            // Calculate fractions to use in interpolation
+            double x1_m = i_m == -1 ? 2.0 * x1f(b,i) - x1v(b,i) : x1v(b,i_m);
+            double x2_m = j_m == -1 ? 2.0 * x2f(b,j) - x2v(b,j) : x2v(b,j_m);
+            double x3_m = k_m == -1 ? 2.0 * x3f(b,k) - x3v(b,k) : x3v(b,k_m);
+            double x1_p = i_p == n_i ? 2.0 * x1v(b,i+1) - x1v(b,i) : x1v(b,i_p);
+            double x2_p = j_p == n_j ? 2.0 * x2v(b,j+1) - x2v(b,j) : x2v(b,j_p);
+            double x3_p = k_p == n_k ? 2.0 * x3v(b,k+1) - x3v(b,k) : x3v(b,k_p);
+            double f_i = (x1 - x1_m) / (x1_p - x1_m);
+            double f_j = (x2 - x2_m) / (x2_p - x2_m);
+            double f_k = (x3 - x3_m) / (x3_p - x3_m);
+
+            // Find interpolation anchors
+            int inds[8][4];
+            FindNearbyInds(b, k_m, j_m, i_m, k, j, i, x3, x2, x1, inds[0]);
+            FindNearbyInds(b, k_m, j_m, i_p, k, j, i, x3, x2, x1, inds[1]);
+            FindNearbyInds(b, k_m, j_p, i_m, k, j, i, x3, x2, x1, inds[2]);
+            FindNearbyInds(b, k_m, j_p, i_p, k, j, i, x3, x2, x1, inds[3]);
+            FindNearbyInds(b, k_p, j_m, i_m, k, j, i, x3, x2, x1, inds[4]);
+            FindNearbyInds(b, k_p, j_m, i_p, k, j, i, x3, x2, x1, inds[5]);
+            FindNearbyInds(b, k_p, j_p, i_m, k, j, i, x3, x2, x1, inds[6]);
+            FindNearbyInds(b, k_p, j_p, i_p, k, j, i, x3, x2, x1, inds[7]);
+
+            // Store results
+            for (int p = 0; p < 8; p++)
+            {
+              for (int q = 0; q < 4; q++)
+                sample_inds[adaptive_level](m,n,p,q) = inds[p][q];
+              if (slow_light_on)
+                sample_inds[adaptive_level](m,n,p,4) = t_ind;
+            }
+            sample_fracs[adaptive_level](m,n,0) = f_k;
+            sample_fracs[adaptive_level](m,n,1) = f_j;
+            sample_fracs[adaptive_level](m,n,2) = f_i;
+            if (slow_light_on and slow_interp)
+              sample_fracs[adaptive_level](m,n,3) = t_frac;
+          }
         }
       }
 
@@ -976,8 +1062,9 @@ void RadiationIntegrator::SampleSimulation()
 //   If the requested cell is not on the grid, values are copied from the unique cell on the grid
 //       closest to the appropriate ghost cell, effectively resulting in constant (rather than
 //       linear) extrapolation near the edges of the grid.
-//   In the case of simulation_coord == Coordinates::sks, neighboring blocks are understood to cross
-//       the periodic boundary in x^3 (phi), but the domain is not stitched together at the poles.
+//   In the case of simulation_coord being Coordinates::sks or Coordinates::fmks, neighboring blocks
+//       are understood to cross the periodic boundary in x^3 (phi), but the domain is not stitched
+//       together at the poles.
 void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, int j_c, int i_c,
     double x3, double x2, double x1, int inds[4])
 {
@@ -1020,7 +1107,8 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
     int location_k_alt = locations(b_alt,2);
 
     // Check x^1-direction
-    if (x1_off_grid and i != i_safe) {
+    if (x1_off_grid and i != i_safe)
+    {
       bool same_level_exists = level_alt == level;
       same_level_exists =
           same_level_exists and location_i_alt == (i == -1 ? location_i - 1 : location_i + 1);
@@ -1043,7 +1131,8 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
     }
 
     // Check x^2-direction
-    if (x2_off_grid and j != j_safe) {
+    if (x2_off_grid and j != j_safe)
+    {
       bool same_level_exists = level_alt == level;
       same_level_exists = same_level_exists and location_i_alt == location_i;
       same_level_exists =
@@ -1066,7 +1155,8 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
     }
 
     // Check x^3-direction
-    if (x3_off_grid and k != k_safe) {
+    if (x3_off_grid and k != k_safe)
+    {
       bool same_level_exists = level_alt == level;
       same_level_exists = same_level_exists and location_i_alt == location_i;
       same_level_exists = same_level_exists and location_j_alt == location_j;
@@ -1089,7 +1179,8 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
     }
 
     // Check x^3-direction across periodic boundary
-    if (x3_off_grid and simulation_coord == Coordinates::sks and k == -1 and location_k == 0) {
+    if (x3_off_grid and simulation_coord == Coordinates::sks and k == -1 and location_k == 0)
+    {
       bool same_level_exists = level_alt == level;
       same_level_exists = same_level_exists and location_i_alt == location_i;
       same_level_exists = same_level_exists and location_j_alt == location_j;
@@ -1108,7 +1199,8 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
         x3_off_grid = false;
     }
     if (x3_off_grid and simulation_coord == Coordinates::sks and k == n_k
-        and location_k == n_3_level(level) - 1) {
+        and location_k == n_3_level(level) - 1)
+    {
       bool same_level_exists = level_alt == level;
       same_level_exists = same_level_exists and location_i_alt == location_i;
       same_level_exists = same_level_exists and location_j_alt == location_j;

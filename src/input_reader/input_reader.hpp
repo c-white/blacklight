@@ -163,6 +163,10 @@ struct InputReader
   std::optional<double> plasma_mu;
   std::optional<double> plasma_ne_ni;
   std::optional<PlasmaModel> plasma_model;
+  std::optional<bool> plasma_use_p;
+  std::optional<double> plasma_gamma;
+  std::optional<double> plasma_gamma_i;
+  std::optional<double> plasma_gamma_e;
   std::optional<double> plasma_rat_low;
   std::optional<double> plasma_rat_high;
   std::optional<double> plasma_power_frac;

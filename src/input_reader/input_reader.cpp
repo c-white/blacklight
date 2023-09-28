@@ -321,6 +321,14 @@ int InputReader::Read()
       plasma_ne_ni = std::stod(val);
     else if (key == "plasma_model")
       plasma_model = ReadPlasmaModel(val);
+    else if (key == "plasma_use_p")
+      plasma_use_p = ReadBool(val);
+    else if (key == "plasma_gamma")
+      plasma_gamma = std::stod(val);
+    else if (key == "plasma_gamma_i")
+      plasma_gamma_i = std::stod(val);
+    else if (key == "plasma_gamma_e")
+      plasma_gamma_e = std::stod(val);
     else if (key == "plasma_rat_low")
       plasma_rat_low = std::stod(val);
     else if (key == "plasma_rat_high")
