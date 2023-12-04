@@ -541,7 +541,7 @@ double SimulationReader::Read(int snapshot)
         for (int ind_ind = 0; ind_ind < 8; ind_ind++)
         {
           data_stream.seekg(cell_data_begin);
-          int offset = athenak_inds[ind_ind] * athenak_cells_per_block * athenak_variable_size;
+          offset = athenak_inds[ind_ind] * athenak_cells_per_block * athenak_variable_size;
           data_stream.seekg(offset, std::ios_base::cur);
           if (athenak_variable_size == 4)
             data_stream.read(reinterpret_cast<char *>(&prim[n](prim_inds[ind_ind],block,0,0,0)),
@@ -560,7 +560,7 @@ double SimulationReader::Read(int snapshot)
         if (plasma_model == PlasmaModel::code_kappa)
         {
           data_stream.seekg(cell_data_begin);
-          int offset = athenak_ind_kappa * athenak_cells_per_block * athenak_variable_size;
+          offset = athenak_ind_kappa * athenak_cells_per_block * athenak_variable_size;
           data_stream.seekg(offset, std::ios_base::cur);
           if (athenak_variable_size == 4)
             data_stream.read(reinterpret_cast<char *>(&prim[n](ind_kappa,block,0,0,0)),
