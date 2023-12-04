@@ -336,7 +336,10 @@ double SimulationReader::Read(int snapshot)
     {
       ReadAthenaKHeader();
       if (first_time)
+      {
+        VerifyVariablesAthenaK();
         ReadAthenaKInputs();
+      }
     }
 
     // Read time
@@ -449,7 +452,6 @@ double SimulationReader::Read(int snapshot)
           data_stream.ignore(athenak_block_size_bytes);
           athenak_num_blocks++;
         }
-        athenak_num_blocks--;
       }
 
       // Allocate arrays
@@ -470,9 +472,14 @@ double SimulationReader::Read(int snapshot)
       }
 
       // Go through blocks
-      data_stream.seekg(athenak_data_offset);
       for (int block = 0; block < athenak_num_blocks; block++)
       {
+
+        // Seek to beginning of block
+        data_stream.seekg(athenak_data_offset);
+        int offset = block * athenak_block_size_bytes;
+        data_stream.seekg(offset, std::ios_base::cur);
+
         // Skip block indices
         data_stream.ignore(24);
 
@@ -524,8 +531,6 @@ double SimulationReader::Read(int snapshot)
           data_stream.ignore(6 * athenak_location_size);
 
         // Read cell data
-        if (first_time)
-          VerifyVariablesAthenaK();
         if (first_time and athenak_variable_size == 8)
           athenak_cell_data_double = new double[athenak_cells_per_block];
         std::streampos cell_data_begin = data_stream.tellg();
@@ -910,7 +915,7 @@ std::string SimulationReader::FormatFilename(int file_number)
 void SimulationReader::ReadAthenaKHeader()
 {
   // Prepare buffer
-  constexpr int buffer_size = 128;
+  constexpr int buffer_size = 1024;
   Array<char> buffer;
   buffer.Allocate(buffer_size);
 
