@@ -8,7 +8,7 @@
 #include <cstdio>     // snprintf
 #include <cstring>    // strncmp, strtok
 #include <fstream>    // ifstream
-#include <ios>        // ios_base
+#include <ios>        // ios_base, streamoff
 #include <iosfwd>     // streampos
 #include <optional>   // optional
 #include <sstream>    // ostringstream
@@ -477,7 +477,7 @@ double SimulationReader::Read(int snapshot)
 
         // Seek to beginning of block
         data_stream.seekg(athenak_data_offset);
-        int offset = block * athenak_block_size_bytes;
+        std::streamoff offset = block * static_cast<std::streamoff>(athenak_block_size_bytes);
         data_stream.seekg(offset, std::ios_base::cur);
 
         // Skip block indices
