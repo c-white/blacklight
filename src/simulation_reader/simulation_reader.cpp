@@ -517,14 +517,14 @@ double SimulationReader::Read(int snapshot)
           double dy = (face_coordinates[3] - face_coordinates[2]) / athenak_block_ny;
           for (int j = 1; j < athenak_block_ny; j++)
             x2f(block,j) = face_coordinates[2] + j * dy;
-          for (int j = 0; j < athenak_block_nx; j++)
+          for (int j = 0; j < athenak_block_ny; j++)
             x2v(block,j) = 0.5 * (x2f(block,j) + x2f(block,j+1));
           x3f(block,0) = face_coordinates[4];
           x3f(block,athenak_block_nz) = face_coordinates[5];
           double dz = (face_coordinates[5] - face_coordinates[4]) / athenak_block_nz;
           for (int k = 1; k < athenak_block_nz; k++)
             x3f(block,k) = face_coordinates[4] + k * dz;
-          for (int k = 0; k < athenak_block_nx; k++)
+          for (int k = 0; k < athenak_block_nz; k++)
             x3v(block,k) = 0.5 * (x3f(block,k) + x3f(block,k+1));
         }
         else
