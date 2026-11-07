@@ -419,7 +419,7 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
             if (x3f(b,k+1) >= x3)
               break;
           int k_m = k == 0 or (k != n_k - 1 and x3 >= x3v(b,k)) ? k : k - 1;
-          double f_k = (x3 - x3v(b,k_m)) / (x3v(b,k_m+1) - x3v(b,k_m));
+          double f_k = n_k > 1 ? (x3 - x3v(b,k_m)) / (x3v(b,k_m+1) - x3v(b,k_m)) : 0.0;
 
           // Prepare to sample values without interpolation
           if (not simulation_interp)
@@ -485,9 +485,9 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
             int i_m = i == 0 or (i != n_i - 1 and x1 >= x1v(b,i)) ? i : i - 1;
             int j_m = j == 0 or (j != n_j - 1 and x2 >= x2v(b,j)) ? j : j - 1;
             int k_m = k == 0 or (k != n_k - 1 and x3 >= x3v(b,k)) ? k : k - 1;
-            double f_i = (x1 - x1v(b,i_m)) / (x1v(b,i_m+1) - x1v(b,i_m));
-            double f_j = (x2 - x2v(b,j_m)) / (x2v(b,j_m+1) - x2v(b,j_m));
-            double f_k = (x3 - x3v(b,k_m)) / (x3v(b,k_m+1) - x3v(b,k_m));
+            double f_i = n_i > 1 ? (x1 - x1v(b,i_m)) / (x1v(b,i_m+1) - x1v(b,i_m)) : 0.0;
+            double f_j = n_j > 1 ? (x2 - x2v(b,j_m)) / (x2v(b,j_m+1) - x2v(b,j_m)) : 0.0;
+            double f_k = n_k > 1 ? (x3 - x3v(b,k_m)) / (x3v(b,k_m+1) - x3v(b,k_m)) : 0.0;
             sample_inds[adaptive_level](m,n,0) = b;
             sample_inds[adaptive_level](m,n,1) = k_m;
             sample_inds[adaptive_level](m,n,2) = j_m;
@@ -1334,14 +1334,17 @@ void RadiationIntegrator::FindNearbyInds(int b, int k, int j, int i, int k_c, in
 double RadiationIntegrator::InterpolateSimple(const Array<float> &grid_vals, int grid_ind, int b,
     int k, int j, int i, double f_k, double f_j, double f_i)
 {
+  int i_p = grid_vals.n1 > 1 ? i + 1 : i;
+  int j_p = grid_vals.n2 > 1 ? j + 1 : j;
+  int k_p = grid_vals.n3 > 1 ? k + 1 : k;
   double val_mmm = static_cast<double>(grid_vals(grid_ind,b,k,j,i));
-  double val_mmp = static_cast<double>(grid_vals(grid_ind,b,k,j,i+1));
-  double val_mpm = static_cast<double>(grid_vals(grid_ind,b,k,j+1,i));
-  double val_mpp = static_cast<double>(grid_vals(grid_ind,b,k,j+1,i+1));
-  double val_pmm = static_cast<double>(grid_vals(grid_ind,b,k+1,j,i));
-  double val_pmp = static_cast<double>(grid_vals(grid_ind,b,k+1,j,i+1));
-  double val_ppm = static_cast<double>(grid_vals(grid_ind,b,k+1,j+1,i));
-  double val_ppp = static_cast<double>(grid_vals(grid_ind,b,k+1,j+1,i+1));
+  double val_mmp = static_cast<double>(grid_vals(grid_ind,b,k,j,i_p));
+  double val_mpm = static_cast<double>(grid_vals(grid_ind,b,k,j_p,i));
+  double val_mpp = static_cast<double>(grid_vals(grid_ind,b,k,j_p,i_p));
+  double val_pmm = static_cast<double>(grid_vals(grid_ind,b,k_p,j,i));
+  double val_pmp = static_cast<double>(grid_vals(grid_ind,b,k_p,j,i_p));
+  double val_ppm = static_cast<double>(grid_vals(grid_ind,b,k_p,j_p,i));
+  double val_ppp = static_cast<double>(grid_vals(grid_ind,b,k_p,j_p,i_p));
   double val = (1.0 - f_k) * (1.0 - f_j) * (1.0 - f_i) * val_mmm
       + (1.0 - f_k) * (1.0 - f_j) * f_i * val_mmp + (1.0 - f_k) * f_j * (1.0 - f_i) * val_mpm
       + (1.0 - f_k) * f_j * f_i * val_mpp + f_k * (1.0 - f_j) * (1.0 - f_i) * val_pmm
