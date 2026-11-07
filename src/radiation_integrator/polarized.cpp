@@ -427,8 +427,8 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
                 double alpha_i_p_factor = 1.0 / (alpha_s[0] * alpha_s[0] - alpha_sq);
                 ss_end[0] = (ss_start[0] * cosh_p - alpha_ss / alpha_p * sinh_p) * exp_neg_i
                     + alpha_j * alpha_i_p_factor * (-1.0 + (alpha_s[0] * sinh_p + alpha_p * cosh_p)
-                    / alpha_p * exp_neg_p) + alpha_s[0] * j_s[0] * alpha_i_p_factor * (1.0
-                    - (alpha_s[0] * cosh_p + alpha_p * sinh_p) / alpha_s[0] * exp_neg_p);
+                    / alpha_p * exp_neg_i) + alpha_s[0] * j_s[0] * alpha_i_p_factor * (1.0
+                    - (alpha_s[0] * cosh_p + alpha_p * sinh_p) / alpha_s[0] * exp_neg_i);
 
                 for (int a = 1; a < 4; a++)
                 {
@@ -436,7 +436,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
                       - ss_start[0] * alpha_s[a] / alpha_p * sinh_p) * exp_neg_i;
                   double term_2 = j_s[a] * (1.0 - exp_neg_i) / alpha_s[0];
                   double term_3 = alpha_j * alpha_s[a] / alpha_s[0] * alpha_i_p_factor * (1.0 - (1.0
-                      - alpha_s[0] * alpha_s[0] / alpha_sq - alpha_s[0] / alpha_sq * (alpha_s[0]
+                      - alpha_s[0] * alpha_s[0] / alpha_sq + alpha_s[0] / alpha_sq * (alpha_s[0]
                       * cosh_p + alpha_p * sinh_p)) * exp_neg_i);
                   double term_4 = j_s[0] * alpha_s[a] / alpha_p * alpha_i_p_factor * (-alpha_p +
                       (alpha_p * cosh_p + alpha_s[0] * sinh_p) * exp_neg_i);
@@ -540,15 +540,15 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
                 double alpha_i_p_factor = 1.0 / (alpha_s[0] * alpha_s[0] - alpha_sq);
                 ss_end[0] = (ss_start[0] * cosh_p - alpha_ss / alpha_p * sinh_p) * exp_neg_i
                     + alpha_j * alpha_i_p_factor * (-1.0 + (alpha_s[0] * sinh_p + alpha_p * cosh_p)
-                    / alpha_p * exp_neg_p) + alpha_s[0] * j_s[0] * alpha_i_p_factor * (1.0
-                    - (alpha_s[0] * cosh_p + alpha_p * sinh_p) / alpha_s[0] * exp_neg_p);
+                    / alpha_p * exp_neg_i) + alpha_s[0] * j_s[0] * alpha_i_p_factor * (1.0
+                    - (alpha_s[0] * cosh_p + alpha_p * sinh_p) / alpha_s[0] * exp_neg_i);
                 for (int a = 1; a < 4; a++)
                 {
                   double term_1 = (ss_start[a] + alpha_s[a] * alpha_ss / alpha_sq * coshm1_p
                       - ss_start[0] * alpha_s[a] / alpha_p * sinh_p) * exp_neg_i;
                   double term_2 = j_s[a] * (1.0 - exp_neg_i) / alpha_s[0];
                   double term_3 = alpha_j * alpha_s[a] / alpha_s[0] * alpha_i_p_factor * (1.0 - (1.0
-                      - alpha_s[0] * alpha_s[0] / alpha_sq - alpha_s[0] / alpha_sq * (alpha_s[0]
+                      - alpha_s[0] * alpha_s[0] / alpha_sq + alpha_s[0] / alpha_sq * (alpha_s[0]
                       * cosh_p + alpha_p * sinh_p)) * exp_neg_i);
                   double term_4 = j_s[0] * alpha_s[a] / alpha_p * alpha_i_p_factor * (-alpha_p +
                       (alpha_p * cosh_p + alpha_s[0] * sinh_p) * exp_neg_i);
@@ -628,15 +628,15 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
                 double alpha_i_p_factor = 1.0 / (alpha_s[0] * alpha_s[0] - alpha_sq);
                 ss_end[0] = (ss_start[0] * cosh_p - alpha_ss / alpha_p * sinh_p) * exp_neg_i
                     + alpha_j * alpha_i_p_factor * (-1.0 + (alpha_s[0] * sinh_p + alpha_p * cosh_p)
-                    / alpha_p * exp_neg_p) + alpha_s[0] * j_s[0] * alpha_i_p_factor * (1.0
-                    - (alpha_s[0] * cosh_p + alpha_p * sinh_p) / alpha_s[0] * exp_neg_p);
+                    / alpha_p * exp_neg_i) + alpha_s[0] * j_s[0] * alpha_i_p_factor * (1.0
+                    - (alpha_s[0] * cosh_p + alpha_p * sinh_p) / alpha_s[0] * exp_neg_i);
                 for (int a = 1; a < 4; a++)
                 {
                   double term_1 = (ss_start[a] + alpha_s[a] * alpha_ss / alpha_sq * coshm1_p
                       - ss_start[0] * alpha_s[a] / alpha_p * sinh_p) * exp_neg_i;
                   double term_2 = j_s[a] * (1.0 - exp_neg_i) / alpha_s[0];
                   double term_3 = alpha_j * alpha_s[a] / alpha_s[0] * alpha_i_p_factor * (1.0 - (1.0
-                      - alpha_s[0] * alpha_s[0] / alpha_sq - alpha_s[0] / alpha_sq * (alpha_s[0]
+                      - alpha_s[0] * alpha_s[0] / alpha_sq + alpha_s[0] / alpha_sq * (alpha_s[0]
                       * cosh_p + alpha_p * sinh_p)) * exp_neg_i);
                   double term_4 = j_s[0] * alpha_s[a] / alpha_p * alpha_i_p_factor * (-alpha_p +
                       (alpha_p * cosh_p + alpha_s[0] * sinh_p) * exp_neg_i);
