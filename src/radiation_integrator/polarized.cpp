@@ -678,7 +678,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
               mm_2[0][1] = lambda_2 * alpha_s[1] - s * lambda_1 * rho_s[1];
               mm_2[0][3] = lambda_2 * alpha_s[3] - s * lambda_1 * rho_s[3];
               mm_2[1][2] = s * lambda_1 * alpha_s[3] + lambda_2 * rho_s[3];
-              mm_2[1][2] = s * lambda_1 * alpha_s[1] + lambda_2 * rho_s[1];
+              mm_2[2][3] = s * lambda_1 * alpha_s[1] + lambda_2 * rho_s[1];
               mm_2[1][0] = mm_2[0][1];
               mm_2[2][0] = mm_2[0][2];
               mm_2[3][0] = mm_2[0][3];
@@ -694,7 +694,7 @@ void RadiationIntegrator::IntegratePolarizedRadiation()
               mm_3[0][1] = lambda_1 * alpha_s[1] + s * lambda_2 * rho_s[1];
               mm_3[0][3] = lambda_1 * alpha_s[3] + s * lambda_2 * rho_s[3];
               mm_3[1][2] = -(s * lambda_2 * alpha_s[3] - lambda_1 * rho_s[3]);
-              mm_3[1][2] = -(s * lambda_2 * alpha_s[1] - lambda_1 * rho_s[1]);
+              mm_3[2][3] = -(s * lambda_2 * alpha_s[1] - lambda_1 * rho_s[1]);
               mm_3[1][0] = mm_3[0][1];
               mm_3[2][0] = mm_3[0][2];
               mm_3[3][0] = mm_3[0][3];
