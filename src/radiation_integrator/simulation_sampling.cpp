@@ -516,9 +516,9 @@ void RadiationIntegrator::CalculateSimulationSampling(int snapshot)
             double x1_m = i_m == -1 ? 2.0 * x1f(b,i) - x1v(b,i) : x1v(b,i_m);
             double x2_m = j_m == -1 ? 2.0 * x2f(b,j) - x2v(b,j) : x2v(b,j_m);
             double x3_m = k_m == -1 ? 2.0 * x3f(b,k) - x3v(b,k) : x3v(b,k_m);
-            double x1_p = i_p == n_i ? 2.0 * x1v(b,i+1) - x1v(b,i) : x1v(b,i_p);
-            double x2_p = j_p == n_j ? 2.0 * x2v(b,j+1) - x2v(b,j) : x2v(b,j_p);
-            double x3_p = k_p == n_k ? 2.0 * x3v(b,k+1) - x3v(b,k) : x3v(b,k_p);
+            double x1_p = i_p == n_i ? 2.0 * x1f(b,i+1) - x1v(b,i) : x1v(b,i_p);
+            double x2_p = j_p == n_j ? 2.0 * x2f(b,j+1) - x2v(b,j) : x2v(b,j_p);
+            double x3_p = k_p == n_k ? 2.0 * x3f(b,k+1) - x3v(b,k) : x3v(b,k_p);
             double f_i = (x1 - x1_m) / (x1_p - x1_m);
             double f_j = (x2 - x2_m) / (x2_p - x2_m);
             double f_k = (x3 - x3_m) / (x3_p - x3_m);
